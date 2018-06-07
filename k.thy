@@ -1686,7 +1686,7 @@ code_pred ksearch .
 export_code Eps Continue Success FunTrans Single IntConst Bool Defined UnitLabel NonTerminal
     Strict Syntax Star Stdin Multiplicity KTerm KLabelC Heat TheSyntax IRKLabel IRKItem
        KLabelMatching KLabelFunPat SUKLabel KLabelSubs FunPat SingleTon OtherVar krun ksearch
-    ARule Parsed AChar Suc Nibble0 Char Num.One Int.Pos Num.inc formGraph
+    ARule Parsed AChar Suc Char Num.One Int.Pos Num.inc formGraph
    symbolsToKLabel syntaxToKItem syntaxSetToKItemTest getKLabelName subsort getNonTerminalInList
     getValueTerm in OCaml  module_name K file "k.ml"
 
