@@ -28,8 +28,10 @@ datatype 'upVar sort = Bool | K | KItem | KLabel | KResult | KList | List | Set 
 datatype 'metaVar metaVar = Defined 'metaVar | Generated nat | FunHole
 
 datatype 'upVar label = UnitLabel "'upVar sort" | ConstToLabel theConstant
-            | Sort | GetKLabel | IsKResult | AndBool | NotBool | OtherLabel string
-           | TokenLabel string
+  | Sort | GetKLabel | IsKResult | AndBool | NotBool | OrBool | SetConLabel
+  | SetItemLabel | ListConLabel | ListItemLabel | MapConLabel | MapItemLabel | MapUpdate
+  | EqualK | NotEqualK | EqualKLabel | NotEqualKLabel | OtherLabel string | TokenLabel string
+  | PlusInt | MinusInt | TimesInt 
 
 datatype 'upVar symbol = NonTerminal "'upVar sort" | Terminal string
 
@@ -53,10 +55,6 @@ datatype 'upVar kSyntax = Syntax "'upVar sort" "'upVar symbol nelist" "synAttrib
                          | Subsort "'upVar sort" "'upVar sort"
                          | Token "'upVar sort" reg "synAttrib list"
                          | ListSyntax "'upVar sort" "'upVar sort" string "synAttrib list"
-
-datatype ruleInString = ARule string | AContext string | AConfi string
-datatype 'upVar theoryParsed =
-                     Parsed "('upVar sort * 'upVar kSyntax list list) list" "ruleInString list"
 
 datatype key = Star | Question
 
@@ -326,6 +324,19 @@ datatype ('upVar, 'var, 'metaVar) rulePat
     | BagRulePat "('upVar, 'var, 'metaVar) irBag"
                 "('upVar, 'var, 'metaVar) suB list"
                 "('upVar, 'var, 'metaVar) suKItem" bool
+
+
+datatype ('upVar, 'var, 'metaVar) simpleK = SimId "'metaVar metaVar" "'upVar sort"
+  | SimTerm "'upVar label" "('upVar, 'var, 'metaVar) simpleK list"
+  | SimLabel "'upVar label"
+  | SimEmpty "'upVar sort"
+  | SimBagCon "('upVar, 'var, 'metaVar) simpleK" "('upVar, 'var, 'metaVar) simpleK"
+  | SimBag "'var var" "feature list" "('upVar, 'var, 'metaVar) simpleK"
+
+datatype ('upVar, 'var, 'metaVar) theoryParsed =
+      Parsed "('upVar sort * 'upVar kSyntax list list) list"
+                      "(('upVar, 'var, 'metaVar) simpleK * ('upVar, 'var, 'metaVar) simpleK
+                   * ('upVar, 'var, 'metaVar) simpleK * ('var, 'upVar) ruleAttrib list) list"
 
 (* define svar var type var etc *)
 datatype 'a KItemSyntax = SingleTon "'a" | SetTon "'a \<Rightarrow> bool"
@@ -682,6 +693,30 @@ primrec syntaxToKItem where
        then None else (Some [([a],[[b],[a]], SingleTon t,c, False),
                     ([a],[],SingleTon (UnitLabel a),(getRidStrictAttrs c), False)]))"
 
+primrec mergeList where
+"mergeList [] = []"
+| "mergeList (x#l) = x@(mergeList l)"
+
+fun mergeTuples where
+"mergeTuples [] = []"
+| "mergeTuples ((a,b)#l) = (mergeList b)@(mergeTuples l)"
+
+definition builtinSymbolTables where
+"builtinSymbolTables = [([KLabel],[[K]], SingleTon GetKLabel, [Function], True),
+  ([Bool],[[K]], SingleTon IsKResult, [Function], True),
+  ([Bool],[[K],[K]], SingleTon AndBool, [Function], True),
+  ([Bool],[[K]], SingleTon NotBool, [Function], True),
+  ([Bool],[[K],[K]], SingleTon OrBool, [Function], True),
+  ([String],[[K]], SingleTon Sort, [Function], True),
+  ([Map],[[Map],[K],[K]], SingleTon MapUpdate, [Function], True),
+  ([Bool],[[K],[K]], SingleTon EqualK, [Function], True),
+  ([Bool],[[K],[K]], SingleTon NotEqualK, [Function], True),
+  ([Bool],[[KLabel],[KLabel]], SingleTon EqualKLabel, [Function], True),
+  ([Bool],[[KLabel],[KLabel]], SingleTon NotEqualKLabel, [Function], True),
+  ([kSyntax.Int],[[kSyntax.Int],[kSyntax.Int]], SingleTon PlusInt, [Function], True),
+  ([kSyntax.Int],[[kSyntax.Int],[kSyntax.Int]], SingleTon MinusInt, [Function], True),
+  ([kSyntax.Int],[[kSyntax.Int],[kSyntax.Int]], SingleTon TimesInt, [Function], True)]"
+
 primrec syntaxSetToKItemSetAux where
 "syntaxSetToKItemSetAux [] order = Some []"
 | "syntaxSetToKItemSetAux (a#l) order = (case syntaxToKItem a of
@@ -689,6 +724,10 @@ primrec syntaxSetToKItemSetAux where
            | Some l' \<Rightarrow>
         (case (syntaxSetToKItemSetAux l (order@[a])) of None \<Rightarrow> None
             | Some la \<Rightarrow> Some (l'@la)))"
+
+definition syntaxSetToKItems where
+"syntaxSetToKItems l = (case (syntaxSetToKItemSetAux l []) of None \<Rightarrow> None
+                 | Some l \<Rightarrow> Some (l@builtinSymbolTables))"
 
 definition syntaxSetToKItemTest where
 "syntaxSetToKItemTest Theory

@@ -93,10 +93,33 @@ fun getResultSortInAttrs :: "('var, 'upVar) ruleAttrib list \<Rightarrow> 'upVar
                     | Some a' \<Rightarrow> None)"
 | "getResultSortInAttrs (a#l) = getResultSortInAttrs l"
 
-definition PreAllSubsorts where
-"PreAllSubsorts Theory = (getAllSubsortInKFile Theory)
+fun getAllSorts :: "'upVar kSyntax list \<Rightarrow> 'upVar sort list" where
+ "getAllSorts [] = []"
+| "getAllSorts ((Syntax x pros l)#xs) = List.insert x (getAllSorts xs)"
+| "getAllSorts ((ListSyntax a b pros l)#xs) = List.insert a (getAllSorts xs)"
+| "getAllSorts ((Token a s l)#xs) = List.insert a (getAllSorts xs)"
+| "getAllSorts (a#xs) = (getAllSorts xs)"
+
+fun getAllSubsortInList where
+ "getAllSubsortInList [] = []"
+| "getAllSubsortInList ((Subsort a b)#l) = List.insert (a,b) (getAllSubsortInList l)"
+| "getAllSubsortInList (x#l) = getAllSubsortInList l"
+
+fun getAllSubsortInListList where
+ "getAllSubsortInListList [] = []"
+| "getAllSubsortInListList (x#l) = (getAllSubsortInList x)@(getAllSubsortInListList l)"
+
+fun getAllSubsortInTuples where
+ "getAllSubsortInTuples [] = []"
+| "getAllSubsortInTuples ((a,b)#l) = (getAllSubsortInListList b)@(getAllSubsortInTuples l)"
+
+fun getAllSubsortInKFile where
+"getAllSubsortInKFile (Parsed a b) = getAllSubsortInTuples a"
+
+fun PreAllSubsorts where
+"PreAllSubsorts (Parsed a b) = (getAllSubsortInKFile (Parsed a b))
                      @ (addImplicitSubsorts KItem BuiltinSorts
-                          (getAllSorts (getAllSyntaxInKFile Theory)))
+                          (getAllSorts (mergeTuples a)))
                      @ [(KResult, KItem), (KItem, K)]@topSubsort"
 
 definition preSubsortTerms where
@@ -104,10 +127,9 @@ definition preSubsortTerms where
    = formSubsortDatabase (PreAllSubsorts Theory)
          (formDatabase database)"
 
-definition preSubsortGraph where
-"preSubsortGraph Theory = formGraph (insertAll (getAllSorts
-        (getAllSyntaxInKFile Theory)) BuiltinSorts) (PreAllSubsorts Theory)"
-
+fun preSubsortGraph where
+"preSubsortGraph (Parsed a b) = formGraph (insertAll (getAllSorts
+        (mergeTuples a)) BuiltinSorts) (PreAllSubsorts (Parsed a b))"
 
 function subsortAux :: "'upVar \<Rightarrow> 'upVar \<Rightarrow>
                            ('upVar * 'upVar list) list \<Rightarrow> bool"
@@ -130,6 +152,21 @@ primrec getKResultSubsorts where
            then getKResultSubsorts l subG
       else (KResult,a)#(getKResultSubsorts l subG))"
 
+fun kResultSubsorts where
+"kResultSubsorts (Parsed a b) = 
+       getKResultSubsorts (getAllSorts (mergeTuples a)) (preSubsortGraph (Parsed a b))"
+
+fun AllSubsorts where
+"AllSubsorts (Parsed a b) = (getAllSubsortInKFile (Parsed a b))
+                     @ (addImplicitSubsorts KItem BuiltinSorts
+                          (getAllSorts (mergeTuples a)))
+                     @ [(KResult, KItem), (KItem, K)]@topSubsort@(kResultSubsorts (Parsed a b))"
+
+fun subsortGraph where
+"subsortGraph (Parsed a b) = formGraph (insertAll (getAllSorts
+        (mergeTuples a)) BuiltinSorts) (AllSubsorts (Parsed a b))"
+
+(*
 definition kResultSubsorts where
 "kResultSubsorts Theory = 
        getKResultSubsorts (getAllSorts (getAllSyntaxInKFile Theory)) (preSubsortGraph Theory)"
@@ -148,6 +185,7 @@ definition subsortTerms where
 definition subsortGraph where
 "subsortGraph Theory = formGraph (insertAll (getAllSorts
         (getAllSyntaxInKFile Theory)) BuiltinSorts) (AllSubsorts Theory)"
+*)
 
 definition subsort where
 "subsort a b subG = (if a = b then True else subsortAux a b subG)"
@@ -161,12 +199,12 @@ primrec subsortList where
 "subsortList [] b subG = True"
 | "subsortList (x#l) b subG = (if subsortListAux x b subG then
                subsortList l b subG else False)"
-
+(*
 definition invalidSortChecks where
 "invalidSortChecks Theory = (case subsortGraph Theory of subG \<Rightarrow>
     (\<not> hasInvalidSubsort (getAllSubsortInKFile Theory)
          \<and> \<not> hasInvalidTranstiveClosure subG subG))"
-
+*)
 primrec insertSortInList where
 "insertSortInList a [] subG = [a]"
 | "insertSortInList a (b#l) subG = (if subsort a b subG then (b#l)

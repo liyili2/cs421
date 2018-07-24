@@ -1,5 +1,5 @@
 theory k
-imports Main Real List kCompile
+imports Main Real List kSyntax kSort kGetters
 begin
 
 (*
@@ -15,7 +15,969 @@ hence, left vars do not apply on the K case.
 
 *)
 
+(* translate pattern in K core to K IR *)
+
 (* implementation of krun and ksearch *)
+
+(* type check terms *)
+primrec updateMap where
+"updateMap a b [] subG = Some [(a,b)]"
+| "updateMap a b (x#l) subG = (case x of (a',b') \<Rightarrow> 
+   (if a = a' then (case meet b b' subG of [] \<Rightarrow> None
+     | (ty#tyl) \<Rightarrow> Some ((a,(ty#tyl))#l)) else
+   (case (updateMap a b l subG) of None \<Rightarrow> None
+        | Some l' \<Rightarrow> Some (x#l'))))"
+
+primrec updateBeta where
+"updateBeta a b [] subG = Some []"
+| "updateBeta a b (x#l) subG = (case x of (a',b') \<Rightarrow> 
+   (if a = a' then (case meet b b' subG of [] \<Rightarrow> None
+     | (ty#tyl) \<Rightarrow> Some ((a,(ty#tyl))#l)) else
+   (case (updateBeta a b l subG) of None \<Rightarrow> None
+        | Some l' \<Rightarrow> Some (x#l'))))"
+
+primrec hasIdInKList where
+"hasIdInKList [] = False"
+| "hasIdInKList (a#l) = (case a of IdKl x \<Rightarrow> True | _ \<Rightarrow> hasIdInKList l)"
+
+primrec numberOfItemsInKList where
+"numberOfItemsInKList [] = 0"
+| "numberOfItemsInKList (x#l) = (case x of IdKl a \<Rightarrow> numberOfItemsInKList l
+          | ItemKl a \<Rightarrow> 1 + numberOfItemsInKList l)"
+
+fun getIdInSUKLabel where
+"getIdInSUKLabel (SUIdKLabel a) = Some a"
+| "getIdInSUKLabel a = None"
+
+fun isFunctionItemAux where
+"isFunctionItemAux [] s = False"
+| "isFunctionItemAux ((a,b, SingleTon t, nl, True)#l) s =
+     (if (t = s) then True else isFunctionItemAux l s)"
+| "isFunctionItemAux ((a,b, SetTon t, nl, True)#l) s =
+     (if (t s) then True else isFunctionItemAux l s)"
+| "isFunctionItemAux ((a,b, t, nl, False)#l) s = isFunctionItemAux l s"
+
+definition isFunctionItem where
+"isFunctionItem s database = isFunctionItemAux database s"
+
+(* check if a kitem is contained in a structure, no function terms
+    only used for checking correctness of configurations *)
+definition getSUKLabelMeaning  where
+"getSUKLabelMeaning x = (case x of (SUKLabel a) \<Rightarrow> Some a | _ \<Rightarrow> None)"
+
+definition getKLabelInSUKItem where
+"getKLabelInSUKItem A = (case A of (SUKItem a b ty) \<Rightarrow> getSUKLabelMeaning a
+                     | _ \<Rightarrow> None)"
+
+definition getKLabelInSUK where
+"getKLabelInSUK x = (case x of (SUKKItem a b ty) \<Rightarrow> getSUKLabelMeaning a
+                          | _ \<Rightarrow> None)"
+
+definition getKLabelInSUKS where
+"getKLabelInSUKS x = (case x of [x'] \<Rightarrow> getKLabelInSUK x'
+                          | _ \<Rightarrow> None)"
+
+definition getKLabelInSUList where
+"getKLabelInSUList x = (case x of (SUListKItem a b) \<Rightarrow> getSUKLabelMeaning a
+                          | _ \<Rightarrow> None)"
+
+definition getKLabelInSUListS where
+"getKLabelInSUListS x = (case x of [x'] \<Rightarrow> getKLabelInSUList x'
+                          | _ \<Rightarrow> None)"
+
+definition getKLabelInSUSet where
+"getKLabelInSUSet x = (case x of (SUSetKItem a b) \<Rightarrow> getSUKLabelMeaning a
+                          | _ \<Rightarrow> None)"
+
+definition getKLabelInSUSetS where
+"getKLabelInSUSetS x = (case x of [x'] \<Rightarrow> getKLabelInSUSet x'
+                          | _ \<Rightarrow> None)"
+
+definition getKLabelInSUMap where
+"getKLabelInSUMap x = (case x of (SUMapKItem a b) \<Rightarrow> getSUKLabelMeaning a
+                          | _ \<Rightarrow> None)"
+
+definition getKLabelInSUMapS where
+"getKLabelInSUMapS x = (case x of [x'] \<Rightarrow> getKLabelInSUMap x'
+                          | _ \<Rightarrow> None)"
+
+definition getIRKLabel where
+"getIRKLabel x = (case x of (IRKLabel a) \<Rightarrow> Some a | _ \<Rightarrow> None)"
+
+primrec flattenSetAux where
+"flattenSetAux [] = []"
+| "flattenSetAux (x#xl) = (SetPat [x] None)#(flattenSetAux xl)"
+
+primrec flattenSetVar where
+"flattenSetVar None = []"
+| "flattenSetVar (Some v) = [SetPat [] (Some v)]"
+
+primrec flattenSet where
+"flattenSet [] = Some []"
+| "flattenSet (x#xl) = (case (flattenSet xl) of None \<Rightarrow> None
+             | Some xl' \<Rightarrow> (case x of IRBigBag (IRSet (SetPat sl sv))
+                  \<Rightarrow>  Some ((flattenSetAux sl)@(flattenSetVar sv)@xl')
+                    | _ \<Rightarrow> None))"
+
+primrec restructSet where
+"restructSet [] = Some (SetPat [] None)"
+| "restructSet (x#xl) = (case (restructSet xl) of None \<Rightarrow> None
+             | Some (SetPat sl None) \<Rightarrow> (case x of SetPat sl' None
+                   \<Rightarrow> Some (SetPat (sl'@sl) None)
+                  | SetPat sl' (Some v) \<Rightarrow> Some (SetPat (sl'@sl) (Some v)))
+              | Some (SetPat sl (Some v)) \<Rightarrow> (case x of SetPat sl' None
+                  \<Rightarrow> Some (SetPat (sl'@sl) (Some v))
+                   | SetPat sl' (Some v') \<Rightarrow> None))"
+
+primrec flattenMapAux where
+"flattenMapAux [] = []"
+| "flattenMapAux (x#xl) = (MapPat [x] None)#(flattenMapAux xl)"
+
+primrec flattenMapVar where
+"flattenMapVar None = []"
+| "flattenMapVar (Some v) = [MapPat [] (Some v)]"
+
+primrec flattenMap where
+"flattenMap [] = Some []"
+| "flattenMap (x#xl) = (case (flattenMap xl) of None \<Rightarrow> None
+             | Some xl' \<Rightarrow> (case x of IRBigBag (IRMap (MapPat sl sv))
+                  \<Rightarrow>  Some ((flattenMapAux sl)@(flattenMapVar sv)@xl')
+                    | _ \<Rightarrow> None))"
+
+primrec restructMap where
+"restructMap [] = Some (MapPat [] None)"
+| "restructMap (x#xl) = (case (restructMap xl) of None \<Rightarrow> None
+             | Some (MapPat sl None) \<Rightarrow> (case x of MapPat sl' None
+                   \<Rightarrow> Some (MapPat (sl'@sl) None)
+                  | MapPat sl' (Some v) \<Rightarrow> Some (MapPat (sl'@sl) (Some v)))
+              | Some (MapPat sl (Some v)) \<Rightarrow> (case x of MapPat sl' None
+                  \<Rightarrow> Some (MapPat (sl'@sl) (Some v))
+                   | MapPat sl' (Some v') \<Rightarrow> None))"
+
+primrec flattenListAux where
+"flattenListAux [] = []"
+| "flattenListAux (x#xl) = (ListPatNoVar [x])#(flattenListAux xl)"
+
+primrec flattenList where
+"flattenList [] = Some []"
+| "flattenList (x#xl) = (case (flattenList xl) of None \<Rightarrow> None
+             | Some xl' \<Rightarrow> (case x of IRBigBag (IRList (ListPatNoVar sl))
+                  \<Rightarrow>  Some ((flattenListAux sl)@xl')
+               | IRBigBag (IRList (ListPat sl1 v sl2))
+                  \<Rightarrow> Some ((flattenListAux sl1)@([ListPat [] v []])@(flattenListAux sl2)@xl')
+                    | _ \<Rightarrow> None))"
+
+primrec restructList where
+"restructList [] = Some (ListPatNoVar [])"
+| "restructList (x#xl) = (case (restructList xl) of None \<Rightarrow> None
+             | Some (ListPatNoVar sl) \<Rightarrow> (case x of ListPatNoVar sl'
+                   \<Rightarrow> Some (ListPatNoVar (sl'@sl))
+                  | ListPat sl1 v sl2 \<Rightarrow> Some (ListPat sl1 v (sl2@sl)))
+              | Some (ListPat sl1 v sl2) \<Rightarrow> (case x of ListPatNoVar sl'
+                  \<Rightarrow> Some (ListPat (sl'@sl1) v sl2)
+                   | ListPat sl1' v' sl2' \<Rightarrow> None))"
+
+fun simpleKToIR and simpleKToIRKList where 
+"simpleKToIR (SimId x y) database =
+   (case y of KLabel \<Rightarrow> Some (NormalPat (KLabelMatching (IRIdKLabel x)))
+      | KList \<Rightarrow> Some (NormalPat (KListMatching (KListPat [] x [])))
+      | K \<Rightarrow> Some (NormalPat (KMatching (KPat [] (Some x))))
+      | List \<Rightarrow> Some (NormalPat (ListMatching (ListPat [] x [])))
+      | Set \<Rightarrow> Some (NormalPat (SetMatching (SetPat [] (Some x))))
+      | Map \<Rightarrow> Some (NormalPat (MapMatching (MapPat [] (Some x))))
+      | Bag \<Rightarrow> Some (NormalPat (BagMatching (BagPat [] (Some x))))
+      | _ \<Rightarrow> Some (NormalPat (KItemMatching (IRIdKItem x [y]))))"
+| "simpleKToIR (SimEmpty y) database =
+     (case y of KList \<Rightarrow> Some (NormalPat (KListMatching (KListPatNoVar [])))
+      | K \<Rightarrow> Some (NormalPat (KMatching (KPat [] None)))
+      | List \<Rightarrow> Some (NormalPat (ListMatching (ListPatNoVar [])))
+      | Set \<Rightarrow> Some (NormalPat (SetMatching (SetPat [] None)))
+      | Map \<Rightarrow> Some (NormalPat (MapMatching (MapPat [] None)))
+      | Bag \<Rightarrow> Some (NormalPat (BagMatching (BagPat [] None)))
+      | _ \<Rightarrow> Some (NormalPat (KItemMatching (IRKItem (IRKLabel (UnitLabel y)) (KListPatNoVar []) [y]))))"
+| "simpleKToIR (SimLabel l) database = Some (NormalPat (KLabelMatching (IRKLabel l)))"
+| "simpleKToIR (SimBag x y b) database = (case simpleKToIR b database of
+       Some (NormalPat (KItemMatching s)) \<Rightarrow> Some (NormalPat
+                  (BagMatching (BagPat [(x,y,IRK (KPat [s] None))] None)))
+    | Some (NormalPat (KMatching s)) \<Rightarrow> Some (NormalPat
+                  (BagMatching (BagPat [(x,y,IRK s)] None)))
+    | Some (NormalPat (ListMatching s)) \<Rightarrow> Some (NormalPat
+                  (BagMatching (BagPat [(x,y,IRList s)] None)))
+    | Some (NormalPat (SetMatching s)) \<Rightarrow> Some (NormalPat
+                  (BagMatching (BagPat [(x,y,IRSet s)] None)))
+    | Some (NormalPat (MapMatching s)) \<Rightarrow> Some (NormalPat
+                  (BagMatching (BagPat [(x,y,IRMap s)] None)))
+    | Some (NormalPat (BagMatching s)) \<Rightarrow> Some (NormalPat
+                  (BagMatching (BagPat [(x,y,IRBag s)] None)))
+    | _ \<Rightarrow> None)"
+| "simpleKToIR (SimBagCon l r) database = (case simpleKToIR l database of
+      Some (NormalPat (BagMatching (BagPat sl v))) \<Rightarrow> 
+       (case simpleKToIR r database of
+          Some (NormalPat (BagMatching (BagPat sl' v'))) \<Rightarrow>
+               (case v of None \<Rightarrow> Some (NormalPat (BagMatching (BagPat (sl@sl') v')))
+                | Some n \<Rightarrow> (case v' of None \<Rightarrow> Some (NormalPat (BagMatching (BagPat (sl@sl') v)))
+                    | Some n' \<Rightarrow> None)) | _ \<Rightarrow> None) | _ \<Rightarrow> None)"
+| "simpleKToIR (SimTerm l kl) database =
+    (case simpleKToIRKList kl database of None \<Rightarrow> None
+       | Some kl' \<Rightarrow> 
+         (if isFunctionItem l database then (case getSort l database of None \<Rightarrow> None
+           | Some t \<Rightarrow> if t = KLabel then Some (KLabelFunPat l kl')
+                else if t = K then Some (KFunPat l kl')
+                   else if t = List then Some (ListFunPat l kl')
+                  else if t = Set then Some (SetFunPat l kl')
+                 else if t = Map then Some (MapFunPat l kl')
+                   else Some (KItemFunPat l kl'))
+          else (case l of SetItemLabel \<Rightarrow> 
+             (case kl' of (KListPatNoVar [(IRBigBag (IRK kx))])
+                          \<Rightarrow> Some (NormalPat ( SetMatching (SetPat [kx] None))) | _ \<Rightarrow> None)
+             | ListItemLabel \<Rightarrow> (case kl' of (KListPatNoVar [(IRBigBag (IRK kx))])
+                          \<Rightarrow> Some (NormalPat (ListMatching (ListPatNoVar [kx]))) | _ \<Rightarrow> None)
+             | MapItemLabel \<Rightarrow> (case kl' of (KListPatNoVar [(IRBigBag (IRK kx)),(IRBigBag (IRK ky))])
+                          \<Rightarrow> Some (NormalPat (MapMatching (MapPat [(kx, ky)] None))) | _ \<Rightarrow> None)
+             | SetConLabel \<Rightarrow> (case kl' of (KListPatNoVar newkl)
+                  \<Rightarrow> (case flattenSet newkl of None \<Rightarrow> None
+                       | Some sl \<Rightarrow> (case restructSet sl of None \<Rightarrow> None
+                           | Some sl' \<Rightarrow> Some (NormalPat (SetMatching sl')))) | _ \<Rightarrow> None)
+             | MapConLabel \<Rightarrow> (case kl' of (KListPatNoVar newkl)
+                  \<Rightarrow> (case flattenMap newkl of None \<Rightarrow> None
+                       | Some sl \<Rightarrow> (case restructMap sl of None \<Rightarrow> None
+                           | Some sl' \<Rightarrow> Some (NormalPat (MapMatching sl')))) | _ \<Rightarrow> None)
+             | ListConLabel \<Rightarrow> (case kl' of (KListPatNoVar newkl)
+                  \<Rightarrow> (case flattenList newkl of None \<Rightarrow> None
+                       | Some sl \<Rightarrow> (case restructList sl of None \<Rightarrow> None
+                           | Some sl' \<Rightarrow> Some (NormalPat (ListMatching sl')))) | _ \<Rightarrow> None)
+            | _ \<Rightarrow> (case getSort l database of None \<Rightarrow> None
+                 | Some t \<Rightarrow> Some (NormalPat (KItemMatching (IRKItem (IRKLabel l) kl' [t])))))))"
+| "simpleKToIRKList [] database = Some (KListPatNoVar [])"
+| "simpleKToIRKList (x#xl) database = (case (simpleKToIRKList xl database) of None \<Rightarrow> None
+          | Some (KListPatNoVar xl') \<Rightarrow> 
+          (case simpleKToIR x database of None \<Rightarrow> None
+              | Some (NormalPat (KListMatching (KListPatNoVar sl))) \<Rightarrow> Some (KListPatNoVar (sl@xl'))
+            | Some (NormalPat (KListMatching (KListPat sl v sl'))) \<Rightarrow> Some (KListPat sl v (sl'@xl'))
+           | Some (NormalPat (KLabelMatching x')) \<Rightarrow> Some (KListPatNoVar ((IRBigLabel x')#xl'))
+           | Some (NormalPat (KMatching x')) \<Rightarrow> Some (KListPatNoVar ((IRBigBag (IRK x'))#xl'))
+           | Some (NormalPat (ListMatching x')) \<Rightarrow> Some (KListPatNoVar ((IRBigBag (IRList x'))#xl'))
+           | Some (NormalPat (SetMatching x')) \<Rightarrow> Some (KListPatNoVar ((IRBigBag (IRSet x'))#xl'))
+           | Some (NormalPat (MapMatching x')) \<Rightarrow> Some (KListPatNoVar ((IRBigBag (IRMap x'))#xl'))
+           | Some (NormalPat (BagMatching x')) \<Rightarrow> Some (KListPatNoVar ((IRBigBag (IRBag x'))#xl'))
+           | Some (NormalPat (KItemMatching x')) \<Rightarrow> Some (KListPatNoVar ((IRBigBag (IRK (KPat [x'] None)))#xl'))
+           | _ \<Rightarrow> None)
+      | Some (KListPat xl1 u xl2) \<Rightarrow> (case simpleKToIR x database of None \<Rightarrow> None
+              | Some (NormalPat (KListMatching (KListPatNoVar sl))) \<Rightarrow> Some (KListPat (sl@xl1) u xl2)
+           | Some (NormalPat (KLabelMatching x')) \<Rightarrow> Some (KListPat ((IRBigLabel x')#xl1) u xl2)
+           | Some (NormalPat (KMatching x')) \<Rightarrow> Some (KListPat ((IRBigBag (IRK x'))#xl1) u xl2)
+           | Some (NormalPat (ListMatching x')) \<Rightarrow> Some (KListPat ((IRBigBag (IRList x'))#xl1) u xl2)
+           | Some (NormalPat (SetMatching x')) \<Rightarrow> Some (KListPat ((IRBigBag (IRSet x'))#xl1) u xl2)
+           | Some (NormalPat (MapMatching x')) \<Rightarrow> Some (KListPat ((IRBigBag (IRMap x'))#xl1) u xl2)
+           | Some (NormalPat (BagMatching x')) \<Rightarrow> Some (KListPat ((IRBigBag (IRBag x'))#xl1) u xl2)
+           | Some (NormalPat (KItemMatching x')) \<Rightarrow> Some (KListPat ((IRBigBag (IRK (KPat [x'] None)))#xl1) u xl2)
+           | _ \<Rightarrow> None))"
+
+primrec flattenSUSet where
+"flattenSUSet [] = Some []"
+| "flattenSUSet (x#xl) = (case (flattenSUSet xl) of None \<Rightarrow> None
+             | Some xl' \<Rightarrow> (case x of ItemKl (SUBigBag (SUSet sl)) \<Rightarrow>  Some (sl@xl')
+                    | _ \<Rightarrow> None))"
+
+primrec flattenSUMap where
+"flattenSUMap [] = Some []"
+| "flattenSUMap (x#xl) = (case (flattenSUMap xl) of None \<Rightarrow> None
+             | Some xl' \<Rightarrow> (case x of ItemKl (SUBigBag (SUMap sl)) \<Rightarrow>  Some (sl@xl')
+                    | _ \<Rightarrow> None))"
+
+primrec flattenSUList where
+"flattenSUList [] = Some []"
+| "flattenSUList (x#xl) = (case (flattenSUList xl) of None \<Rightarrow> None
+             | Some xl' \<Rightarrow> (case x of ItemKl (SUBigBag (SUList sl)) \<Rightarrow>  Some (sl@xl')
+                    | _ \<Rightarrow> None))"
+
+fun simpleKToSU and simpleKToSUKList where 
+"simpleKToSU (SimId x y) database =
+   (case y of KLabel \<Rightarrow> Some (KLabelSubs (SUIdKLabel x))
+      | KList \<Rightarrow> Some (KListSubs [(IdKl x)])
+      | K \<Rightarrow> Some (KSubs [IdFactor x])
+      | List \<Rightarrow> Some (ListSubs [IdL x])
+      | Set \<Rightarrow> Some (SetSubs [IdS x])
+      | Map \<Rightarrow> Some (MapSubs [IdM x])
+      | Bag \<Rightarrow> Some (BagSubs [IdB x])
+      | _ \<Rightarrow> Some (KItemSubs (SUIdKItem x [y])))"
+| "simpleKToSU (SimEmpty y) database =
+     (case y of KList \<Rightarrow> Some (KListSubs [])
+      | K \<Rightarrow> Some (KSubs [])
+      | List \<Rightarrow> Some (ListSubs [])
+      | Set \<Rightarrow> Some (SetSubs [])
+      | Map \<Rightarrow> Some (MapSubs [])
+      | Bag \<Rightarrow> Some (BagSubs [])
+      | _ \<Rightarrow> Some (KItemSubs (SUKItem (SUKLabel (UnitLabel y)) [] [y])))"
+| "simpleKToSU (SimLabel l) database = Some (KLabelSubs (SUKLabel l))"
+| "simpleKToSU (SimBag x y b) database = (case simpleKToSU b database of
+       Some (KItemSubs s) \<Rightarrow> Some
+                  (BagSubs [(ItemB x y (SUK [ItemFactor s]))])
+    | Some (KSubs s) \<Rightarrow> Some
+                  (BagSubs [(ItemB x y (SUK s))])
+    | Some (ListSubs s) \<Rightarrow> Some
+                  (BagSubs [(ItemB x y (SUList s))])
+    | Some (SetSubs s) \<Rightarrow> Some
+                  (BagSubs [(ItemB x y (SUSet s))])
+    | Some (MapSubs s) \<Rightarrow> Some
+                  (BagSubs [(ItemB x y (SUMap s))])
+    | Some (BagSubs s) \<Rightarrow> Some
+                  (BagSubs [(ItemB x y (SUBag s))])
+    | _ \<Rightarrow> None)"
+| "simpleKToSU (SimBagCon l r) database = (case simpleKToSU l database of
+      Some (BagSubs l') \<Rightarrow> 
+       (case simpleKToSU r database of
+          Some (BagSubs r') \<Rightarrow> Some (BagSubs (l'@r')) | _ \<Rightarrow> None) | _ \<Rightarrow> None)"
+| "simpleKToSU (SimTerm l kl) database =
+    (case simpleKToSUKList kl database of None \<Rightarrow> None
+       | Some kl' \<Rightarrow> 
+         (if isFunctionItem l database then (case getSort l database of None \<Rightarrow> None
+           | Some t \<Rightarrow> if t = KLabel then Some (KLabelSubs (SUKLabelFun (SUKLabel l) kl'))
+                else if t = K then Some (KSubs [SUKKItem (SUKLabel l) kl' [K]])
+                   else if t = List then Some (ListSubs [SUListKItem (SUKLabel l) kl'])
+                  else if t = Set then Some (SetSubs [SUSetKItem (SUKLabel l) kl'])
+                 else if t = Map then Some (MapSubs [SUMapKItem (SUKLabel l) kl'])
+                   else Some (KItemSubs (SUKItem (SUKLabel l) kl' [t])))
+          else (case l of SetItemLabel \<Rightarrow> 
+             (case kl' of [ItemKl (SUBigBag (SUK kx))]
+                          \<Rightarrow> Some (SetSubs [ItemS kx]) | _ \<Rightarrow> None)
+             | ListItemLabel \<Rightarrow> (case kl' of [ItemKl (SUBigBag (SUK kx))]
+                          \<Rightarrow> Some (ListSubs [ItemL kx]) | _ \<Rightarrow> None)
+             | MapItemLabel \<Rightarrow> (case kl' of [ItemKl (SUBigBag (SUK kx)), ItemKl (SUBigBag (SUK ky))]
+                          \<Rightarrow> Some (MapSubs [ItemM kx ky]) | _ \<Rightarrow> None)
+             | SetConLabel \<Rightarrow> (case flattenSUSet kl' of Some newkl \<Rightarrow> Some (SetSubs newkl) | _ \<Rightarrow> None)
+             | MapConLabel \<Rightarrow> (case flattenSUMap kl' of Some newkl \<Rightarrow> Some (MapSubs newkl) | _ \<Rightarrow> None)
+             | ListConLabel \<Rightarrow>(case flattenSUList kl' of Some newkl \<Rightarrow> Some (ListSubs newkl) | _ \<Rightarrow> None)
+            | _ \<Rightarrow> (case getSort l database of None \<Rightarrow> None
+                 | Some t \<Rightarrow> Some (KItemSubs (SUKItem (SUKLabel l) kl' [t]))))))"
+| "simpleKToSUKList [] database = Some []"
+| "simpleKToSUKList (x#xl) database = (case (simpleKToSUKList xl database) of None \<Rightarrow> None
+          | Some xl' \<Rightarrow> 
+          (case simpleKToSU x database of None \<Rightarrow> None
+              | Some (KListSubs sl) \<Rightarrow> Some sl
+           | Some (KLabelSubs x') \<Rightarrow> Some [ItemKl (SUBigLabel x')]
+           | Some (KSubs x') \<Rightarrow> Some [ItemKl (SUBigBag (SUK x'))]
+           | Some (ListSubs x') \<Rightarrow> Some [ItemKl (SUBigBag (SUList x'))]
+           | Some (SetSubs x') \<Rightarrow> Some [ItemKl (SUBigBag (SUSet x'))]
+           | Some (MapSubs x') \<Rightarrow> Some [ItemKl (SUBigBag (SUMap x'))]
+           | Some (BagSubs x') \<Rightarrow> Some [ItemKl (SUBigBag (SUBag x'))]
+           | Some (KItemSubs x') \<Rightarrow> Some [ItemKl (SUBigBag (SUK [ItemFactor x']))]))"
+
+
+function checkTermsInSUKLabel
+    and checkTermsInSUKItem
+    and checkTermsInSUKListAux
+    and checkTermsInNoneSUKList
+    and checkTermsInSUKList
+    and checkTermsInSUK
+    and checkTermsInSUList
+    and checkTermsInSUSet
+    and checkTermsInSUMap
+    and checkTermsInSUBigKWithBag
+    and checkTermsInSUBigKWithLabel
+    and checkTermsInSUBag where 
+  "checkTermsInSUKLabel (SUKLabel a) acc beta database subG = Some (acc,beta, SUKLabel a)"
+| "checkTermsInSUKLabel (SUKLabelFun a b) acc beta database subG = (case getSUKLabelMeaning a of 
+       None \<Rightarrow> (case checkTermsInSUKLabel a acc beta database subG of None \<Rightarrow> None
+          | Some (acc',beta', a') \<Rightarrow>
+        (case checkTermsInNoneSUKList b acc' beta' database subG of None \<Rightarrow> None
+           | Some (acca,betaa, b') \<Rightarrow>
+          (case getIdInSUKLabel a' of None \<Rightarrow> Some (acca,betaa,SUKLabelFun a' b')
+        | Some x \<Rightarrow> (case updateMap x [KLabel] betaa subG of None \<Rightarrow> None
+          | Some betab \<Rightarrow> Some (acca,betab, SUKLabelFun a' b')))))
+    | Some s \<Rightarrow> (if isFunctionItem s database then 
+     (case getArgSort s database of None \<Rightarrow> None
+      | Some l \<Rightarrow> (case getSort s database of None \<Rightarrow> None
+             | Some ty \<Rightarrow> if subsortList ty [KLabel] subG then
+           (case checkTermsInSUKList b l acc beta database subG of None \<Rightarrow> None
+           | Some (acc',beta', b') \<Rightarrow> Some (acc', beta', SUKLabelFun a b')) else None)) else None))"
+| "checkTermsInSUKLabel (SUIdKLabel n) acc beta database subG =
+   (case updateMap n [KLabel] acc subG of None \<Rightarrow> None
+      | Some acc' \<Rightarrow> Some (acc', beta, SUIdKLabel n))"
+| "checkTermsInSUKItem (SUKItem l r ty) maxTy acc beta database subG = 
+   (if subsortList maxTy [K] subG \<and> subsortList ty [K] subG then
+      (case getSUKLabelMeaning l of None \<Rightarrow> 
+         (case checkTermsInSUKLabel l acc beta database subG of None \<Rightarrow> None
+             | Some (acc', beta', l') \<Rightarrow>
+           (case checkTermsInNoneSUKList r acc' beta' database subG of None \<Rightarrow> None
+             | Some (acca, betaa, r') \<Rightarrow>
+        (case meet ty maxTy subG of [] \<Rightarrow> None
+            | (tya#tyl) \<Rightarrow> (case getIdInSUKLabel l' of None \<Rightarrow> 
+                 Some (acca,betaa, SUKItem l' r' (tya#tyl))
+          | Some newId \<Rightarrow>
+          (case updateBeta newId (tya#tyl) acca subG of None \<Rightarrow> None
+          | Some betab \<Rightarrow> Some (acca,betab, SUKItem l' r' (tya#tyl)))))))
+         | Some s \<Rightarrow> (case getSort s database of None \<Rightarrow> None
+           | Some theTy \<Rightarrow>
+        (case getArgSort s database of None \<Rightarrow> None | Some tyl \<Rightarrow>
+         (case checkTermsInSUKList r tyl acc beta database subG of None \<Rightarrow> None
+          | Some (acc', beta', r') \<Rightarrow>
+      (if isFunctionItem s database then
+       (case meet theTy (meet ty maxTy subG) subG of [] \<Rightarrow> None
+          | tya \<Rightarrow> Some (acc',beta', SUKItem l r' tya))
+       else if subsortList theTy ty subG \<and> subsortList theTy maxTy subG then
+            Some (acc',beta', SUKItem l r' theTy) else None))))) else None)"
+| "checkTermsInSUKItem (SUIdKItem a b) maxTy acc beta database subG =
+    (case meet b maxTy subG of [] \<Rightarrow> None
+        | ty' \<Rightarrow> (case updateMap a ty' acc subG of None \<Rightarrow> None
+         | Some acc' \<Rightarrow> Some (acc',beta, SUIdKItem a ty')))"
+| "checkTermsInSUKItem (SUHOLE a) maxTy acc beta database subG =
+    (case meet a maxTy subG of [] \<Rightarrow> None
+      | ty' \<Rightarrow> Some (acc,beta,  SUHOLE ty'))"
+| "checkTermsInNoneSUKList [] acc beta database subG = Some (acc, beta, [])"
+| "checkTermsInNoneSUKList (x#l) acc beta database subG = (case x of IdKl a
+      \<Rightarrow> (case updateMap a [KList] acc subG of None \<Rightarrow> None
+           | Some acc' \<Rightarrow> (case checkTermsInNoneSUKList l acc' beta database subG of None \<Rightarrow> None
+         | Some (acca, betaa, l') \<Rightarrow> Some (acca, betaa, (IdKl a)#l')))
+    | ItemKl a \<Rightarrow> (case checkTermsInSUBigKWithLabel a None acc beta database subG of None \<Rightarrow> None
+      | Some (acc', beta', a') \<Rightarrow> (case checkTermsInNoneSUKList l acc beta database subG
+          of None \<Rightarrow> None | Some (acca, betaa, l') \<Rightarrow> Some (acca, betaa, (ItemKl a')#l'))))"
+| "checkTermsInSUKListAux [] tyl acc beta database subG = Some (acc,beta, [], [])"
+| "checkTermsInSUKListAux (b#l) tyl acc beta database subG =
+     (case b of IdKl x \<Rightarrow>
+      (case updateMap x [KList] acc subG of None \<Rightarrow> None
+         | Some acc' \<Rightarrow> Some (acc',beta, [] , b#l))
+    | ItemKl x \<Rightarrow> (case tyl of [] \<Rightarrow> None
+         | (ty#tyl') \<Rightarrow>
+      (case checkTermsInSUBigKWithLabel x (Some ty) acc beta database subG of None \<Rightarrow> None
+         | Some (acc',beta', x') \<Rightarrow>
+        (case checkTermsInSUKListAux l tyl' acc' beta' database subG of None \<Rightarrow> None
+          | Some (acca, betaa, l', la) \<Rightarrow> Some (acca, betaa, ((ItemKl x')#l', la))))))"
+| "checkTermsInSUKList l tyl acc beta database subG =
+     (if numberOfItemsInKList l > length tyl then None
+         else (if hasIdInKList l then
+       (case checkTermsInSUKListAux l tyl acc beta database subG of None \<Rightarrow> None
+           | Some (acc', beta', la, lb) \<Rightarrow> 
+         (case checkTermsInSUKListAux (rev lb) (rev tyl) acc' beta' database subG of None \<Rightarrow> None
+             | Some (acca, betaa, la', lb') \<Rightarrow>
+      (if lb' = [] then Some (acca, betaa, la@(rev la'))
+         else (case checkTermsInNoneSUKList (rev lb') acca betaa database subG of None \<Rightarrow> None
+             | Some (accb, betab, lbb) \<Rightarrow> Some (accb, betab, la@lbb@(rev la'))))))
+       else if numberOfItemsInKList l = length tyl
+            then (case checkTermsInSUKListAux l tyl acc beta database subG
+         of Some (acca,betaa, la, []) 
+                 \<Rightarrow> Some (acca,betaa, la) | _ \<Rightarrow> None) else None))"
+| "checkTermsInSUBigKWithLabel (SUBigBag a) ty acc beta database subG =
+     (case checkTermsInSUBigKWithBag a ty acc beta database subG of None \<Rightarrow> None
+         | Some (acc',beta', a') \<Rightarrow> Some (acc',beta', SUBigBag a'))"
+| "checkTermsInSUBigKWithLabel (SUBigLabel a) ty acc beta database subG = (case ty of None \<Rightarrow> 
+   (case checkTermsInSUKLabel a acc beta database subG of None \<Rightarrow> None
+         | Some (acc',beta', a') \<Rightarrow> Some (acc',beta', SUBigLabel a'))
+    | Some ty' \<Rightarrow> if ty' = [KLabel] then
+        (case checkTermsInSUKLabel a acc beta database subG of None \<Rightarrow> None
+         | Some (acc',beta', a') \<Rightarrow> Some (acc',beta', SUBigLabel a')) else None)"
+| "checkTermsInSUBigKWithBag (SUK a) ty acc beta database subG = (case ty of None
+    \<Rightarrow> (case checkTermsInSUK a [K] acc beta database subG of None \<Rightarrow> None
+                   | Some (acc',beta', a') \<Rightarrow> Some (acc',beta', SUK a'))
+              | Some ty' \<Rightarrow> (if subsortList ty' [K] subG then 
+          (case checkTermsInSUK a [K] acc beta database subG of None \<Rightarrow> None
+                   | Some (acc',beta', a') \<Rightarrow> Some (acc',beta', SUK a')) else None))"
+| "checkTermsInSUBigKWithBag (SUList a) ty acc beta database subG = (case ty of None
+    \<Rightarrow> (case checkTermsInSUList a acc beta database subG of None \<Rightarrow> None
+                   | Some (acc',beta', a') \<Rightarrow> Some (acc',beta', SUList a'))
+              | Some ty' \<Rightarrow> (if ty' = [List] then 
+          (case checkTermsInSUList a acc beta database subG of None \<Rightarrow> None
+                   | Some (acc',beta', a') \<Rightarrow> Some (acc',beta', SUList a')) else None))"
+| "checkTermsInSUBigKWithBag (SUSet a) ty acc beta database subG = (case ty of None
+    \<Rightarrow> (case checkTermsInSUSet a acc beta database subG of None \<Rightarrow> None
+                   | Some (acc',beta', a') \<Rightarrow> Some (acc',beta', SUSet a'))
+              | Some ty' \<Rightarrow> (if ty' = [Set] then 
+          (case checkTermsInSUSet a acc beta database subG of None \<Rightarrow> None
+                   | Some (acc',beta', a') \<Rightarrow> Some (acc',beta', SUSet a')) else None))"
+| "checkTermsInSUBigKWithBag (SUMap a) ty acc beta database subG = (case ty of None
+    \<Rightarrow> (case checkTermsInSUMap a acc beta database subG of None \<Rightarrow> None
+                   | Some (acc',beta', a') \<Rightarrow> Some (acc',beta', SUMap a'))
+              | Some ty' \<Rightarrow> (if ty' = [Map] then 
+          (case checkTermsInSUMap a acc beta database subG of None \<Rightarrow> None
+                   | Some (acc',beta', a') \<Rightarrow> Some (acc',beta', SUMap a')) else None))"
+| "checkTermsInSUBigKWithBag (SUBag a) ty acc beta database subG = (case ty of None
+    \<Rightarrow> (case checkTermsInSUBag a acc beta database subG of None \<Rightarrow> None
+                   | Some (acc',beta', a') \<Rightarrow> Some (acc',beta', SUBag a'))
+              | Some ty' \<Rightarrow> (if ty' = [Bag] then 
+          (case checkTermsInSUBag a acc beta database subG of None \<Rightarrow> None
+                   | Some (acc',beta', a') \<Rightarrow> Some (acc',beta', SUBag a')) else None))"
+| "checkTermsInSUK l ty acc beta database subG = (if ty = [K] then 
+       (case l of [] \<Rightarrow> Some (acc,beta,[])
+          | ((ItemFactor x)#xl) \<Rightarrow>
+              (case checkTermsInSUKItem x [K] acc beta database subG of None \<Rightarrow> None
+                | Some (acc',beta',x') \<Rightarrow>
+        (case checkTermsInSUK xl ty acc' beta' database subG of None \<Rightarrow> None
+           | Some (acca,betaa, xl') \<Rightarrow> Some (acca,betaa, (ItemFactor x')#xl')))
+         | ((IdFactor x)#xl) \<Rightarrow>
+         (case updateMap x [K] acc subG of None \<Rightarrow> None
+          | Some acc' \<Rightarrow> (case checkTermsInSUK xl ty acc' beta database subG of
+   None \<Rightarrow> None | Some (acca,betaa, xl') \<Rightarrow> Some (acca,betaa, (IdFactor x)#xl')))
+         | ((SUKKItem a b ty')#xl) \<Rightarrow>
+         (if subsortList ty' [K] subG then
+            (case getSUKLabelMeaning a of None \<Rightarrow>
+               (case checkTermsInSUKLabel a acc beta database subG of None \<Rightarrow> None
+                  | Some (acc',beta', a') \<Rightarrow>
+                (case checkTermsInNoneSUKList b acc' beta' database subG of None \<Rightarrow> None
+                   | Some (acca,betaa, b') \<Rightarrow>
+                  (case checkTermsInSUK xl ty acca betaa database subG of None \<Rightarrow> None
+                     | Some (accb,betab, xl') \<Rightarrow> Some (accb,betab,(SUKKItem a' b' ty')#xl'))))
+             | Some s \<Rightarrow> if isFunctionItem s database then
+         (case (getSort s database, getArgSort s database) of (Some tya, Some tyl)
+      \<Rightarrow> (case meet ty' tya subG of [] \<Rightarrow> None
+             |  tyb \<Rightarrow>
+               (case checkTermsInSUKList b tyl acc beta database subG of None \<Rightarrow> None
+                | Some (acc',beta', b') \<Rightarrow>
+               (case checkTermsInSUK xl ty acc' beta' database subG of None \<Rightarrow> None
+                  | Some (acca,betaa, xl') \<Rightarrow> Some (acca,betaa, (SUKKItem a b' tyb)#xl'))))
+              | _ \<Rightarrow> None) else None) else None))
+           else if subsortList ty [KItem] subG then
+          (case l of [u] \<Rightarrow> (case u of (IdFactor a) \<Rightarrow>
+            (case updateMap a ty acc subG of None \<Rightarrow> None
+               | Some acc' \<Rightarrow> Some (acc',beta, [ItemFactor (SUIdKItem a ty)]))
+             | ItemFactor a \<Rightarrow> (case checkTermsInSUKItem a ty acc beta database subG
+              of None \<Rightarrow> None
+               | Some (acc',beta', a') \<Rightarrow> Some (acc',beta', [ItemFactor a']))
+             | SUKKItem a b ty' \<Rightarrow> if subsortList ty' [K] subG then
+                 (case getSUKLabelMeaning a of None \<Rightarrow>
+                (case checkTermsInSUKLabel a acc beta database subG of None \<Rightarrow> None
+                  | Some (acc',beta', a') \<Rightarrow>
+                  (case checkTermsInNoneSUKList b acc' beta' database subG of None \<Rightarrow> None
+                    | Some (acca,betaa, b') \<Rightarrow>
+                (case meet ty ty' subG of [] \<Rightarrow> None | tya \<Rightarrow>
+                  Some (acca,betaa,[SUKKItem a' b' tya]))))
+                  | Some s \<Rightarrow> if isFunctionItem s database
+                 then (case (getSort s database, getArgSort s database)
+                     of (Some theTy, Some tyl) \<Rightarrow>
+       (case checkTermsInSUKList b tyl acc beta database subG of None \<Rightarrow> None
+           | Some (acc',beta', b') \<Rightarrow>
+    (case meet ty (meet ty' theTy subG) subG of [] \<Rightarrow> None
+         | tya \<Rightarrow> Some (acc', beta', [SUKKItem a b' tya])))) else None)
+           else None)) else None)"
+| "checkTermsInSUList [] acc beta database subG = Some (acc,beta,[])"
+| "checkTermsInSUList (b#l) acc beta database subG = (case b of ItemL x \<Rightarrow>
+             (case checkTermsInSUK x [K] acc beta database subG of None \<Rightarrow> None
+                | Some (acc',beta', x') \<Rightarrow>
+         (case checkTermsInSUList l acc' beta' database subG of None \<Rightarrow> None
+            | Some (acca,betaa, l') \<Rightarrow> Some (acca,betaa, (ItemL x')#l')))
+         | IdL x \<Rightarrow> (case updateMap x [List] acc subG of None \<Rightarrow> None
+            | Some acc' \<Rightarrow> (case checkTermsInSUList l acc' beta database subG of
+            None \<Rightarrow> None | Some (acca,betaa, l') \<Rightarrow> Some (acca,betaa, (IdL x)#l')))
+        | SUListKItem x y \<Rightarrow> (case getSUKLabelMeaning x of None \<Rightarrow> 
+           (case checkTermsInSUKLabel x acc beta database subG of None \<Rightarrow> None
+             | Some (acc',beta', x') \<Rightarrow>
+              (case checkTermsInNoneSUKList y acc' beta' database subG of None \<Rightarrow> None
+                 | Some (acca, betaa, y') \<Rightarrow>
+               (case checkTermsInSUList l acca betaa database subG of None \<Rightarrow> None
+            | Some (accb,betab, l') \<Rightarrow> (case getIdInSUKLabel x' of None \<Rightarrow> 
+                   Some (accb,betab,(SUListKItem x' y')#l')
+          | Some xx \<Rightarrow> (case updateMap xx [List] betab subG of None \<Rightarrow> None
+            | Some betac \<Rightarrow> Some (accb,betac, (SUListKItem x' y')#l'))))))
+           | Some s \<Rightarrow> if isFunctionItem s database
+            then (case (getSort s database, getArgSort s database) of
+             (Some ty, Some tyl) \<Rightarrow> if ty = [List] then 
+                 (case checkTermsInSUKList y tyl acc beta database subG of None \<Rightarrow> None
+                 | Some (acc',beta', y') \<Rightarrow>
+               (case checkTermsInSUList l acc' beta' database subG of None \<Rightarrow> None
+            | Some (acca,betaa, l') \<Rightarrow> Some (acca,betaa, (SUListKItem x y')#l')))
+              else None | _ \<Rightarrow> None) else None))"
+| "checkTermsInSUSet [] acc beta database subG = Some (acc,beta, [])"
+| "checkTermsInSUSet (b#l) acc beta database subG = (case b of ItemS x \<Rightarrow>
+             (case checkTermsInSUK x [K] acc beta database subG of None \<Rightarrow> None
+                | Some (acc',beta', x') \<Rightarrow>
+         (case checkTermsInSUSet l acc' beta' database subG of None \<Rightarrow> None
+            | Some (acca,betaa, l') \<Rightarrow> Some (acca,betaa, (ItemS x')#l')))
+         | IdS x \<Rightarrow> (case updateMap x [Set] acc subG of None \<Rightarrow> None
+            | Some acc' \<Rightarrow> (case checkTermsInSUSet l acc' beta database subG of None \<Rightarrow> None
+            | Some (acca, betaa, l') \<Rightarrow> Some (acca,betaa, (IdS x)#l')))
+        | SUSetKItem x y \<Rightarrow> (case getSUKLabelMeaning x of None \<Rightarrow> 
+           (case checkTermsInSUKLabel x acc beta database subG of None \<Rightarrow> None
+             | Some (acc',beta', x') \<Rightarrow>
+              (case checkTermsInNoneSUKList y acc' beta' database subG of None \<Rightarrow> None
+                 | Some (acca,betaa, y') \<Rightarrow>
+               (case checkTermsInSUSet l acca betaa database subG of None \<Rightarrow> None
+            | Some (accb, betab, l') \<Rightarrow> (case getIdInSUKLabel x' of None 
+               \<Rightarrow> Some (accb,betab,(SUSetKItem x' y')#l') | Some xx \<Rightarrow>
+          (case updateMap xx [Set] betab subG of None \<Rightarrow> None
+            | Some betac \<Rightarrow> Some (accb,betac,(SUSetKItem x' y')#l'))))))
+           | Some s \<Rightarrow> if isFunctionItem s database then
+            (case (getSort s database, getArgSort s database) of
+             (Some ty, Some tyl) \<Rightarrow> if subsortList ty [Set] subG then 
+                 (case checkTermsInSUKList y tyl acc beta database subG of None \<Rightarrow> None
+                 | Some (acc',beta', y') \<Rightarrow>
+               (case checkTermsInSUSet l acc' beta' database subG of None \<Rightarrow> None
+            | Some (acca,betaa, l') \<Rightarrow> Some (acca,betaa, (SUSetKItem x y')#l')))
+              else None | _ \<Rightarrow> None) else None))"
+| "checkTermsInSUMap [] acc beta database subG = Some (acc,beta, [])"
+| "checkTermsInSUMap (b#l) acc beta database subG = (case b of ItemM x y \<Rightarrow>
+             (case checkTermsInSUK x [K] acc beta database subG of None \<Rightarrow> None
+                | Some (acc',beta', x') \<Rightarrow>
+               (case checkTermsInSUK y [K] acc' beta' database subG of None \<Rightarrow> None
+                   | Some (acca,betaa, y') \<Rightarrow>
+         (case checkTermsInSUMap l acca betaa database subG of None \<Rightarrow> None
+            | Some (accb,betab, l') \<Rightarrow> Some (accb, betab, (ItemM x' y')#l'))))
+         | IdM x \<Rightarrow> (case updateMap x [Map] acc subG of None \<Rightarrow> None
+            | Some acc' \<Rightarrow> (case checkTermsInSUMap l acc' beta database subG of None \<Rightarrow> None
+            | Some (acca,betaa, l') \<Rightarrow> Some (acca, betaa, (IdM x)#l')))
+        | SUMapKItem x y \<Rightarrow> (case getSUKLabelMeaning x of None \<Rightarrow> 
+           (case checkTermsInSUKLabel x acc beta database subG of None \<Rightarrow> None
+             | Some (acc',beta', x') \<Rightarrow>
+              (case checkTermsInNoneSUKList y acc' beta' database subG of None \<Rightarrow> None
+                 | Some (acca,betaa, y') \<Rightarrow>
+               (case checkTermsInSUMap l acca betaa database subG of None \<Rightarrow> None
+            | Some (accb, betab, l') \<Rightarrow> (case getIdInSUKLabel x' of None \<Rightarrow>
+                   Some (accb, betab, (SUMapKItem x' y')#l')
+            | Some xx \<Rightarrow> (case updateMap xx [Map] betab subG of None \<Rightarrow> None
+            | Some betac \<Rightarrow> Some (accb, betac, (SUMapKItem x' y')#l'))))))
+           | Some s \<Rightarrow> if isFunctionItem s database then
+          (case (getSort s database, getArgSort s database) of
+             (Some ty, Some tyl) \<Rightarrow> if subsortList ty [Map] subG then 
+                 (case checkTermsInSUKList y tyl acc beta database subG of None \<Rightarrow> None
+                 | Some (acc', beta', y') \<Rightarrow>
+               (case checkTermsInSUMap l acc' beta' database subG of None \<Rightarrow> None
+            | Some (acca,betaa, l') \<Rightarrow> Some (acca,betaa, (SUMapKItem x y')#l')))
+              else None | _ \<Rightarrow> None) else None))"
+| "checkTermsInSUBag [] acc beta database subG = Some (acc,beta, [])"
+| "checkTermsInSUBag (b#l) acc beta database subG = (case b of ItemB x y z \<Rightarrow>
+             (case checkTermsInSUBigKWithBag z None acc beta database subG of None \<Rightarrow> None
+                | Some (acc',beta', z') \<Rightarrow>
+         (case checkTermsInSUBag l acc' beta' database subG of None \<Rightarrow> None
+            | Some (acca,betaa, l') \<Rightarrow> Some (acca,betaa, (ItemB x y z')#l')))
+         | IdB x \<Rightarrow> (case updateMap x [Bag] acc subG of None \<Rightarrow> None
+   | Some acc' \<Rightarrow> (case checkTermsInSUBag l acc' beta database subG of None \<Rightarrow> None
+   | Some (acca,betaa, l') \<Rightarrow> Some (acca,betaa, (IdB x)#l'))))"
+by pat_completeness auto
+
+termination sorry
+
+(* merge duplicate copys of set and map 
+     and if there is a map being non-functional, return none *)
+(* check the syntatic congruence of two ir terms *)
+function syntacticMonoidInSUKLabel
+    and syntacticMonoidInSUKItem
+    and syntacticMonoidInSUKList
+    and syntacticMonoidInSUK
+    and syntacticMonoidInSUList
+    and syntacticMonoidInSUSet
+    and syntacticMonoidInSUMap
+    and syntacticMonoidInSUBigKWithBag
+    and syntacticMonoidInSUBigKWithLabel
+    and syntacticMonoidInSUBag
+    and syntacticMonoidInSUSubSet
+    and syntacticMonoidInSUMember
+    and syntacticMonoidInSUSubMap
+    and syntacticMonoidInSUMapMember
+    and syntacticMonoidInSUBagMember where
+ "syntacticMonoidInSUKLabel (SUKLabel a) S subG =
+   (case S of (SUKLabel a') \<Rightarrow>
+      (if a = a' then Some (SUKLabel a) else None)
+       | _ \<Rightarrow> None)"
+| "syntacticMonoidInSUKLabel (SUIdKLabel a) B subG = (case B of SUIdKLabel a' \<Rightarrow>
+                                  if a = a' then Some (SUIdKLabel a)
+                                  else None | _ \<Rightarrow> None)"
+| "syntacticMonoidInSUKLabel (SUKLabelFun a b) B subG = (case B of SUKLabelFun a' b' \<Rightarrow>
+     (case syntacticMonoidInSUKLabel a a' subG of None \<Rightarrow> None
+    | Some a1 \<Rightarrow> (case syntacticMonoidInSUKList b b' subG of None \<Rightarrow> None
+                 | Some ba \<Rightarrow> Some (SUKLabelFun a1 ba))) | _ \<Rightarrow> None)"
+| "syntacticMonoidInSUKItem (SUKItem l r ty) S subG = (case S of (SUKItem l' r' ty') \<Rightarrow>
+  (case (syntacticMonoidInSUKLabel l l' subG, syntacticMonoidInSUKList r r' subG) of (Some la, Some ra)
+       \<Rightarrow> (case meet ty ty' subG of [] \<Rightarrow> None
+       | (x#xl) \<Rightarrow> Some (SUKItem la ra (x#xl)))
+    | _ \<Rightarrow> None) | _ \<Rightarrow> None)"
+| "syntacticMonoidInSUKItem (SUHOLE a) S subG = (case S of (SUHOLE a') \<Rightarrow>
+     (case meet a a' subG of [] \<Rightarrow> None | (x#xl) \<Rightarrow>
+               Some (SUHOLE (x#xl))) | _ \<Rightarrow> None)"
+| "syntacticMonoidInSUKItem (SUIdKItem a b) B subG = (case B of SUIdKItem a' b' \<Rightarrow>
+         if (a = a') then (case meet b b' subG of [] \<Rightarrow> None
+         | (x#xl) \<Rightarrow> Some (SUIdKItem a (x#xl))) else None | _ \<Rightarrow> None)"
+| "syntacticMonoidInSUKList [] S subG = (case S of [] \<Rightarrow> Some [] | _ \<Rightarrow> None)"
+| "syntacticMonoidInSUKList (b#l) S subG = (case S of [] \<Rightarrow> None
+         | (b'#l') \<Rightarrow> (case (b,b') of (ItemKl bs, ItemKl bs') \<Rightarrow>
+         (case syntacticMonoidInSUBigKWithLabel bs bs' subG of None \<Rightarrow> None
+       | Some bsa \<Rightarrow> (case syntacticMonoidInSUKList l l' subG of None \<Rightarrow> None
+       | Some la \<Rightarrow> Some ((ItemKl bsa)#la)))
+         | (IdKl x, IdKl x') \<Rightarrow>  if x = x' then
+       (case syntacticMonoidInSUKList l l' subG of None \<Rightarrow> None
+           | Some la \<Rightarrow> Some ((IdKl x)#la)) else None | _ \<Rightarrow> None))"
+| "syntacticMonoidInSUBigKWithLabel (SUBigBag a) b subG =
+   (case b of (SUBigBag a') \<Rightarrow>
+   (case syntacticMonoidInSUBigKWithBag a a' subG of None \<Rightarrow> None
+      | Some aa \<Rightarrow> Some (SUBigBag aa)) | _ \<Rightarrow> None)"
+| "syntacticMonoidInSUBigKWithLabel (SUBigLabel a) b subG =
+   (case b of (SUBigLabel a') \<Rightarrow>
+   (case syntacticMonoidInSUKLabel a a' subG of None \<Rightarrow> None
+      | Some aa \<Rightarrow> Some (SUBigLabel aa)) | _ \<Rightarrow> None)"
+| "syntacticMonoidInSUBigKWithBag (SUK a) b subG =
+   (case b of (SUK a') \<Rightarrow>
+   (case syntacticMonoidInSUK a a' subG of None \<Rightarrow> None
+      | Some aa \<Rightarrow> Some (SUK aa)) | _ \<Rightarrow> None)"
+| "syntacticMonoidInSUBigKWithBag (SUList a) b subG =
+   (case b of (SUList a') \<Rightarrow>
+   (case syntacticMonoidInSUList a a' subG of None \<Rightarrow> None
+      | Some aa \<Rightarrow> Some (SUList aa)) | _ \<Rightarrow> None)"
+| "syntacticMonoidInSUBigKWithBag (SUSet a) b subG =
+   (case b of (SUSet a') \<Rightarrow>
+   (case syntacticMonoidInSUSet a a' a subG of None \<Rightarrow> None
+      | Some aa \<Rightarrow> Some (SUSet aa)) | _ \<Rightarrow> None)"
+| "syntacticMonoidInSUBigKWithBag (SUMap a) b subG =
+   (case b of (SUMap a') \<Rightarrow>
+   (case syntacticMonoidInSUMap a a' a subG of None \<Rightarrow> None
+      | Some aa \<Rightarrow> Some (SUMap aa)) | _ \<Rightarrow> None)"
+| "syntacticMonoidInSUBigKWithBag (SUBag a) b subG =
+   (case b of (SUBag a') \<Rightarrow>
+   (case syntacticMonoidInSUBag a a' subG of None \<Rightarrow> None
+      | Some aa \<Rightarrow> Some (SUBag aa)) | _ \<Rightarrow> None)"
+| "syntacticMonoidInSUK [] S subG = (case S of [] \<Rightarrow> Some [] | _ \<Rightarrow> None)"
+| "syntacticMonoidInSUK (b#l) S subG = (case S of (b'#l') \<Rightarrow>
+       (case (b,b') of (ItemFactor x, ItemFactor x') \<Rightarrow>
+          (case (syntacticMonoidInSUKItem x x' subG, syntacticMonoidInSUK l l' subG)
+           of (Some xa, Some la) \<Rightarrow> Some ((ItemFactor xa)#la) | _ \<Rightarrow> None)
+          | (IdFactor x, IdFactor x') \<Rightarrow> if x = x' then
+            (case (syntacticMonoidInSUK l l' subG) of None \<Rightarrow> None
+               | Some la \<Rightarrow> Some ((IdFactor x)#la)) else None
+          | (IdFactor x, ItemFactor (SUIdKItem x' ty)) \<Rightarrow> 
+             if x = x' then (case syntacticMonoidInSUK l l' subG of None \<Rightarrow> None
+                 | Some la \<Rightarrow> Some ((ItemFactor (SUIdKItem x' ty))#la)) else None
+          | (ItemFactor (SUIdKItem x ty), IdFactor x') \<Rightarrow> if x = x' then
+              (case syntacticMonoidInSUK l l' subG of None \<Rightarrow> None
+                 | Some la \<Rightarrow> Some ((ItemFactor (SUIdKItem x ty))#la)) else None
+   | (SUKKItem x y ty, SUKKItem x' y' ty')
+      \<Rightarrow> (case (syntacticMonoidInSUKLabel x x' subG,
+       syntacticMonoidInSUKList y y' subG, syntacticMonoidInSUK l l' subG) of 
+       (Some xa, Some ya, Some la) \<Rightarrow> (case meet ty ty' subG of [] \<Rightarrow> None
+          | (newTy#newTyl) \<Rightarrow> Some ((SUKKItem xa ya (newTy#newTyl))#la))
+        | _ \<Rightarrow> None) | _ \<Rightarrow> None) | _ \<Rightarrow> None)"
+| "syntacticMonoidInSUList [] S subG = (case S of [] \<Rightarrow> Some [] | _ \<Rightarrow> None)"
+| "syntacticMonoidInSUList (b#l) S subG = (case S of (b'#l') \<Rightarrow>
+       (case (b,b') of (ItemL x, ItemL x') \<Rightarrow>
+     (case (syntacticMonoidInSUK x x' subG, syntacticMonoidInSUList l l' subG)
+       of (Some xa, Some la) \<Rightarrow> Some ((ItemL xa)#la) | _ \<Rightarrow> None)
+      | (IdL x, IdL x') \<Rightarrow> if x = x' then
+     (case syntacticMonoidInSUList l l' subG of None \<Rightarrow> None
+        | Some la \<Rightarrow> Some ((IdL x)#la)) else None
+      | (SUListKItem x y, SUListKItem x' y') \<Rightarrow>
+     (case (syntacticMonoidInSUKLabel x x' subG, syntacticMonoidInSUKList y y' subG,
+       syntacticMonoidInSUList l l' subG) of (Some xa, Some ya, Some la) \<Rightarrow>
+           Some ((SUListKItem xa ya)#la) | _ \<Rightarrow> None)
+        | _ \<Rightarrow> None) | _ \<Rightarrow> None)"
+| "syntacticMonoidInSUMember b [] subG = None"
+| "syntacticMonoidInSUMember b (b'#l) subG = (case (b,b')
+   of (ItemS x, ItemS x') \<Rightarrow>
+   (case syntacticMonoidInSUK x' x subG of None \<Rightarrow> syntacticMonoidInSUMember b l subG
+      | Some xa \<Rightarrow> Some (ItemS xa))
+    | (IdS x, IdS x') \<Rightarrow> if x = x' then Some (IdS x) else syntacticMonoidInSUMember b l subG
+    | (SUSetKItem x y, SUSetKItem x' y') \<Rightarrow>
+     (case (syntacticMonoidInSUKLabel x' x subG, syntacticMonoidInSUKList y' y subG)
+      of (Some xa, Some ya) \<Rightarrow> Some (SUSetKItem xa ya)
+        | _ \<Rightarrow> syntacticMonoidInSUMember b l subG) | _ \<Rightarrow> None)"
+| "syntacticMonoidInSUSubSet [] T subG = Some []"
+| "syntacticMonoidInSUSubSet (b#l) T subG =
+      (case syntacticMonoidInSUMember b T subG of None \<Rightarrow> None
+      | Some b' \<Rightarrow> (case syntacticMonoidInSUSubSet l T subG of None \<Rightarrow> None
+      | Some l' \<Rightarrow> Some (b'#l')))"
+| "syntacticMonoidInSUSet [] S T subG = syntacticMonoidInSUSubSet S T subG"
+| "syntacticMonoidInSUSet (b#l) S T subG =
+    (case syntacticMonoidInSUMember b S subG of None \<Rightarrow> None
+      | Some b' \<Rightarrow> syntacticMonoidInSUSet l S T subG)"
+| "syntacticMonoidInSUMapMember b [] subG = None"
+| "syntacticMonoidInSUMapMember b (b'#l) subG = (case (b,b')
+   of (ItemM x y, ItemM x' y') \<Rightarrow>
+   (case syntacticMonoidInSUK x' x subG of None \<Rightarrow> syntacticMonoidInSUMapMember b l subG
+      | Some xa \<Rightarrow> (case syntacticMonoidInSUK y' y subG of None \<Rightarrow> None
+       | Some ya \<Rightarrow> Some (ItemM xa ya)))
+    | (IdM x, IdM x') \<Rightarrow> if x = x' then Some (IdM x)
+                 else syntacticMonoidInSUMapMember b l subG
+    | (SUMapKItem x y, SUMapKItem x' y') \<Rightarrow>
+     (case (syntacticMonoidInSUKLabel x' x subG, syntacticMonoidInSUKList y' y subG)
+      of (Some xa, Some ya) \<Rightarrow> Some (SUMapKItem xa ya)
+        | _ \<Rightarrow> syntacticMonoidInSUMapMember b l subG) | _ \<Rightarrow> None)"
+| "syntacticMonoidInSUSubMap [] T subG = Some []"
+| "syntacticMonoidInSUSubMap (b#l) T subG =
+      (case syntacticMonoidInSUMapMember b T subG of None \<Rightarrow> None
+      | Some b' \<Rightarrow> (case syntacticMonoidInSUSubMap l T subG of None \<Rightarrow> None
+      | Some l' \<Rightarrow> Some (b'#l')))"
+| "syntacticMonoidInSUMap [] S T subG = syntacticMonoidInSUSubMap S T subG"
+| "syntacticMonoidInSUMap (b#l) S T subG =
+    (case syntacticMonoidInSUMapMember b S subG of None \<Rightarrow> None
+      | Some b' \<Rightarrow> syntacticMonoidInSUMap l S T subG)"
+| "syntacticMonoidInSUBagMember b [] subG = None"
+| "syntacticMonoidInSUBagMember b (b'#l) subG = (case (b,b') of
+       (ItemB x y z,ItemB x' y' z') \<Rightarrow>
+     (if x = x' then (case syntacticMonoidInSUBigKWithBag z' z subG of None \<Rightarrow> None
+        | Some za \<Rightarrow> Some (ItemB x y za, l)) else
+     (case syntacticMonoidInSUBagMember b l subG of None \<Rightarrow> None
+       | Some (ba,la) \<Rightarrow> Some (ba,b'#la)))
+     | (IdB x, IdB x') \<Rightarrow> if x = x' then Some (IdB x, l)
+          else (case syntacticMonoidInSUBagMember b l subG of None \<Rightarrow> None
+           | Some (ba, la) \<Rightarrow> Some (ba, (IdB x')#la))
+     | _ \<Rightarrow> (case syntacticMonoidInSUBagMember b l subG of None \<Rightarrow> None
+         | Some (ba,la) \<Rightarrow> Some (ba, b'#la)))"
+| "syntacticMonoidInSUBag [] S subG = (case S of [] \<Rightarrow> Some [] | _ \<Rightarrow> None)"
+| "syntacticMonoidInSUBag (b#l) S subG =
+    (case syntacticMonoidInSUBagMember b S subG of None \<Rightarrow> None
+       | Some (ba, S') \<Rightarrow> (case syntacticMonoidInSUBag l S' subG of None \<Rightarrow> None
+           | Some la \<Rightarrow> Some (ba#la)))"
+by pat_completeness auto
+
+termination sorry
+
+primrec isCommonElemInSUSet where
+"isCommonElemInSUSet a [] subG = False"
+| "isCommonElemInSUSet a (b#l) subG =
+        (case a of ItemS v \<Rightarrow> (case b of ItemS v' \<Rightarrow>
+           (case syntacticMonoidInSUK v v' subG of None \<Rightarrow> (isCommonElemInSUSet a l subG)
+             | Some va \<Rightarrow> True)
+             | _ \<Rightarrow> (isCommonElemInSUSet a l subG))
+          | IdS x \<Rightarrow> (case b of IdS x' \<Rightarrow>
+                  if x = x' then True else (isCommonElemInSUSet a l subG)
+                | _ \<Rightarrow> (isCommonElemInSUSet a l subG))
+          | SUSetKItem x y \<Rightarrow>
+              (case b of SUSetKItem x' y' \<Rightarrow>
+               (case (syntacticMonoidInSUKLabel x x' subG, syntacticMonoidInSUKList y y' subG)
+                 of (Some xa, Some ya) \<Rightarrow> True
+                  | _ \<Rightarrow> (isCommonElemInSUSet a l subG))
+                 | _ \<Rightarrow> (isCommonElemInSUSet a l subG)))"
+
+primrec isCommonElemInSUMap where
+"isCommonElemInSUMap a [] subG = False"
+| "isCommonElemInSUMap a (b#l) subG =
+        (case a of ItemM v w \<Rightarrow> (case b of ItemM v' w' \<Rightarrow>
+           (case syntacticMonoidInSUK v v' subG of None \<Rightarrow>
+             (isCommonElemInSUMap a l subG)
+             | Some va \<Rightarrow> (case syntacticMonoidInSUK w w' subG of None \<Rightarrow>
+             (isCommonElemInSUMap a l subG) | Some wa \<Rightarrow> True))
+             | _ \<Rightarrow> (isCommonElemInSUMap a l subG))
+          | IdM x \<Rightarrow> (case b of IdM x' \<Rightarrow>
+                  if x = x' then True else (isCommonElemInSUMap a l subG)
+                | _ \<Rightarrow> (isCommonElemInSUMap a l subG))
+          | SUMapKItem x y \<Rightarrow>
+              (case b of SUMapKItem x' y' \<Rightarrow>
+               (case (syntacticMonoidInSUKLabel x x' subG, syntacticMonoidInSUKList y y' subG)
+                 of (Some xa, Some ya) \<Rightarrow> True
+                  | _ \<Rightarrow> (isCommonElemInSUMap a l subG))
+                 | _ \<Rightarrow> (isCommonElemInSUMap a l subG)))"
+
+primrec getValueInSUMap where
+"getValueInSUMap a [] subG = None"
+| "getValueInSUMap a (b#l) subG = (case b of ItemM x y \<Rightarrow>
+         (case syntacticMonoidInSUK a x subG of None \<Rightarrow> getValueInSUMap a l subG
+            | Some xa \<Rightarrow>  Some y)
+              | IdM x \<Rightarrow> getValueInSUMap a l subG
+              | SUMapKItem x y \<Rightarrow> getValueInSUMap a l subG)"
+
+primrec regularizeInSUKLabel
+    and regularizeInSUKItem
+    and regularizeInSUKListElem
+    and regularizeInSUKList
+    and regularizeInSUKElem
+    and regularizeInSUK
+    and regularizeInSUListElem
+    and regularizeInSUList
+    and regularizeInSUSetElem
+    and regularizeInSUSet
+    and regularizeInSUMapElem
+    and regularizeInSUMap
+    and regularizeInSUBigKWithBag
+    and regularizeInSUBigKWithLabel
+    and regularizeInSUBagElem
+    and regularizeInSUBag where
+ "regularizeInSUKLabel (SUKLabel a) subG = Some (SUKLabel a)"
+| "regularizeInSUKLabel (SUIdKLabel a) subG = Some (SUIdKLabel a)"
+| "regularizeInSUKLabel (SUKLabelFun a b) subG =
+   (case (regularizeInSUKLabel a subG) of None \<Rightarrow> None
+       | Some a' \<Rightarrow> (case (regularizeInSUKList b subG) of None \<Rightarrow> None
+          | Some b' \<Rightarrow> Some (SUKLabelFun a' b')))"
+| "regularizeInSUKItem (SUKItem l r ty) subG=
+   (case (regularizeInSUKLabel l subG) of None \<Rightarrow> None
+       | Some a' \<Rightarrow> (case (regularizeInSUKList r subG) of None \<Rightarrow> None
+          | Some b' \<Rightarrow> Some (SUKItem a' b' ty)))"
+| "regularizeInSUKItem (SUHOLE a) subG = Some (SUHOLE a)"
+| "regularizeInSUKItem (SUIdKItem a b) subG = Some (SUIdKItem a b)"
+| "regularizeInSUKListElem (IdKl x) subG = Some (IdKl x)"
+| "regularizeInSUKListElem (ItemKl x) subG = (case (regularizeInSUBigKWithLabel x subG)
+    of None \<Rightarrow> None | Some x' \<Rightarrow> Some (ItemKl x'))"
+| "regularizeInSUKList [] subG = Some []"
+| "regularizeInSUKList (b#l) subG =
+   (case regularizeInSUKListElem b subG of None \<Rightarrow> None
+     | Some b' \<Rightarrow> (case regularizeInSUKList l subG of None \<Rightarrow> None
+         | Some l' \<Rightarrow> Some (b'#l')))"
+| "regularizeInSUBigKWithLabel (SUBigBag a) subG =
+    (case regularizeInSUBigKWithBag a subG of None \<Rightarrow> None
+          | Some a' \<Rightarrow> Some (SUBigBag a'))"
+| "regularizeInSUBigKWithLabel (SUBigLabel a) subG =
+    (case regularizeInSUKLabel a subG of None \<Rightarrow> None
+          | Some a' \<Rightarrow> Some (SUBigLabel a'))"
+| "regularizeInSUBigKWithBag (SUK a) subG =
+    (case regularizeInSUK a subG of None \<Rightarrow> None
+          | Some a' \<Rightarrow> Some (SUK a'))"
+| "regularizeInSUBigKWithBag (SUList a) subG =
+    (case regularizeInSUList a subG of None \<Rightarrow> None
+          | Some a' \<Rightarrow> Some (SUList a'))"
+| "regularizeInSUBigKWithBag (SUSet a) subG =
+    (case regularizeInSUSet a subG of None \<Rightarrow> None
+          | Some a' \<Rightarrow> Some (SUSet a'))"
+| "regularizeInSUBigKWithBag (SUMap a) subG =
+    (case regularizeInSUMap a subG of None \<Rightarrow> None
+          | Some a' \<Rightarrow> Some (SUMap a'))"
+| "regularizeInSUBigKWithBag (SUBag a) subG =
+    (case regularizeInSUBag a subG of None \<Rightarrow> None
+          | Some a' \<Rightarrow> Some (SUBag a'))"
+| "regularizeInSUKElem (IdFactor x) subG = Some (IdFactor x)"
+| "regularizeInSUKElem (ItemFactor x) subG = (case (regularizeInSUKItem x subG)
+     of None \<Rightarrow> None | Some x' \<Rightarrow> Some (ItemFactor x'))"
+| "regularizeInSUKElem (SUKKItem x y z) subG = (case (regularizeInSUKLabel x subG)
+     of None \<Rightarrow> None | Some x' \<Rightarrow>
+    (case regularizeInSUKList y subG of None \<Rightarrow> None
+       | Some y' \<Rightarrow> Some (SUKKItem x' y' z)))"
+| "regularizeInSUK [] subG = Some []"
+| "regularizeInSUK (b#l) subG =
+   (case regularizeInSUKElem b subG of None \<Rightarrow> None
+     | Some b' \<Rightarrow> (case regularizeInSUK l subG of None \<Rightarrow> None
+         | Some l' \<Rightarrow> Some (b'#l')))"
+| "regularizeInSUListElem (IdL x) subG = Some (IdL x)"
+| "regularizeInSUListElem (ItemL x) subG = (case (regularizeInSUK x subG)
+     of None \<Rightarrow> None | Some x' \<Rightarrow> Some (ItemL x'))"
+| "regularizeInSUListElem (SUListKItem x y) subG = (case (regularizeInSUKLabel x subG)
+     of None \<Rightarrow> None | Some x' \<Rightarrow>
+    (case regularizeInSUKList y subG of None \<Rightarrow> None
+       | Some y' \<Rightarrow> Some (SUListKItem x' y')))"
+| "regularizeInSUList [] subG = Some []"
+| "regularizeInSUList (b#l) subG =
+   (case regularizeInSUListElem b subG of None \<Rightarrow> None
+     | Some b' \<Rightarrow> (case regularizeInSUList l subG of None \<Rightarrow> None
+         | Some l' \<Rightarrow> Some (b'#l')))"
+| "regularizeInSUSetElem (IdS x) subG = Some (IdS x)"
+| "regularizeInSUSetElem (ItemS x) subG = (case (regularizeInSUK x subG)
+     of None \<Rightarrow> None | Some x' \<Rightarrow> Some (ItemS x'))"
+| "regularizeInSUSetElem (SUSetKItem x y) subG = (case (regularizeInSUKLabel x subG)
+     of None \<Rightarrow> None | Some x' \<Rightarrow>
+    (case regularizeInSUKList y subG of None \<Rightarrow> None
+       | Some y' \<Rightarrow> Some (SUSetKItem x' y')))"
+| "regularizeInSUSet [] subG = Some []"
+| "regularizeInSUSet (b#l) subG =
+   (case regularizeInSUSetElem b subG of None \<Rightarrow> None
+      | Some b' \<Rightarrow> (case regularizeInSUSet l subG of None \<Rightarrow> None
+         | Some l' \<Rightarrow> (if isCommonElemInSUSet b' l' subG
+            then Some l' else Some (b'#l'))))"
+| "regularizeInSUMapElem (IdM x) subG = Some (IdM x)"
+| "regularizeInSUMapElem (ItemM x y) subG = (case (regularizeInSUK x subG)
+     of None \<Rightarrow> None | Some x' \<Rightarrow> (case regularizeInSUK y subG of None \<Rightarrow> None
+          | Some y' \<Rightarrow>  Some (ItemM x' y')))"
+| "regularizeInSUMapElem (SUMapKItem x y) subG = (case (regularizeInSUKLabel x subG)
+     of None \<Rightarrow> None | Some x' \<Rightarrow>
+    (case regularizeInSUKList y subG of None \<Rightarrow> None
+       | Some y' \<Rightarrow> Some (SUMapKItem x' y')))"
+| "regularizeInSUMap [] subG = Some []"
+| "regularizeInSUMap (b#l) subG =
+   (case regularizeInSUMapElem b subG of None \<Rightarrow> None
+      | Some b' \<Rightarrow> (case regularizeInSUMap l subG of None \<Rightarrow> None
+         | Some l' \<Rightarrow> (if isCommonElemInSUMap b' l' subG
+            then Some l' else 
+   (case b' of (ItemM x y) \<Rightarrow> (case getValueInSUMap x l' subG of None \<Rightarrow> Some (b'#l')
+          | Some y' \<Rightarrow> None)
+     | _ \<Rightarrow> Some (b'#l')))))"
+| "regularizeInSUBagElem (IdB x) subG = Some (IdB x)"
+| "regularizeInSUBagElem (ItemB x y z) subG = (case (regularizeInSUBigKWithBag z subG)
+    of None \<Rightarrow> None | Some z' \<Rightarrow> Some (ItemB x y z'))"
+| "regularizeInSUBag [] subG = Some []"
+| "regularizeInSUBag (b#l) subG =
+   (case regularizeInSUBagElem b subG of None \<Rightarrow> None
+     | Some b' \<Rightarrow> (case regularizeInSUBag l subG of None \<Rightarrow> None
+         | Some l' \<Rightarrow> Some (b'#l')))"
 
 (* type check programs *)
 definition typeCheckProgramState where
@@ -30,11 +992,412 @@ definition typeCheckCondition where
           of None \<Rightarrow> None | Some (acc,beta,aa) \<Rightarrow>
          regularizeInSUKItem aa subG) else None)"
 
+(*
 definition validConfiguration where
 "validConfiguration a = (case uniqueCellNameInSUBag a [] of None \<Rightarrow> False
      | _ \<Rightarrow> (noDotInSUBag a \<and> hasNoBagVarInSUBag a))"
-
+*)
 (* check and get all macro rules *)
+
+primrec subSyntaxInSUKLabel
+    and subSyntaxInSUKItem
+    and subSyntaxInSUKListElem
+    and subSyntaxInSUKList
+    and subSyntaxInSUKElem
+    and subSyntaxInSUK
+    and subSyntaxInSUListElem
+    and subSyntaxInSUList
+    and subSyntaxInSUSetElem
+    and subSyntaxInSUSet
+    and subSyntaxInSUMapElem
+    and subSyntaxInSUMap
+    and subSyntaxInSUBigKWithBag
+    and subSyntaxInSUBigKWithLabel
+    and subSyntaxInSUBagElem
+    and subSyntaxInSUBag where
+ "subSyntaxInSUKLabel s kl (SUKLabel a') subG = False"
+| "subSyntaxInSUKLabel s kl (SUIdKLabel a) subG = False"
+| "subSyntaxInSUKLabel s kl (SUKLabelFun a b) subG =
+           (subSyntaxInSUKLabel s kl a subG \<or> subSyntaxInSUKList s kl b subG)"
+| "subSyntaxInSUKItem s kl (SUKItem l r ty) subG = (case getSUKLabelMeaning l of None \<Rightarrow>
+          (subSyntaxInSUKLabel s kl l subG \<or> subSyntaxInSUKList s kl r subG)
+       | Some ss \<Rightarrow> if s = ss then
+         (case syntacticMonoidInSUKList kl r subG of None \<Rightarrow> subSyntaxInSUKList s kl r subG
+             | Some kl' \<Rightarrow> True) else subSyntaxInSUKList s kl r subG)"
+| "subSyntaxInSUKItem s kl (SUHOLE a) subG = False"
+| "subSyntaxInSUKItem s kl (SUIdKItem a b) subG = False"
+| "subSyntaxInSUKListElem s kl (IdKl x) subG = False"
+| "subSyntaxInSUKListElem s kl (ItemKl x) subG = subSyntaxInSUBigKWithLabel s kl x subG"
+| "subSyntaxInSUKList s kl [] subG = False"
+| "subSyntaxInSUKList s kl (b#l) subG = 
+     (subSyntaxInSUKListElem s kl b subG \<or> subSyntaxInSUKList s kl l subG)"
+| "subSyntaxInSUBigKWithLabel s kl (SUBigBag a) subG = subSyntaxInSUBigKWithBag s kl a subG"
+| "subSyntaxInSUBigKWithLabel s kl (SUBigLabel a) subG = subSyntaxInSUKLabel s kl a subG"
+| "subSyntaxInSUBigKWithBag s kl (SUK a) subG = subSyntaxInSUK s kl a subG"
+| "subSyntaxInSUBigKWithBag s kl (SUList a) subG = subSyntaxInSUList s kl a subG"
+| "subSyntaxInSUBigKWithBag s kl (SUSet a) subG = subSyntaxInSUSet s kl a subG"
+| "subSyntaxInSUBigKWithBag s kl (SUMap a) subG = subSyntaxInSUMap s kl a subG"
+| "subSyntaxInSUBigKWithBag s kl (SUBag a) subG = subSyntaxInSUBag s kl a subG"
+| "subSyntaxInSUKElem s kl (IdFactor x) subG = False"
+| "subSyntaxInSUKElem s kl (ItemFactor x) subG = subSyntaxInSUKItem s kl x subG"
+| "subSyntaxInSUKElem s kl (SUKKItem x y ty) subG =
+    (subSyntaxInSUKLabel s kl x subG \<or> subSyntaxInSUKList s kl y subG)"
+| "subSyntaxInSUK s kl [] subG = False"
+| "subSyntaxInSUK s kl (b#l) subG = (subSyntaxInSUKElem s kl b subG \<or> subSyntaxInSUK s kl l subG)"
+| "subSyntaxInSUListElem s kl (IdL x) subG = False"
+| "subSyntaxInSUListElem s kl (ItemL x) subG = subSyntaxInSUK s kl x subG"
+| "subSyntaxInSUListElem s kl (SUListKItem x y) subG =
+    (subSyntaxInSUKLabel s kl x subG \<or> subSyntaxInSUKList s kl y subG)"
+| "subSyntaxInSUList s kl [] subG = False"
+| "subSyntaxInSUList s kl (b#l) subG =
+            (subSyntaxInSUListElem s kl b subG \<or> subSyntaxInSUList s kl l subG)"
+| "subSyntaxInSUSetElem s kl (IdS x) subG = False"
+| "subSyntaxInSUSetElem s kl (ItemS x) subG = subSyntaxInSUK s kl x subG"
+| "subSyntaxInSUSetElem s kl (SUSetKItem x y) subG =
+    (subSyntaxInSUKLabel s kl x subG \<or> subSyntaxInSUKList s kl y subG)"
+| "subSyntaxInSUSet s kl [] subG = False"
+| "subSyntaxInSUSet s kl (b#l) subG = 
+   (subSyntaxInSUSetElem s kl b subG \<or> subSyntaxInSUSet s kl l subG)"
+| "subSyntaxInSUMapElem s kl (IdM x) subG = False"
+| "subSyntaxInSUMapElem s kl (ItemM x y) subG =
+    (subSyntaxInSUK s kl x subG \<or> subSyntaxInSUK s kl y subG)"
+| "subSyntaxInSUMapElem s kl (SUMapKItem x y) subG =
+    (subSyntaxInSUKLabel s kl x subG \<or> subSyntaxInSUKList s kl y subG)"
+| "subSyntaxInSUMap s kl [] subG = False"
+| "subSyntaxInSUMap s kl (b#l) subG =
+   (subSyntaxInSUMapElem s kl b subG \<or> subSyntaxInSUMap s kl l subG)"
+| "subSyntaxInSUBagElem s kl (IdB x) subG = False"
+| "subSyntaxInSUBagElem s kl (ItemB x y z) subG = subSyntaxInSUBigKWithBag s kl z subG"
+| "subSyntaxInSUBag s kl [] subG = False"
+| "subSyntaxInSUBag s kl (b#l) subG = 
+      (subSyntaxInSUBagElem s kl b subG \<or> subSyntaxInSUBag s kl l subG)"
+
+primrec irToSUInKLabel where
+  "irToSUInKLabel (IRKLabel a) = SUKLabel a"
+| "irToSUInKLabel (IRIdKLabel n) = (SUIdKLabel n)"
+
+fun irToSUInKItem
+    and irToSUInKList
+    and irToSUInK
+    and irToSUInList
+    and irToSUInSet
+    and irToSUInMap
+    and irToSUInBigKWithBag
+    and irToSUInBigKWithLabel
+    and irToSUInBag where 
+ "irToSUInKItem (IRKItem l r ty) = (SUKItem (irToSUInKLabel l) (irToSUInKList r) ty)"
+| "irToSUInKItem (IRIdKItem a b) = (SUIdKItem a b)"
+| "irToSUInKItem (IRHOLE a) = (SUHOLE a)"
+| "irToSUInKList (KListPatNoVar l) = 
+   (List.map (\<lambda> x . ItemKl (irToSUInBigKWithLabel x)) l)"
+| "irToSUInKList (KListPat l a r) = 
+   (List.map (\<lambda> x . ItemKl (irToSUInBigKWithLabel x)) l)@[IdKl a]
+          @((List.map (\<lambda> x . ItemKl (irToSUInBigKWithLabel x)) r))"
+| "irToSUInBigKWithLabel (IRBigBag a) = SUBigBag (irToSUInBigKWithBag a)"
+| "irToSUInBigKWithLabel (IRBigLabel a) = SUBigLabel (irToSUInKLabel a)"
+| "irToSUInBigKWithBag (IRK a) = SUK (irToSUInK a)"
+| "irToSUInBigKWithBag (IRList a) = SUList (irToSUInList a)"
+| "irToSUInBigKWithBag (IRSet a) = SUSet (irToSUInSet a)"
+| "irToSUInBigKWithBag (IRMap a) = SUMap (irToSUInMap a)"
+| "irToSUInBigKWithBag (IRBag a) = SUBag (irToSUInBag a)"
+| "irToSUInK (KPat l a) = (case a of None
+       \<Rightarrow> List.map (\<lambda> x . (case x of (IRIdKItem u v) \<Rightarrow>
+           if v = [K] then (IdFactor u) else ItemFactor (irToSUInKItem x)
+            | _ \<Rightarrow> ItemFactor (irToSUInKItem x))) l
+   | Some a'
+      \<Rightarrow> (List.map (\<lambda> x . (case x of (IRIdKItem u v) \<Rightarrow>
+           if v = [K] then (IdFactor u) else ItemFactor (irToSUInKItem x)
+            | _ \<Rightarrow> ItemFactor (irToSUInKItem x))) l)@[(IdFactor a')])"
+| "irToSUInList (ListPatNoVar l) =
+     (List.map (\<lambda> x . ItemL (irToSUInK x)) l)"
+| "irToSUInList (ListPat l a r) =
+     (List.map (\<lambda> x . ItemL (irToSUInK x)) l)@[IdL a]
+          @((List.map (\<lambda> x . ItemL (irToSUInK x)) r))"
+| "irToSUInSet (SetPat l a) = (case a of None
+       \<Rightarrow> List.map (\<lambda> x . ItemS (irToSUInK x)) l
+   | Some a'
+      \<Rightarrow> (List.map (\<lambda> x . ItemS (irToSUInK x)) l)@[(IdS a')])"
+| "irToSUInMap (MapPat l a) = (case a of None
+       \<Rightarrow> List.map (\<lambda> (x,y) . ItemM (irToSUInK x) (irToSUInK y)) l
+   | Some a'
+      \<Rightarrow> (List.map (\<lambda> (x,y) . ItemM (irToSUInK x) (irToSUInK y)) l)@[(IdM a')])"
+| "irToSUInBag (BagPat l a) = (case a of None
+       \<Rightarrow> List.map (\<lambda> (a,b,c) . ItemB a b (irToSUInBigKWithBag c)) l
+   | Some a'  \<Rightarrow>
+        (List.map (\<lambda> (a,b,c) . ItemB a b (irToSUInBigKWithBag c)) l)@[(IdB a')])"
+
+primrec irToSUInMatchFactor where
+"irToSUInMatchFactor (KLabelMatching a) = KLabelSubs (irToSUInKLabel a)"
+| "irToSUInMatchFactor (KItemMatching a) = KItemSubs (irToSUInKItem a)"
+| "irToSUInMatchFactor (KMatching a) = KSubs (irToSUInK a)"
+| "irToSUInMatchFactor (KListMatching a) = KListSubs (irToSUInKList a)"
+| "irToSUInMatchFactor (ListMatching a) = ListSubs (irToSUInList a)"
+| "irToSUInMatchFactor (SetMatching a) = SetSubs (irToSUInSet a)"
+| "irToSUInMatchFactor (MapMatching a) = MapSubs (irToSUInMap a)"
+| "irToSUInMatchFactor (BagMatching a) = BagSubs (irToSUInBag a)"
+
+primrec irToSUInPat where
+"irToSUInPat (KLabelFunPat s l) database = KLabelSubs (SUKLabelFun (SUKLabel s) (irToSUInKList l))"
+| "irToSUInPat (KItemFunPat s l) database = (case getSort s database of Some ty
+              \<Rightarrow> KItemSubs (SUKItem (SUKLabel s) (irToSUInKList l) ty)
+             | _ \<Rightarrow> KItemSubs (SUKItem (SUKLabel s) (irToSUInKList l) [KItem]))"
+| "irToSUInPat (KFunPat s l) database = KSubs [SUKKItem (SUKLabel s) (irToSUInKList l) [K]]"
+| "irToSUInPat (ListFunPat s l) database = ListSubs [SUListKItem (SUKLabel s) (irToSUInKList l)]"
+| "irToSUInPat (SetFunPat s l) database = SetSubs [SUSetKItem (SUKLabel s) (irToSUInKList l)]"
+| "irToSUInPat (MapFunPat s l) database = MapSubs [SUMapKItem (SUKLabel s) (irToSUInKList l)]"
+| "irToSUInPat (NormalPat a) database = irToSUInMatchFactor a"
+
+fun irToSUInIRBagList where
+"irToSUInIRBagList [] = []"
+| "irToSUInIRBagList ((x,y,z)#l) = (ItemB x y (irToSUInBigKWithBag z))#(irToSUInIRBagList l)"
+
+primrec sizeInSUKLabel
+  and sizeInSUKItem
+  and sizeInSUKListElem
+  and sizeInSUKList
+  and sizeInSUKElem
+  and sizeInSUK
+  and sizeInSUListElem
+  and sizeInSUList
+  and sizeInSUSetElem
+  and sizeInSUSet
+  and sizeInSUMapElem
+  and sizeInSUMap
+  and sizeInSUBigKWithBag
+  and sizeInSUBigKWithLabel
+  and sizeInSUBagElem
+  and sizeInSUBag where
+"sizeInSUKLabel (SUKLabel a) = 0"
+|"sizeInSUKLabel (SUIdKLabel a) = 0"
+| "sizeInSUKLabel (SUKLabelFun a b) = 1 + (sizeInSUKLabel a) + (sizeInSUKList b)"
+| "sizeInSUKItem (SUKItem a b t) = 1 + (sizeInSUKLabel a) + (sizeInSUKList b)"
+| "sizeInSUKItem (SUIdKItem a t) = 0"
+| "sizeInSUKItem (SUHOLE t) = 0"
+| "sizeInSUKListElem (ItemKl a) = 1 + (sizeInSUBigKWithLabel a)"
+| "sizeInSUKListElem (IdKl a) = 0"
+| "sizeInSUKList [] = 0"
+| "sizeInSUKList (a#l) = 1 + (sizeInSUKListElem a) + (sizeInSUKList l)"
+| "sizeInSUKElem (ItemFactor a) = 1 + (sizeInSUKItem a)"
+| "sizeInSUKElem (IdFactor a) = 0"
+| "sizeInSUKElem (SUKKItem a b t) = 1 + (sizeInSUKLabel a) + (sizeInSUKList b)"
+| "sizeInSUK [] = 0"
+| "sizeInSUK (a#l) = 1 + (sizeInSUKElem a) + (sizeInSUK l)"
+| "sizeInSUListElem (ItemL a) = 1 + (sizeInSUK a)"
+| "sizeInSUListElem (IdL a) = 0"
+| "sizeInSUListElem (SUListKItem a b) = 1 + (sizeInSUKLabel a) + (sizeInSUKList b)"
+| "sizeInSUList [] = 0"
+| "sizeInSUList (a#l) = 1 + (sizeInSUListElem a) + (sizeInSUList l)"
+| "sizeInSUSetElem (ItemS a) = 1 + (sizeInSUK a)"
+| "sizeInSUSetElem (IdS a) = 0"
+| "sizeInSUSetElem (SUSetKItem a b) = 1 + (sizeInSUKLabel a) + (sizeInSUKList b)"
+| "sizeInSUSet [] = 0"
+| "sizeInSUSet (a#l) = 1 + (sizeInSUSetElem a) + (sizeInSUSet l)"
+| "sizeInSUMapElem (ItemM a b) = 1 + (sizeInSUK a) + (sizeInSUK b)"
+| "sizeInSUMapElem (IdM a) = 0"
+| "sizeInSUMapElem (SUMapKItem a b) = 1 + (sizeInSUKLabel a) + (sizeInSUKList b)"
+| "sizeInSUMap [] = 0"
+| "sizeInSUMap (a#l) = 1 + (sizeInSUMapElem a) + (sizeInSUMap l)"
+| "sizeInSUBigKWithBag (SUK a) = 1 + (sizeInSUK a)"
+| "sizeInSUBigKWithBag (SUList a) = 1 + (sizeInSUList a)"
+| "sizeInSUBigKWithBag (SUSet a) = 1 + (sizeInSUSet a)"
+| "sizeInSUBigKWithBag (SUMap a) = 1 + (sizeInSUMap a)"
+| "sizeInSUBigKWithBag (SUBag a) = 1 + (sizeInSUBag a)"
+| "sizeInSUBigKWithLabel (SUBigBag a) = 1 + (sizeInSUBigKWithBag a)"
+| "sizeInSUBigKWithLabel (SUBigLabel a) = 1 + (sizeInSUKLabel a)"
+| "sizeInSUBagElem (ItemB x y z) = 1 + (sizeInSUBigKWithBag z)"
+| "sizeInSUBagElem (IdB a) = 0"
+| "sizeInSUBag [] = 0"
+| "sizeInSUBag (a#l) = 1 + (sizeInSUBagElem a) + (sizeInSUBag l)"
+
+function suToIRInKLabel
+    and suToIRInKItem
+    and suToIRInKList
+    and suToIRInK
+    and suToIRInList
+    and suToIRInSet
+    and suToIRInMap
+    and suToIRInBigKWithBag
+    and suToIRInBigKWithLabel
+    and suToIRInBag  where 
+  "suToIRInKLabel (SUKLabel a) database = Some (NormalPat (KLabelMatching (IRKLabel a)))"
+| "suToIRInKLabel (SUKLabelFun a b) database = (case getSUKLabelMeaning a of None \<Rightarrow> None
+         | Some s \<Rightarrow> (case (suToIRInKList b database) of None \<Rightarrow> None
+         | Some b' \<Rightarrow> Some (KLabelFunPat s b')))"
+| "suToIRInKLabel (SUIdKLabel n) database = Some (NormalPat (KLabelMatching (IRIdKLabel n)))"
+| "suToIRInKItem (SUKItem l r ty) database = (case getSUKLabelMeaning l of None \<Rightarrow>
+     (case (suToIRInKLabel l database, suToIRInKList r database) 
+        of (Some (NormalPat (KLabelMatching l')), Some r')
+             \<Rightarrow> Some (NormalPat (KItemMatching (IRKItem l' r' ty)))
+         | _ \<Rightarrow> None)
+      | Some s \<Rightarrow> (if isFunctionItem s database then
+      (case suToIRInKList r database of None \<Rightarrow> None
+          | Some r' \<Rightarrow> Some (KFunPat s r')) else
+            (case (suToIRInKLabel l database, suToIRInKList r database) 
+        of (Some (NormalPat (KLabelMatching l')), Some r')
+                \<Rightarrow> Some (NormalPat (KItemMatching (IRKItem l' r' ty)))
+         | _ \<Rightarrow> None)))"
+| "suToIRInKItem (SUIdKItem a b) database = Some (NormalPat (KItemMatching (IRIdKItem a b)))"
+| "suToIRInKItem (SUHOLE a) database = Some (NormalPat (KItemMatching (IRHOLE a)))"
+| "suToIRInKList [] database = Some (KListPatNoVar [])"
+| "suToIRInKList (b#l) database = (case suToIRInKList l database of None \<Rightarrow> None
+        | Some (KListPatNoVar la) \<Rightarrow> (case b of (ItemKl x) 
+         \<Rightarrow> (case suToIRInBigKWithLabel x database of None \<Rightarrow> None
+            | Some x' \<Rightarrow> Some (KListPatNoVar (x'#la)))
+           | IdKl x \<Rightarrow> Some (KListPat [] x la))
+        | Some (KListPat la x ra) \<Rightarrow> (case b of (ItemKl u) 
+         \<Rightarrow> (case suToIRInBigKWithLabel u database of None \<Rightarrow> None
+            | Some u' \<Rightarrow> Some (KListPat (u'#la) x ra))
+             | IdKl u \<Rightarrow> None))"
+| "suToIRInBigKWithLabel (SUBigBag a) database =
+      (case (suToIRInBigKWithBag a database) of None \<Rightarrow> None
+                    | Some a' \<Rightarrow> Some (IRBigBag a'))"
+| "suToIRInBigKWithLabel (SUBigLabel a) database = (case (suToIRInKLabel a database) of
+        Some (NormalPat (KLabelMatching a')) \<Rightarrow> Some (IRBigLabel a')
+                    | _ \<Rightarrow> None)"
+| "suToIRInBigKWithBag (SUK a) database = (case (suToIRInK a database) of
+         Some (NormalPat (KMatching a')) \<Rightarrow> Some (IRK a')
+                    | _ \<Rightarrow> None)"
+| "suToIRInBigKWithBag (SUList a) database = (case (suToIRInList a database) of
+         Some (NormalPat (ListMatching a')) \<Rightarrow> Some (IRList a')
+                    | _ \<Rightarrow> None)"
+| "suToIRInBigKWithBag (SUSet a) database = (case (suToIRInSet a database) of
+         Some (NormalPat (SetMatching a')) \<Rightarrow> Some (IRSet a')
+                    | _ \<Rightarrow> None)"
+| "suToIRInBigKWithBag (SUMap a) database = (case (suToIRInMap a database) of
+         Some (NormalPat (MapMatching a')) \<Rightarrow> Some (IRMap a')
+                    | _ \<Rightarrow> None)"
+| "suToIRInBigKWithBag (SUBag a) database = (case (suToIRInBag a database) of None \<Rightarrow> None
+                    | Some a' \<Rightarrow> Some (IRBag a'))"
+| "suToIRInK [] database = Some (NormalPat (KMatching (KPat [] None)))"
+| "suToIRInK (b#l) database = (case suToIRInK l database of
+        Some (NormalPat (KMatching (KPat t None)))
+          \<Rightarrow> (case b of (ItemFactor x) 
+             \<Rightarrow> (if t = [] then (case x of (SUIdKItem xa xty) \<Rightarrow>
+               if xty = [K] then Some (NormalPat (KMatching (KPat [] (Some xa))))
+                 else Some (NormalPat (KMatching (KPat [(IRIdKItem xa xty)] None)))
+           | _ \<Rightarrow> (case suToIRInKItem x database of Some (NormalPat (KItemMatching x'))
+                 \<Rightarrow> Some (NormalPat (KMatching (KPat [x'] None)))))
+     else (case suToIRInKItem x database of Some (NormalPat (KItemMatching x'))
+                 \<Rightarrow> Some (NormalPat (KMatching (KPat (x'#t) None)))
+             | _ \<Rightarrow> None))
+           | IdFactor x \<Rightarrow> (if t = [] then
+                 Some (NormalPat (KMatching (KPat [] (Some x)))) else
+                 Some (NormalPat (KMatching (KPat ((IRIdKItem x [K])#t) None))))
+           | SUKKItem u v ty \<Rightarrow> (if t = [] then
+           (case getSUKLabelMeaning u of None \<Rightarrow> None
+              | Some s \<Rightarrow> if isFunctionItem s database then
+               (case suToIRInKList v database of Some v'
+                    \<Rightarrow> Some (KFunPat s v')
+                 | _ \<Rightarrow> None) else None) else None))
+        | Some (NormalPat (KMatching (KPat t (Some v))))
+         \<Rightarrow> (case b of (ItemFactor x) 
+            \<Rightarrow> (case suToIRInKItem x database of Some (NormalPat (KItemMatching x'))
+                 \<Rightarrow> Some (NormalPat (KMatching (KPat (x'#t) None)))
+             | _ \<Rightarrow> None)
+             | IdFactor x \<Rightarrow>
+                   Some (NormalPat (KMatching (KPat ((IRIdKItem x [K])#t) (Some v))))
+             | SUKKItem u v ty \<Rightarrow> None)
+        | _ \<Rightarrow> None)"
+| "suToIRInList [] database = Some (NormalPat (ListMatching (ListPatNoVar [])))"
+| "suToIRInList (b#l) database = (case suToIRInList l database of
+       Some (NormalPat (ListMatching (ListPatNoVar la)))
+         \<Rightarrow> (case b of (ItemL x)
+           \<Rightarrow> (case suToIRInK x database of Some (NormalPat (KMatching x'))
+            \<Rightarrow> Some (NormalPat (ListMatching (ListPatNoVar (x'#la))))
+                       | _ \<Rightarrow> None)
+           | IdL x \<Rightarrow> Some (NormalPat (ListMatching (ListPat [] x la)))
+           | SUListKItem u v \<Rightarrow> if la = [] then 
+             (case getSUKLabelMeaning u of None \<Rightarrow> None
+                | Some s \<Rightarrow> (if isFunctionItem s database then
+                  (case suToIRInKList v database of None \<Rightarrow> None
+                    | Some v' \<Rightarrow> Some (ListFunPat s v')) else None))
+                    else None)
+        | Some (NormalPat (ListMatching (ListPat la x ra)))
+           \<Rightarrow> (case b of (ItemL u)
+             \<Rightarrow> (case suToIRInK u database of Some (NormalPat (KMatching u'))
+              \<Rightarrow> Some (NormalPat (ListMatching (ListPat (u'#la) x ra)))
+                  | _ \<Rightarrow> None)
+                | IdL u \<Rightarrow> None
+               | SUListKItem u v \<Rightarrow> None)
+           | _ \<Rightarrow> None)"
+| "suToIRInSet [] database = Some (NormalPat (SetMatching (SetPat [] None)))"
+| "suToIRInSet (b#l) database = (case suToIRInSet l database of 
+       Some (NormalPat (SetMatching (SetPat t None)))
+       \<Rightarrow> (case b of (ItemS x) 
+         \<Rightarrow> (case suToIRInK x database of Some (NormalPat (KMatching x'))
+           \<Rightarrow> Some (NormalPat (SetMatching (SetPat (x'#t) None)))
+                | _ \<Rightarrow> None)
+           | IdS x \<Rightarrow> Some (NormalPat (SetMatching (SetPat t (Some x))))
+          | SUSetKItem u v \<Rightarrow> if t = [] then
+            (case getSUKLabelMeaning u of None \<Rightarrow> None
+                | Some u' \<Rightarrow> if isFunctionItem u' database then
+                 (case suToIRInKList v database of None \<Rightarrow> None
+                    | Some v' \<Rightarrow> Some (SetFunPat u' v')) else None) else None)
+        | Some (NormalPat (SetMatching (SetPat t (Some v))))
+         \<Rightarrow> (case b of (ItemS x) 
+         \<Rightarrow> (case suToIRInK x database of Some (NormalPat (KMatching x'))
+            \<Rightarrow> Some (NormalPat (SetMatching (SetPat (x'#t) (Some v))))
+                | _ \<Rightarrow> None)
+             | IdS x \<Rightarrow> None
+             | (SUSetKItem u v) \<Rightarrow> None)
+        | _ \<Rightarrow> None)"
+| "suToIRInMap [] database = Some (NormalPat (MapMatching (MapPat [] None)))"
+| "suToIRInMap (b#l) database = (case suToIRInMap l database of 
+       Some (NormalPat (MapMatching (MapPat t None)))
+       \<Rightarrow> (case b of (ItemM x y) 
+         \<Rightarrow> (case (suToIRInK x database, suToIRInK y database)
+          of (Some (NormalPat (KMatching x')), Some (NormalPat (KMatching y')))
+           \<Rightarrow> Some (NormalPat (MapMatching (MapPat ((x',y')#t) None)))
+                | _ \<Rightarrow> None)
+           | IdM x \<Rightarrow> Some (NormalPat (MapMatching (MapPat t (Some x))))
+          | SUMapKItem u v \<Rightarrow> if t = [] then
+            (case getSUKLabelMeaning u of None \<Rightarrow> None
+                | Some u' \<Rightarrow> if isFunctionItem u' database then
+                 (case suToIRInKList v database of None \<Rightarrow> None
+                    | Some v' \<Rightarrow> Some (MapFunPat u' v')) else None) else None)
+        | Some (NormalPat (MapMatching (MapPat t (Some v))))
+         \<Rightarrow> (case b of (ItemM x y)  \<Rightarrow> 
+              (case (suToIRInK x database, suToIRInK y database) of
+          (Some (NormalPat (KMatching x')), Some (NormalPat (KMatching y')))
+            \<Rightarrow> Some (NormalPat (MapMatching (MapPat ((x',y')#t) (Some v))))
+                | _ \<Rightarrow> None)
+             | IdM x \<Rightarrow> None
+             | (SUMapKItem u v) \<Rightarrow> None)
+        | _ \<Rightarrow> None)"
+| "suToIRInBag [] database = Some (BagPat [] None)"
+| "suToIRInBag (b#l) database = (case suToIRInBag l database of None \<Rightarrow> None
+        | Some (BagPat t None) \<Rightarrow> (case b of (ItemB a b c) 
+         \<Rightarrow> (case suToIRInBigKWithBag c database of None \<Rightarrow> None
+            | Some c' \<Rightarrow> Some (BagPat ((a,b,c')#t) None))
+           | IdB x \<Rightarrow> Some (BagPat t (Some x)))
+        | Some (BagPat t (Some v)) \<Rightarrow> (case b of (ItemB a b c) 
+         \<Rightarrow> (case suToIRInBigKWithBag c database of None \<Rightarrow> None
+            | Some c' \<Rightarrow> Some (BagPat ((a,b,c')#t) (Some v)))
+           | IdB x \<Rightarrow> None))"
+by pat_completeness auto
+
+termination
+by (relation "measure (\<lambda> x . (case x of Inl x1 => (case x1 of Inl x2
+       \<Rightarrow> (case x2 of Inl (a,b) \<Rightarrow> sizeInSUKLabel a | Inr (a,b) \<Rightarrow> sizeInSUKItem a)
+        | Inr x3 \<Rightarrow> (case x3 of Inl (a,b) \<Rightarrow> sizeInSUKList a | Inr x4 \<Rightarrow> 
+       (case x4 of Inl (a,b) \<Rightarrow> sizeInSUK a | Inr (a,b) \<Rightarrow> sizeInSUList a)))
+      | Inr x1 => (case x1 of Inl x2
+       \<Rightarrow> (case x2 of Inl (a,b) \<Rightarrow> sizeInSUSet a | Inr (a,b) \<Rightarrow> sizeInSUMap a)
+        | Inr x3 \<Rightarrow> (case x3 of Inl (a,b) \<Rightarrow> sizeInSUBigKWithBag a | Inr x4 \<Rightarrow> 
+       (case x4 of Inl (a,b) \<Rightarrow> sizeInSUBigKWithLabel a | Inr (a,b) \<Rightarrow> sizeInSUBag a)))))") auto
+
+primrec suToIRInSubsFactor where
+"suToIRInSubsFactor (KLabelSubs a) database = (suToIRInKLabel a database)"
+| "suToIRInSubsFactor (KItemSubs a) database = (suToIRInKItem a database)"
+| "suToIRInSubsFactor (KSubs a) database = (suToIRInK a database)"
+| "suToIRInSubsFactor (KListSubs a) database = (case suToIRInKList a database of None \<Rightarrow> None
+           | Some a' \<Rightarrow> Some (NormalPat (KListMatching a')))"
+| "suToIRInSubsFactor (ListSubs a) database = (suToIRInList a database)"
+| "suToIRInSubsFactor (SetSubs a) database = (suToIRInSet a database)"
+| "suToIRInSubsFactor (MapSubs a) database = (suToIRInMap a database)"
+| "suToIRInSubsFactor (BagSubs a) database = (case suToIRInBag a database of None \<Rightarrow> None
+           | Some a' \<Rightarrow> Some (NormalPat (BagMatching a')))"
+
 fun divideMacroRules where
 "divideMacroRules [] subG = Some ([],[])"
 | "divideMacroRules ((MacroPat x y z)#l) subG = (if subSyntaxInSUK x (irToSUInKList y) z subG
@@ -43,7 +1406,7 @@ fun divideMacroRules where
 | "divideMacroRules (x#l) subG = (case divideMacroRules l subG of None \<Rightarrow> None
        | Some (l', S)  \<Rightarrow> Some (l', x#S))"
 
-(* type check all rules *)
+(* type check all rules 
 definition typeCheckRules where
 "typeCheckRules Theory database subG =
     (case normalizeRules (getAllRules Theory) Theory database subG of None \<Rightarrow> None
@@ -53,7 +1416,7 @@ definition typeCheckRules where
 (* check uniqueness of KLabel in a spec *)
 definition uniqueKLabelSyntax where
 "uniqueKLabelSyntax Theory = isUnitLabel (syntaxSetToKItemSet Theory)"
-
+*)
 (* giving a list of input initial program and a configuration, generating a initial program state *)
 fun bagContainsCell :: "'var var \<Rightarrow> ('upVar, 'var, 'metaVar) suB list
                   \<Rightarrow> bool"
@@ -86,7 +1449,7 @@ fun createInitState
             | Some x' \<Rightarrow> Some (SUBag x'))"
 | "createInitStateAux a = Some a"
 
-(* checks needing to be made: 1, it is a ground term. 2, it is type checked *)
+(* checks needing to be made: 1, it is a ground term. 2, it is type checked 
 definition configurationTest where
 "configurationTest Theory database subG = (case getConfiguration Theory of [a] \<Rightarrow>
         (case toSUInBag a of None \<Rightarrow> None | Some a' \<Rightarrow>
@@ -105,7 +1468,7 @@ definition realConfigurationTest where
           (case composeConfiAndProgInSUBag a' l subG of None \<Rightarrow> None
              | Some aa \<Rightarrow>
          typeCheckProgramState aa database subG) else None))"
-
+*)
 (*
 (checkTermsInSUBag (irToSUInBag kl) [],
               checkTermsInSUBag r [], checkTermsInSUKItem c KItem [])
@@ -897,6 +2260,7 @@ fun adjustKSortsInRulePats where
 | "adjustKSortsInRulePats ((BagRulePat a b c d)#l) =
                 (BagRulePat (adjustKSortsInIRBag a) b c d)#(adjustKSortsInRulePats l)"
 
+(*
 definition applyAllMacroRulesCheck where
 "applyAllMacroRulesCheck stl Theory database subG =
     (case typeCheckRules Theory database subG of None \<Rightarrow> None
@@ -910,6 +2274,7 @@ definition applyAllMacroRulesCheck where
       (case inferTypesInRules la' Theory database subG of None \<Rightarrow> None
           | Some lb \<Rightarrow> (case typeCheckProgramState confi database subG of None \<Rightarrow> None
       | Some confi' \<Rightarrow> Some (lb, confi'))))) else None))))"
+*)
 
 (* dealing with function rules *)
 function hasFunLabelInSUKLabel
@@ -1159,10 +2524,102 @@ fun getFunRule where
        | Some f' \<Rightarrow> getRidOfLabel (fl@[f'])) else getFunRule s l)"
 | "getFunRule s (x#l) = getFunRule s l"
 
+definition builtinLabels where
+"builtinLabels = [GetKLabel, IsKResult, AndBool, NotBool,
+                      OrBool, Sort, MapUpdate, EqualK, NotEqualK,
+                       EqualKLabel, NotEqualKLabel, PlusInt, MinusInt, TimesInt]"
+
+primrec inLabelList where
+"inLabelList a [] = False"
+| "inLabelList a (x#l) = (if a = x then True else inLabelList a l)"
+
+fun evalMapUpdate where
+"evalMapUpdate [] a b = [(ItemM a b)]"
+| "evalMapUpdate (x#xl) a b = (case x of ItemM u v \<Rightarrow>
+                      if u = a then (ItemM a b)#xl else x#(evalMapUpdate xl a b) | _ \<Rightarrow> x#xl)"
+
+fun evalBuiltinFun where
+"evalBuiltinFun GetKLabel kl database subG =
+    (case kl of [ItemKl (SUBigBag (SUK [ItemFactor (SUKItem l newl t)]))]
+                \<Rightarrow> Some (KLabelSubs l) | _ \<Rightarrow> None)"
+| "evalBuiltinFun IsKResult kl database subG =
+    (case kl of [ItemKl (SUBigBag (SUK [ItemFactor (SUKItem (SUKLabel s) newl t)]))]
+                \<Rightarrow> (case getSort s database of None \<Rightarrow> None
+                    | Some t' \<Rightarrow> if subsortList t' [KResult] subG
+          then Some (KItemSubs (SUKItem (SUKLabel (ConstToLabel (BoolConst True))) [] [Bool]))
+          else Some (KItemSubs (SUKItem (SUKLabel (ConstToLabel (BoolConst False))) [] [Bool])))
+                    | _ \<Rightarrow> None)"
+| "evalBuiltinFun AndBool kl database subG =
+    (case kl of [ItemKl (SUBigBag (SUK [ItemFactor
+                               (SUKItem (SUKLabel (ConstToLabel (BoolConst b1))) newl1 [Bool])])),
+                 ItemKl (SUBigBag (SUK [ItemFactor
+                               (SUKItem (SUKLabel (ConstToLabel (BoolConst b2))) newl2 [Bool])]))]
+                \<Rightarrow> Some (KItemSubs (SUKItem (SUKLabel (ConstToLabel (BoolConst (b1 \<and> b2)))) [] [Bool]))
+                    | _ \<Rightarrow> None)"
+| "evalBuiltinFun OrBool kl database subG =
+    (case kl of [ItemKl (SUBigBag (SUK [ItemFactor
+                               (SUKItem (SUKLabel (ConstToLabel (BoolConst b1))) newl1 [Bool])])),
+                 ItemKl (SUBigBag (SUK [ItemFactor
+                               (SUKItem (SUKLabel (ConstToLabel (BoolConst b2))) newl2 [Bool])]))]
+                \<Rightarrow> Some (KItemSubs (SUKItem (SUKLabel (ConstToLabel (BoolConst (b1 \<or> b2)))) [] [Bool]))
+                    | _ \<Rightarrow> None)"
+| "evalBuiltinFun NotBool kl database subG =
+    (case kl of [ItemKl (SUBigBag (SUK [ItemFactor
+                               (SUKItem (SUKLabel (ConstToLabel (BoolConst b1))) newl1 [Bool])]))]
+                \<Rightarrow> Some (KItemSubs (SUKItem (SUKLabel (ConstToLabel (BoolConst (\<not> b1)))) [] [Bool]))
+                    | _ \<Rightarrow> None)"
+| "evalBuiltinFun MapUpdate kl database subG =
+    (case kl of [ItemKl (SUBigBag (SUMap ml)), ItemKl (SUBigBag (SUK key)),ItemKl (SUBigBag (SUK v))]
+                \<Rightarrow> Some (MapSubs (evalMapUpdate ml key v)) | _ \<Rightarrow> None)"
+| "evalBuiltinFun EqualK kl database subG =
+    (case kl of [ItemKl (SUBigBag (SUK a)),ItemKl (SUBigBag (SUK b))]
+           \<Rightarrow> Some (KItemSubs (SUKItem (SUKLabel (ConstToLabel (BoolConst (a = b)))) [] [Bool]))
+                        | _ \<Rightarrow> None)"
+| "evalBuiltinFun NotEqualK kl database subG =
+    (case kl of [ItemKl (SUBigBag (SUK a)),ItemKl (SUBigBag (SUK b))]
+           \<Rightarrow> Some (KItemSubs (SUKItem (SUKLabel (ConstToLabel (BoolConst (a \<noteq> b)))) [] [Bool]))
+                        | _ \<Rightarrow> None)"
+| "evalBuiltinFun EqualKLabel kl database subG =
+    (case kl of [ItemKl (SUBigLabel (SUKLabel a)),ItemKl (SUBigLabel (SUKLabel b))]
+           \<Rightarrow> Some (KItemSubs (SUKItem (SUKLabel (ConstToLabel (BoolConst (a = b)))) [] [Bool]))
+                        | _ \<Rightarrow> None)"
+| "evalBuiltinFun NotEqualKLabel kl database subG =
+    (case kl of [ItemKl (SUBigLabel (SUKLabel a)),ItemKl (SUBigLabel (SUKLabel b))]
+           \<Rightarrow> Some (KItemSubs (SUKItem (SUKLabel (ConstToLabel (BoolConst (a \<noteq> b)))) [] [Bool]))
+                        | _ \<Rightarrow> None)"
+| "evalBuiltinFun PlusInt kl database subG =
+    (case kl of [ItemKl (SUBigBag (SUK [ItemFactor
+                               (SUKItem (SUKLabel (ConstToLabel (IntConst b1))) newl1 t1)])),
+                 ItemKl (SUBigBag (SUK [ItemFactor
+                               (SUKItem (SUKLabel (ConstToLabel (IntConst b2))) newl2 t2)]))]
+                \<Rightarrow> Some (KItemSubs (SUKItem (SUKLabel (ConstToLabel (IntConst (b1 + b2)))) [] [kSyntax.Int]))
+                    | _ \<Rightarrow> None)"
+| "evalBuiltinFun MinusInt kl database subG =
+    (case kl of [ItemKl (SUBigBag (SUK [ItemFactor
+                               (SUKItem (SUKLabel (ConstToLabel (IntConst b1))) newl1 t1)])),
+                 ItemKl (SUBigBag (SUK [ItemFactor
+                               (SUKItem (SUKLabel (ConstToLabel (IntConst b2))) newl2 t2)]))]
+                \<Rightarrow> Some (KItemSubs (SUKItem (SUKLabel (ConstToLabel (IntConst (b1 - b2)))) [] [kSyntax.Int]))
+                    | _ \<Rightarrow> None)"
+| "evalBuiltinFun TimesInt kl database subG =
+    (case kl of [ItemKl (SUBigBag (SUK [ItemFactor
+                               (SUKItem (SUKLabel (ConstToLabel (IntConst b1))) newl1 t1)])),
+                 ItemKl (SUBigBag (SUK [ItemFactor
+                               (SUKItem (SUKLabel (ConstToLabel (IntConst b2))) newl2 t2)]))]
+                \<Rightarrow> Some (KItemSubs (SUKItem (SUKLabel (ConstToLabel (IntConst (b1 * b2)))) [] [kSyntax.Int]))
+                    | _ \<Rightarrow> None)"
+| "evalBuiltinFun A kl database subG = None"
+
 inductive funEvaluationBool and funEvaluationBoolAux where
  conZeroStep : " \<not> hasFunLabelInSUKItem C database
     \<Longrightarrow> funEvaluationBool allRules database subG (Continue C) (Stop C)"
-| conOneStep : "\<lbrakk> hasFunLabelInSUKItem C database ;
+| conFunStep : "\<lbrakk> hasFunLabelInSUKItem C database ; l \<in> set builtinLabels;
+    localteFunTermInSUKItem C database = Some (l, fun, ty, Cr);
+            evalBuiltinFun l fun database subG = Some r;
+      substitutionInSUKItem Cr [(FunHole, r)] = Some C';
+       funEvaluationBool allRules database subG (Continue C') (Stop C'') \<rbrakk>
+        \<Longrightarrow> funEvaluationBool allRules database subG (Continue C) (Stop C'')"
+| conOneStep : "\<lbrakk> hasFunLabelInSUKItem C database ; l \<notin> set builtinLabels;
     localteFunTermInSUKItem C database = Some (l, fun, ty, Cr); getFunRule l allRules = Some fl;
           funEvaluationBoolAux allRules database subG fl fun (Continue Cr) (Stop C');
        funEvaluationBool allRules database subG (Continue C') (Stop C'') \<rbrakk>
@@ -1188,15 +2645,24 @@ inductive funEvaluationBool and funEvaluationBoolAux where
                 \<Longrightarrow> funEvaluationBoolAux allRules database subG
        ((p,r,c)#l) fun (Continue Cr) (Stop C'')"
 
-code_pred funEvaluationBool .
 code_pred funEvaluationBoolAux .
+code_pred funEvaluationBool .
 
-inductive funEvaluation
-    and funEvaluationAux
+definition boolEvalFun where
+"boolEvalFun allRules database subG C =
+         Predicate.the (funEvaluationBool_i_i_i_i_o allRules database subG (Continue C))"
+
+inductive funEvaluation and funEvaluationAux
 where
  conZeroStep : " \<not> hasFunLabelInSUBag B database
                  \<Longrightarrow> funEvaluation allRules database subG (Continue B) (Stop B)"
-| conOneStep : "\<lbrakk> hasFunLabelInSUBag B database ;
+| conFunStep : "\<lbrakk> hasFunLabelInSUBag C database ; l \<in> set builtinLabels;
+    localteFunTermInSUBag C database = Some (l, fun, ty, Cr);
+            evalBuiltinFun l fun database subG = Some r;
+      substitutionInSUBag Cr [(FunHole, r)] = Some C';
+       funEvaluation allRules database subG (Continue C') (Stop C'') \<rbrakk>
+        \<Longrightarrow> funEvaluation allRules database subG (Continue C) (Stop C'')"
+| conOneStep : "\<lbrakk> hasFunLabelInSUBag B database ; l \<notin> set builtinLabels;
     localteFunTermInSUBag B database = Some (l, fun, ty, Br); getFunRule l allRules = Some fl;
           funEvaluationAux allRules database subG fl fun (Continue Br) (Stop B');
        funEvaluation allRules database subG (Continue B') (Stop B'') \<rbrakk>
@@ -1224,6 +2690,23 @@ where
 
 code_pred funEvaluation .
 code_pred funEvaluationAux .
+
+definition funRuleEvalFun where
+"funRuleEvalFun allRules database subG C =
+         Predicate.the (funEvaluation_i_i_i_i_o allRules database subG (Continue C))"
+
+export_code Eps Continue Success FunTrans Single IntConst Bool Defined UnitLabel NonTerminal
+    Strict Syntax Star Stdin Multiplicity KTerm KLabelC Heat TheSyntax IRKLabel IRKItem SimId
+       KLabelMatching KLabelFunPat SUKLabel KLabelSubs FunPat SingleTon OtherVar 
+    Parsed AChar Suc Char Num.One Int.Pos Num.inc formGraph syntaxSetToKItemSetAux
+   symbolsToKLabel syntaxToKItem syntaxSetToKItemTest getKLabelName subsort getNonTerminalInList
+    getValueTerm irToSUInKLabel irToSUInKItem irToSUInPat irToSUInMatchFactor subsortGraph
+    AllSubsorts kResultSubsorts getKResultSubsorts preSubsortGraph preSubsortTerms syntaxSetToKItems
+     PreAllSubsorts getAllSubsortInKFile mergeTuples mergeList getAllSorts simpleKToIR
+     simpleKToIRKList simpleKToSU simpleKToSUKList  suToIRInKLabel suToIRInSubsFactor
+    boolEvalFun funRuleEvalFun in OCaml  module_name K file "k.ml"
+
+
 
 (* dealing with anywhere rules *)
 
@@ -1373,7 +2856,9 @@ zeroStep : "\<lbrakk> funEvaluation allFunRules database subG (Continue B) (Stop
    B \<noteq> B'';  funAnywhere allFunRules anywheres database subG (Continue B'') (Stop B''') \<rbrakk>
        \<Longrightarrow> funAnywhere allFunRules anywheres database subG (Continue B) (Stop B''')"
 
+(*
 code_pred funAnywhere .
+*)
 
 (* define K cell rule and bag rule *)
 fun getAllKCells and getAllKCellsAux where
@@ -1431,7 +2916,9 @@ zeroStep : "oneStepKRuleAux allFunRules database subG [] (Continue C) (Stop C)"
    substitutionInSUK r acc = Some r' \<rbrakk>
     \<Longrightarrow> oneStepKRuleAux allFunRules database subG ((p,r,con,l)#fl) (Continue C) (Stop r')"
 
+(*
 code_pred oneStepKRuleAux .
+*)
 
 inductive oneStepKRule where
 zeroStep : "oneStepKRule allFunRules database subG allKRule [] None"
@@ -1442,7 +2929,9 @@ zeroStep : "oneStepKRule allFunRules database subG allKRule [] None"
       C \<noteq> C' \<rbrakk>
      \<Longrightarrow> oneStepKRule allFunRules database subG allKRule (C#l) (Some (C,C'))"
 
+(*
 code_pred oneStepKRule .
+*)
 
 inductive oneStepBagRule where
 zeroStep : "oneStepBagRule allFunRules database subG [] (Continue B) (Stop B)"
@@ -1462,9 +2951,11 @@ zeroStep : "oneStepBagRule allFunRules database subG [] (Continue B) (Stop B)"
    substitutionInSUBag r acc = Some r' \<rbrakk>
     \<Longrightarrow> oneStepBagRule allFunRules database subG ((p,r,con,l)#fl) (Continue B) (Stop r')"
 
+(*
 code_pred oneStepBagRule .
+*)
 
-(* defining K compile: compilation and checking process of K theory *)
+(* defining K compile: compilation and checking process of K theory 
 definition kcompile :: "('upVar, 'var, 'acapvar, 'metaVar) kFile
    \<Rightarrow> (('upVar, 'var, 'acapvar, 'metaVar) kFile \<times>
            ('upVar kSyntax.sort list \<times> 'upVar kSyntax.sort list list \<times>
@@ -1487,7 +2978,7 @@ definition kcompile :: "('upVar, 'var, 'acapvar, 'metaVar) kFile
        else Failure (''K theory has invalid syntax or strict attributes failed.'')))
      else Failure (''kLabels are not uniquely defined in this K theory.''))
          else Failure (''K theory has invalid subsort.''))"
-
+*)
 (* defining K Run *)
 inductive krunAux where
 zeroStep : "funAnywhere allFunRules allAnywheres database subG (Continue B) (Stop B')
@@ -1509,7 +3000,9 @@ zeroStep : "funAnywhere allFunRules allAnywheres database subG (Continue B) (Sto
      krunAux database subG (n - 1) allFunRules allAnywheres allKRules allBagRules Ba Bb \<rbrakk>
     \<Longrightarrow> krunAux database subG n allFunRules allAnywheres allKRules allBagRules B Bb"
 
+(*
 code_pred krunAux .
+*)
 
 inductive krun where
 theoryFail : "kcompile Theory = Failure s \<Longrightarrow>
@@ -1527,7 +3020,9 @@ theoryFail : "kcompile Theory = Failure s \<Longrightarrow>
      krunAux database subG n  allFunRules allAnywheres allKRules allBagRules B B' \<rbrakk>
 \<Longrightarrow> krun Theory n l (Success B')"
 
+(*
 code_pred krun .
+*)
 
 (* defining K search *)
 fun divideAllKRules where
@@ -1566,7 +3061,9 @@ zeroStep : "oneTransKRuleAux allFunRules database subG [] C []"
     \<Longrightarrow> oneTransKRuleAux allFunRules database subG
            ((p,r,con,l)#fl) C (List.insert (C,r') Cl)"
 
+(*
 code_pred oneTransKRuleAux .
+*)
 
 inductive oneTransKRule where
 zeroStep : "oneTransKRule allFunRules database subG allKRule transKRule [] []"
@@ -1580,7 +3077,9 @@ zeroStep : "oneTransKRule allFunRules database subG allKRule transKRule [] []"
      \<Longrightarrow> oneTransKRule allFunRules database subG allKRule transKRule
             (C#l) (insertAll Cl Cl')"
 
+(*
 code_pred oneTransKRule .
+*)
 
 inductive oneTransBagRule where
 zeroStep : "oneTransBagRule allFunRules database subG [] B []"
@@ -1602,7 +3101,9 @@ zeroStep : "oneTransBagRule allFunRules database subG [] B []"
     \<Longrightarrow> oneTransBagRule allFunRules database subG
       ((p,r,con,l)#fl) B (List.insert r' Bl)"
 
+(*
 code_pred oneTransBagRule .
+*)
 
 fun replaceKCellsInList where
 "replaceKCellsInList B [] = []"
@@ -1632,7 +3133,9 @@ zeroStep : "oneTransKSearch allFunRules database subG
      \<Longrightarrow> oneTransKSearch allFunRules database subG
             allKRules allBagRules transKRules transBagRules (B#l) (insertAll Bl Bl')"
 
+(*
 code_pred oneTransKSearch .
+*)
 
 inductive allAllFunAnywhere where
 zeroStep : "allAllFunAnywhere allFunRules allAnywheres database subG [] []"
@@ -1641,7 +3144,9 @@ zeroStep : "allAllFunAnywhere allFunRules allAnywheres database subG [] []"
     \<Longrightarrow> 
     allAllFunAnywhere allFunRules allAnywheres database subG (B#l) (B'#Bl)"
 
+(*
 code_pred allAllFunAnywhere .
+*)
 
 (* defining K search *)
 inductive ksearchAux where
@@ -1661,7 +3166,9 @@ zeroStep : "allAllFunAnywhere allFunRules allAnywheres database subG Bl Bl'
     \<Longrightarrow> ksearchAux database subG n allFunRules
         allAnywheres allKRules allBagRules transKRules transBagRules Bl Bl'''"
 
+(*
 code_pred ksearchAux .
+*)
 
 inductive ksearch where
 theoryFail : "kcompile Theory = Failure s \<Longrightarrow>
@@ -1681,7 +3188,9 @@ theoryFail : "kcompile Theory = Failure s \<Longrightarrow>
                   allBagRules transKRules transBagRules [B] Bl \<rbrakk>
 \<Longrightarrow> ksearch Theory n l (Success Bl)"
 
+(*
 code_pred ksearch .
+*)
 
 export_code Eps Continue Success FunTrans Single IntConst Bool Defined UnitLabel NonTerminal
     Strict Syntax Star Stdin Multiplicity KTerm KLabelC Heat TheSyntax IRKLabel IRKItem
