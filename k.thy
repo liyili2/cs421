@@ -221,11 +221,11 @@ fun simpleKToIR and simpleKToIRKList where
     (case simpleKToIRKList kl database of None \<Rightarrow> None
        | Some kl' \<Rightarrow> 
          (if isFunctionItem l database then (case getSort l database of None \<Rightarrow> None
-           | Some t \<Rightarrow> if t = KLabel then Some (KLabelFunPat l kl')
-                else if t = K then Some (KFunPat l kl')
-                   else if t = List then Some (ListFunPat l kl')
-                  else if t = Set then Some (SetFunPat l kl')
-                 else if t = Map then Some (MapFunPat l kl')
+           | Some t \<Rightarrow> if t = [KLabel] then Some (KLabelFunPat l kl')
+                else if t = [K] then Some (KFunPat l kl')
+                   else if t = [List] then Some (ListFunPat l kl')
+                  else if t = [Set] then Some (SetFunPat l kl')
+                 else if t = [Map] then Some (MapFunPat l kl')
                    else Some (KItemFunPat l kl'))
           else (case l of SetItemLabel \<Rightarrow> 
              (case kl' of (KListPatNoVar [(IRBigBag (IRK kx))])
@@ -246,8 +246,16 @@ fun simpleKToIR and simpleKToIRKList where
                   \<Rightarrow> (case flattenList newkl of None \<Rightarrow> None
                        | Some sl \<Rightarrow> (case restructList sl of None \<Rightarrow> None
                            | Some sl' \<Rightarrow> Some (NormalPat (ListMatching sl')))) | _ \<Rightarrow> None)
+             | ConstToLabel (IntConst x) \<Rightarrow> Some (NormalPat
+                    (KItemMatching (IRKItem (IRKLabel (ConstToLabel (IntConst x))) kl' [kSyntax.Int])))
+             | ConstToLabel (BoolConst x) \<Rightarrow> Some (NormalPat
+                    (KItemMatching (IRKItem (IRKLabel (ConstToLabel (BoolConst x))) kl' [Bool])))
+             | ConstToLabel (StringConst x) \<Rightarrow> Some (NormalPat
+                    (KItemMatching (IRKItem (IRKLabel (ConstToLabel (StringConst x))) kl' [String])))
+             | ConstToLabel (IdConst x) \<Rightarrow> Some (NormalPat
+                    (KItemMatching (IRKItem (IRKLabel (ConstToLabel (IdConst x))) kl' [Id])))
             | _ \<Rightarrow> (case getSort l database of None \<Rightarrow> None
-                 | Some t \<Rightarrow> Some (NormalPat (KItemMatching (IRKItem (IRKLabel l) kl' [t])))))))"
+                 | Some t \<Rightarrow> Some (NormalPat (KItemMatching (IRKItem (IRKLabel l) kl' t)))))))"
 | "simpleKToIRKList [] database = Some (KListPatNoVar [])"
 | "simpleKToIRKList (x#xl) database = (case (simpleKToIRKList xl database) of None \<Rightarrow> None
           | Some (KListPatNoVar xl') \<Rightarrow> 
@@ -332,12 +340,12 @@ fun simpleKToSU and simpleKToSUKList where
     (case simpleKToSUKList kl database of None \<Rightarrow> None
        | Some kl' \<Rightarrow> 
          (if isFunctionItem l database then (case getSort l database of None \<Rightarrow> None
-           | Some t \<Rightarrow> if t = KLabel then Some (KLabelSubs (SUKLabelFun (SUKLabel l) kl'))
-                else if t = K then Some (KSubs [SUKKItem (SUKLabel l) kl' [K]])
-                   else if t = List then Some (ListSubs [SUListKItem (SUKLabel l) kl'])
-                  else if t = Set then Some (SetSubs [SUSetKItem (SUKLabel l) kl'])
-                 else if t = Map then Some (MapSubs [SUMapKItem (SUKLabel l) kl'])
-                   else Some (KItemSubs (SUKItem (SUKLabel l) kl' [t])))
+           | Some t \<Rightarrow> if t = [KLabel] then Some (KLabelSubs (SUKLabelFun (SUKLabel l) kl'))
+                else if t = [K] then Some (KSubs [SUKKItem (SUKLabel l) kl' [K]])
+                   else if t = [List] then Some (ListSubs [SUListKItem (SUKLabel l) kl'])
+                  else if t = [Set] then Some (SetSubs [SUSetKItem (SUKLabel l) kl'])
+                 else if t = [Map] then Some (MapSubs [SUMapKItem (SUKLabel l) kl'])
+                   else Some (KItemSubs (SUKItem (SUKLabel l) kl' t)))
           else (case l of SetItemLabel \<Rightarrow> 
              (case kl' of [ItemKl (SUBigBag (SUK kx))]
                           \<Rightarrow> Some (SetSubs [ItemS kx]) | _ \<Rightarrow> None)
@@ -348,8 +356,16 @@ fun simpleKToSU and simpleKToSUKList where
              | SetConLabel \<Rightarrow> (case flattenSUSet kl' of Some newkl \<Rightarrow> Some (SetSubs newkl) | _ \<Rightarrow> None)
              | MapConLabel \<Rightarrow> (case flattenSUMap kl' of Some newkl \<Rightarrow> Some (MapSubs newkl) | _ \<Rightarrow> None)
              | ListConLabel \<Rightarrow>(case flattenSUList kl' of Some newkl \<Rightarrow> Some (ListSubs newkl) | _ \<Rightarrow> None)
+            | ConstToLabel (IntConst x) \<Rightarrow>  Some (KItemSubs (SUKItem (SUKLabel
+                              (ConstToLabel (IntConst x))) kl' [kSyntax.Int]))
+            | ConstToLabel (BoolConst x) \<Rightarrow>  Some (KItemSubs (SUKItem (SUKLabel
+                              (ConstToLabel (BoolConst x))) kl' [Bool]))
+            | ConstToLabel (StringConst x) \<Rightarrow>  Some (KItemSubs (SUKItem (SUKLabel
+                              (ConstToLabel (StringConst x))) kl' [String]))
+            | ConstToLabel (IdConst x) \<Rightarrow>  Some (KItemSubs (SUKItem (SUKLabel
+                              (ConstToLabel (IdConst x))) kl' [Id]))
             | _ \<Rightarrow> (case getSort l database of None \<Rightarrow> None
-                 | Some t \<Rightarrow> Some (KItemSubs (SUKItem (SUKLabel l) kl' [t]))))))"
+                 | Some t \<Rightarrow> Some (KItemSubs (SUKItem (SUKLabel l) kl' t))))))"
 | "simpleKToSUKList [] database = Some []"
 | "simpleKToSUKList (x#xl) database = (case (simpleKToSUKList xl database) of None \<Rightarrow> None
           | Some xl' \<Rightarrow> 
@@ -363,6 +379,221 @@ fun simpleKToSU and simpleKToSUKList where
            | Some (BagSubs x') \<Rightarrow> Some [ItemKl (SUBigBag (SUBag x'))]
            | Some (KItemSubs x') \<Rightarrow> Some [ItemKl (SUBigBag (SUK [ItemFactor x']))]))"
 
+fun tupleToRulePat where
+"tupleToRulePat (x,y,z,u) database = (if Macro \<in> set u then 
+     (case simpleKToIR x database of Some (NormalPat (KItemMatching (IRKItem (IRKLabel l) kl t)))
+        \<Rightarrow> (case simpleKToSU y database of Some (KItemSubs y')
+              \<Rightarrow> (case simpleKToSU z database of Some (KItemSubs z')
+             \<Rightarrow>  (case getKLabelInSUKItem z' of Some (ConstToLabel (BoolConst True))
+                     \<Rightarrow> Some (MacroPat l kl [ItemFactor y']) | _ \<Rightarrow> None) | _ \<Rightarrow> None)
+                   | Some (KSubs y') \<Rightarrow>
+                        (case simpleKToSU z database of Some (KItemSubs z')
+             \<Rightarrow>  (case getKLabelInSUKItem z' of Some (ConstToLabel (BoolConst True))
+                     \<Rightarrow> Some (MacroPat l kl y') | _ \<Rightarrow> None) | _ \<Rightarrow> None)
+                     | _ \<Rightarrow> None)
+        | Some (NormalPat (KMatching (KPat [IRKItem (IRKLabel l) kl t] None)))
+        \<Rightarrow> (case simpleKToSU y database of Some (KItemSubs y')
+              \<Rightarrow> (case simpleKToSU z database of Some (KItemSubs z')
+             \<Rightarrow>  (case getKLabelInSUKItem z' of Some (ConstToLabel (BoolConst True))
+                     \<Rightarrow> Some (MacroPat l kl [ItemFactor y']) | _ \<Rightarrow> None) | _ \<Rightarrow> None)
+                   | Some (KSubs y') \<Rightarrow>
+                        (case simpleKToSU z database of Some (KItemSubs z')
+             \<Rightarrow>  (case getKLabelInSUKItem z' of Some (ConstToLabel (BoolConst True))
+                     \<Rightarrow> Some (MacroPat l kl y') | _ \<Rightarrow> None) | _ \<Rightarrow> None)
+                     | _ \<Rightarrow> None) | _ \<Rightarrow> None)
+        else if Anywhere \<in> set u then
+         (case simpleKToIR x database of Some (NormalPat (KItemMatching (IRKItem (IRKLabel l) kl t)))
+        \<Rightarrow> (case simpleKToSU y database of Some (KItemSubs y')
+              \<Rightarrow> (case simpleKToSU z database of Some (KItemSubs z')
+                     \<Rightarrow> Some (AnywherePat l kl [ItemFactor y'] z') | _ \<Rightarrow> None)
+                   | Some (KSubs y') \<Rightarrow>
+                (case simpleKToSU z database of Some (KItemSubs z')
+                     \<Rightarrow> Some (AnywherePat l kl y' z') | _ \<Rightarrow> None)
+                     | _ \<Rightarrow> None)
+        | Some (NormalPat (KMatching (KPat [IRKItem (IRKLabel l) kl t] None)))
+        \<Rightarrow> (case simpleKToSU y database of Some (KItemSubs y')
+              \<Rightarrow> (case simpleKToSU z database of Some (KItemSubs z')
+                     \<Rightarrow> Some (AnywherePat l kl [ItemFactor y'] z') | _ \<Rightarrow> None)
+                   | Some (KSubs y') \<Rightarrow>
+             (case simpleKToSU z database of Some (KItemSubs z')
+                     \<Rightarrow> Some (AnywherePat l kl y' z') | _ \<Rightarrow> None)
+                     | _ \<Rightarrow> None) | _ \<Rightarrow> None)
+          else (case simpleKToIR x database of Some (KLabelFunPat l kl)
+                   \<Rightarrow> (case simpleKToSU y database of Some (KLabelSubs y')
+             \<Rightarrow> (case simpleKToSU z database of Some (KItemSubs z')
+                \<Rightarrow> if Owise \<notin> set u
+                     then Some (FunPat l [((KLabelFunPat l kl),(KLabelSubs y'),z')] None)
+                     else Some (FunPat l [] (Some ((KLabelFunPat l kl),(KLabelSubs y'),z')))
+                    | _ \<Rightarrow> None) | _ \<Rightarrow> None)
+               | Some (KFunPat l kl)
+                   \<Rightarrow> (case simpleKToSU y database of Some (KSubs y')
+             \<Rightarrow> (case simpleKToSU z database of Some (KItemSubs z')
+                \<Rightarrow> if Owise \<notin> set u
+                     then Some (FunPat l [((KFunPat l kl),(KSubs y'),z')] None)
+                     else Some (FunPat l [] (Some ((KFunPat l kl),(KSubs y'),z')))
+                    | _ \<Rightarrow> None)
+              | Some (KItemSubs y')
+             \<Rightarrow> (case simpleKToSU z database of Some (KItemSubs z')
+                \<Rightarrow> if Owise \<notin> set u
+                     then Some (FunPat l [((KFunPat l kl),(KSubs [ItemFactor y']),z')] None)
+                     else Some (FunPat l [] (Some ((KFunPat l kl),(KSubs [ItemFactor y']),z')))
+                    | _ \<Rightarrow> None) | _ \<Rightarrow> None)
+         | Some (KItemFunPat l kl)
+                   \<Rightarrow> (case simpleKToSU y database of Some (KItemSubs y')
+             \<Rightarrow> (case simpleKToSU z database of Some (KItemSubs z')
+                \<Rightarrow> if Owise \<notin> set u
+                     then Some (FunPat l [((KItemFunPat l kl),(KItemSubs y'),z')] None)
+                     else Some (FunPat l [] (Some ((KItemFunPat l kl),(KItemSubs y'),z')))
+                    | _ \<Rightarrow> None)
+              | Some (KSubs [ItemFactor y'])
+             \<Rightarrow> (case simpleKToSU z database of Some (KItemSubs z')
+                \<Rightarrow> if Owise \<notin> set u
+                     then Some (FunPat l [((KItemFunPat l kl),(KItemSubs y'),z')] None)
+                     else Some (FunPat l [] (Some ((KItemFunPat l kl),(KItemSubs y'),z')))
+                    | _ \<Rightarrow> None) | _ \<Rightarrow> None)
+         | Some (ListFunPat l kl)
+                   \<Rightarrow> (case simpleKToSU y database of Some (ListSubs y')
+             \<Rightarrow> (case simpleKToSU z database of Some (KItemSubs z')
+                \<Rightarrow> if Owise \<notin> set u
+                     then Some (FunPat l [((ListFunPat l kl),(ListSubs y'),z')] None)
+                     else Some (FunPat l [] (Some ((ListFunPat l kl),(ListSubs y'),z')))
+                    | _ \<Rightarrow> None) | _ \<Rightarrow> None)
+         | Some (SetFunPat l kl)
+                   \<Rightarrow> (case simpleKToSU y database of Some (SetSubs y')
+             \<Rightarrow> (case simpleKToSU z database of Some (KItemSubs z')
+                \<Rightarrow> if Owise \<notin> set u
+                     then Some (FunPat l [((SetFunPat l kl),(SetSubs y'),z')] None)
+                     else Some (FunPat l [] (Some ((SetFunPat l kl),(SetSubs y'),z')))
+                    | _ \<Rightarrow> None) | _ \<Rightarrow> None)
+         | Some (MapFunPat l kl)
+                   \<Rightarrow> (case simpleKToSU y database of Some (MapSubs y')
+             \<Rightarrow> (case simpleKToSU z database of Some (KItemSubs z')
+                \<Rightarrow> if Owise \<notin> set u
+                     then Some (FunPat l [((MapFunPat l kl),(MapSubs y'),z')] None)
+                     else Some (FunPat l [] (Some ((MapFunPat l kl),(MapSubs y'),z')))
+                    | _ \<Rightarrow> None) | _ \<Rightarrow> None)
+        | Some (NormalPat (KItemMatching x')) \<Rightarrow>
+           (case simpleKToSU y database of Some (KItemSubs y')
+             \<Rightarrow> (case simpleKToSU z database of Some (KItemSubs z')
+                \<Rightarrow> Some (KRulePat (KPat [x'] None) [ItemFactor y'] z'
+                                 (if Transition \<in> set u then True else False))
+                    | _ \<Rightarrow> None)
+              | Some (KSubs y')
+             \<Rightarrow> (case simpleKToSU z database of Some (KItemSubs z')
+                \<Rightarrow> Some (KRulePat (KPat [x'] None) y' z'
+                                 (if Transition \<in> set u then True else False))
+                    | _ \<Rightarrow> None) | _ \<Rightarrow> None)
+        | Some (NormalPat (KMatching x')) \<Rightarrow>
+           (case simpleKToSU y database of Some (KItemSubs y')
+             \<Rightarrow> (case simpleKToSU z database of Some (KItemSubs z')
+                \<Rightarrow> Some (KRulePat x' [ItemFactor y'] z'
+                                 (if Transition \<in> set u then True else False))
+                    | _ \<Rightarrow> None)
+              | Some (KSubs y')
+             \<Rightarrow> (case simpleKToSU z database of Some (KItemSubs z')
+                \<Rightarrow> Some (KRulePat x' y' z' (if Transition \<in> set u then True else False))
+                    | _ \<Rightarrow> None) | _ \<Rightarrow> None)
+         | Some (NormalPat (BagMatching x'))
+                   \<Rightarrow> (case simpleKToSU y database of Some (BagSubs y')
+             \<Rightarrow> (case simpleKToSU z database of Some (KItemSubs z')
+                \<Rightarrow> Some (BagRulePat x' y' z'
+                                 (if Transition \<in> set u then True else False))
+                    | _ \<Rightarrow> None) | _ \<Rightarrow> None)))"
+
+fun mergeFunRules where
+"mergeFunRules  l a b [] = Some [FunPat l a b]"
+| "mergeFunRules  l a b (x#xl) =
+ (case x of (FunPat l' a' b') \<Rightarrow> (if l = l' then 
+        (case b of None \<Rightarrow> Some ((FunPat l (a'@a) b')#xl)
+            | Some bo \<Rightarrow> (case b' of None \<Rightarrow> Some ((FunPat l (a'@a) (Some bo))#xl)
+            | Some bo' \<Rightarrow> None)) else
+         (case (mergeFunRules  l a b xl) of None \<Rightarrow> None
+                | Some xl' \<Rightarrow> Some (x#xl')))
+     | _ \<Rightarrow> (case (mergeFunRules  l a b xl) of None \<Rightarrow> None
+                | Some xl' \<Rightarrow> Some (x#xl')))"
+
+
+fun tupleToRulePats where
+"tupleToRulePats [] database = Some []"
+| "tupleToRulePats (x#xl) database = (case tupleToRulePat x database of None \<Rightarrow> None
+             | Some (FunPat l a b) \<Rightarrow> (case tupleToRulePats xl database of None \<Rightarrow> None
+                | Some xl' \<Rightarrow> mergeFunRules l a b xl')
+             | Some x' \<Rightarrow> (case tupleToRulePats xl database of None \<Rightarrow> None
+               | Some xl' \<Rightarrow> Some (x'#xl')))"
+
+fun existKey where
+"existKey x [] = False"
+| "existKey x ((a,b)#xl) = (if x = a then True else existKey x xl)"
+
+fun update where
+"update x y [] = [(x,y)]"
+| "update x y ((a,b)#xl) = (if a = x then (a,y)#xl else (a,b)#(update x y xl))"
+
+fun lookup where
+"lookup x [] = None"
+| "lookup x ((a,b)#xl) = (if a = x then Some b else lookup x xl)"
+
+fun collectSort and collectSorts where
+"collectSort (SimId a b) acc = (if b = Top then Some acc else if existKey a acc then
+              (case lookup a acc of None \<Rightarrow> None | Some b' \<Rightarrow> if b = b' then Some acc else None)
+               else Some (update a b acc))"
+| "collectSort (SimTerm a bl) acc = collectSorts bl acc"
+| "collectSort (SimLabel a) acc = Some acc"
+| "collectSort (SimEmpty a) acc = Some acc"
+| "collectSort (SimBagCon a b) acc = (case collectSort a acc of None \<Rightarrow> None
+            | Some acc' \<Rightarrow> collectSort b acc)"
+| "collectSort (SimBag x y b) acc = collectSort b acc"
+| "collectSorts [] acc = Some acc"
+| "collectSorts (x#xl) acc = (case collectSort x acc of None \<Rightarrow> None
+                | Some acc' \<Rightarrow>collectSorts xl acc')"
+
+fun collectSortInRule where
+"collectSortInRule (x,y,z,a) = (case collectSort x [] of None \<Rightarrow> None
+          | Some acc \<Rightarrow> (case collectSort y acc of None \<Rightarrow> None
+                | Some acc' \<Rightarrow> collectSort z acc'))"
+
+fun assignSort and assignSorts where
+"assignSort (SimId a b) acc = (if b = Top then (case lookup a acc of None \<Rightarrow> None
+         | Some t \<Rightarrow> Some (SimId a t)) else Some (SimId a b))"
+| "assignSort (SimTerm a bl) acc = (case assignSorts bl acc of None \<Rightarrow> None
+            | Some bl' \<Rightarrow> Some (SimTerm a bl'))"
+| "assignSort (SimLabel a) acc = Some (SimLabel a)"
+| "assignSort (SimEmpty a) acc = Some (SimEmpty a)"
+| "assignSort (SimBagCon a b) acc = (case assignSort a acc of None \<Rightarrow> None
+           | Some a' \<Rightarrow> (case assignSort b acc of None \<Rightarrow> None
+                | Some b' \<Rightarrow> Some (SimBagCon a' b')))"
+| "assignSort (SimBag x y b) acc = (case assignSort b acc of None \<Rightarrow> None
+             | Some b' \<Rightarrow> Some (SimBag x y b'))"
+| "assignSorts [] acc = Some []"
+| "assignSorts (x#xl) acc = (case assignSort x acc of None \<Rightarrow> None
+           | Some x' \<Rightarrow> (case assignSorts xl acc of None \<Rightarrow> None
+               | Some xl' \<Rightarrow> Some (x'#xl')))"
+
+fun assignSortInRule  where
+"assignSortInRule (x,y,z,a) = (case collectSortInRule (x,y,z,a) of None \<Rightarrow> None
+        | Some acc \<Rightarrow> (case assignSort x acc of None \<Rightarrow> None
+       | Some x' \<Rightarrow> (case assignSort y acc of None \<Rightarrow> None
+         | Some y' \<Rightarrow> (case assignSort z acc of None \<Rightarrow> None
+           | Some z' \<Rightarrow> Some (x',y',z',a)))))"
+
+fun assignSortInRules where
+"assignSortInRules [] = Some []"
+| "assignSortInRules (x#xl) = (case assignSortInRule x of None \<Rightarrow> None
+        | Some x' \<Rightarrow> (case assignSortInRules xl of None \<Rightarrow> None
+               | Some xl' \<Rightarrow> Some (x'#xl')))"
+
+fun removeSubsorts where
+"removeSubsorts [] = []"
+| "removeSubsorts (x#xl) = (case x of Subsort a b \<Rightarrow> removeSubsorts xl | _ \<Rightarrow> x#(removeSubsorts xl))"
+
+fun collectDatabase where
+"collectDatabase (Parsed a b) = syntaxSetToKItems (removeSubsorts (mergeTuples a))"
+
+definition tupleToRuleInParsed where
+"tupleToRuleInParsed a = (case a of Parsed x y
+                 \<Rightarrow> (case assignSortInRules y of None \<Rightarrow> None
+          | Some y' \<Rightarrow> (case collectDatabase a of None \<Rightarrow> None
+                | Some database \<Rightarrow> tupleToRulePats y' database)))"
 
 function checkTermsInSUKLabel
     and checkTermsInSUKItem
@@ -2699,12 +2930,13 @@ export_code Eps Continue Success FunTrans Single IntConst Bool Defined UnitLabel
     Strict Syntax Star Stdin Multiplicity KTerm KLabelC Heat TheSyntax IRKLabel IRKItem SimId
        KLabelMatching KLabelFunPat SUKLabel KLabelSubs FunPat SingleTon OtherVar 
     Parsed AChar Suc Char Num.One Int.Pos Num.inc formGraph syntaxSetToKItemSetAux
-   symbolsToKLabel syntaxToKItem syntaxSetToKItemTest getKLabelName subsort getNonTerminalInList
+   symbolsToKLabel syntaxToKItem getKLabelName subsort getNonTerminalInList
     getValueTerm irToSUInKLabel irToSUInKItem irToSUInPat irToSUInMatchFactor subsortGraph
     AllSubsorts kResultSubsorts getKResultSubsorts preSubsortGraph preSubsortTerms syntaxSetToKItems
      PreAllSubsorts getAllSubsortInKFile mergeTuples mergeList getAllSorts simpleKToIR
      simpleKToIRKList simpleKToSU simpleKToSUKList  suToIRInKLabel suToIRInSubsFactor
-    boolEvalFun funRuleEvalFun in OCaml  module_name K file "k.ml"
+    boolEvalFun funRuleEvalFun tupleToRulePats assignSortInRules collectDatabase tupleToRulePats
+         tupleToRuleInParsed in OCaml  module_name K file "k.ml"
 
 
 
