@@ -2936,7 +2936,7 @@ export_code Eps Continue Success FunTrans Single IntConst Bool Defined UnitLabel
      PreAllSubsorts getAllSubsortInKFile mergeTuples mergeList getAllSorts simpleKToIR
      simpleKToIRKList simpleKToSU simpleKToSUKList  suToIRInKLabel suToIRInSubsFactor
     boolEvalFun funRuleEvalFun tupleToRulePats assignSortInRules collectDatabase tupleToRulePats
-         tupleToRuleInParsed in OCaml  module_name K file "k.ml"
+   tupleToRulePat tupleToRuleInParsed isFunctionItem getSort in OCaml  module_name K file "k.ml"
 
 
 

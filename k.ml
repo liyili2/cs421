@@ -182,11 +182,16 @@ module K : sig
   val getValueTerm : 'a equal -> 'a -> ('a * 'b) list -> 'b option
   val irToSUInKLabel : ('a, 'b) irKLabel -> ('a, 'c, 'b) suKLabel
   val irToSUInKItem : 'a equal -> ('a, 'b, 'c) irKItem -> ('a, 'b, 'c) suKItem
+  val isFunctionItem :
+    'a equal -> 'a -> ('b * ('c * ('a kItemSyntax * ('d * bool)))) list -> bool
   val suToIRInKLabel :
     'a equal ->
       ('a, 'b, 'c) suKLabel ->
         ('d * ('e * ('a label kItemSyntax * ('f * bool)))) list ->
           ('a, 'b, 'c) pat option
+  val getSort :
+    'a equal ->
+      'a -> ('b * ('c * ('a kItemSyntax * ('d * 'e)))) list -> 'b option
   val boolEvalFun :
     'a equal -> 'b equal -> 'c equal ->
       ('a, 'b, 'c) rulePat list ->
@@ -229,6 +234,13 @@ module K : sig
           (('a sort list) list * ('a label kItemSyntax * ('d * bool)))) list ->
           ('a sort * 'a sort list) list ->
             ('a, 'b, 'c) suB list -> (('a, 'b, 'c) suB list) state
+  val tupleToRulePat :
+    'a equal -> 'd equal -> 'e equal ->
+      ('a, 'b, 'c) simpleK *
+        (('a, 'b, 'c) simpleK *
+          (('a, 'b, 'c) simpleK * ('d, 'e) ruleAttrib list)) ->
+        ('a sort list * ('f * ('a label kItemSyntax * ('g * bool)))) list ->
+          ('a, 'b, 'c) rulePat option
   val symbolsToKLabel : 'a symbol nelist -> 'b label
   val getKLabelName : synAttrib list -> 'a label option
   val syntaxToKItem :
