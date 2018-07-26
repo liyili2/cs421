@@ -23,7 +23,7 @@
 
   syntax Bool ::= 'occur(Id, Term) [function,klabel('occur)]
   syntax Bool ::= 'occurs(Id, Terms) [function,klabel('occurs)]
-
+  syntax KItem ::= 'eliminate(TermPair, Set, Map) [function, klabel('eliminate)]
 
   syntax Term ::= 'subst(K, Id, Term) [function,klabel('subst)]
   syntax Set ::= 'substInSet(Set, Id, Term) [function,klabel('substInSet)]
@@ -95,5 +95,36 @@
   rule 'occurs(X:Id, 'listCon(T:Term, Ts:Terms))
           => 'orBool('occur(X, T), 'occurs(X, Ts))
 
+  syntax Term ::= 'subst(K, Id, Term) [function,klabel('subst)]
+  syntax Set ::= 'substInSet(Set, Id, Term) [function,klabel('substInSet)]
+  syntax Map ::= 'substMap(Map, Id, Term) [function,klabel('substMap)]
+
+  rule 'subst('termPair(A:Term, B:Term), X:Id, T:Term)
+         => 'termPair('subst(A, X, T), 'subst(B, X, T))
+  rule 'subst(X:Id, X, T:Term) => T
+  rule 'subst(X:Id, Y:Id, T:Term) => X
+       requires '=/=K(X, Y)
+  rule 'subst('const(X:Id, Ts:Terms), Y:Id, T:Term)
+            => 'const(X, 'subst(Ts, Y, T))
+  rule 'subst(.Terms, Y:Id, T:Term) => .Terms
+  rule 'subst('listCon(A:Term, B:Terms), Y:Id, T:Term)
+          => 'listCon('subst(A, Y, T), 'subst(B, Y, T))
+
+  rule 'substInSet(.Set, X:Id, T:Term) => .Set
+  rule 'substInSet(SetCon(SetItem(A:K), S:Set), X:Id, T:Term)
+        => SetCon(SetItem('subst(A, X, T)), 'substInSet(S, X, T))
+
+  rule 'substMap(.Map, X:Id, T:Term) => .Map
+  rule 'substMap(MapCon(MapItem(Y:Id, A:Term), M:Map), X:Id, T:Term)
+          => MapCon(MapItem(Y, 'subst(A, X, T)), 'substMap(M, X, T))
+       requires 'notBool('occur(Y, T))
+  rule 'substMap(MapCon(MapItem(Y:Id, A:Term), M:Map), X:Id, T:Term)
+          => MapCon(MapItem(Y, A), 'substMap(M, X, T))
+       requires 'occur(Y, T)
+
+  rule 'eliminate('termPair(A:Id, B:Term), S:Set, M:Map)
+           => 'some('result('substInSet(S, A, B), 'substInSet(M, A, B)))
+       requires 'notBool('occur(A, B))
+  rule 'eliminate('termPair(A:Term, B:Term), S:Set, M:Map) => 'none(.KList) [owise]
 
 
