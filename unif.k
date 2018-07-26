@@ -12,6 +12,10 @@
   syntax Int ::= 'termLength(Terms) [function,klabel('termLength)]
   syntax KItem ::= 'resultSet(Set) [klabel('resultSet)]
   syntax KItem ::= 'result(Set, Map)  [klabel('result)]
+  syntax Term ::= 'subst(K, Id, Term) [function,klabel('subst)]
+  syntax Set ::= 'substInSet(Set, Id, Term) [function,klabel('substInSet)]
+  syntax Map ::= 'substMap(Map, Id, Term) [function,klabel('substMap)]
+
 
   syntax KItem ::= 'applyDec(TermPair) [function,klabel('applyDec)]
   syntax Set ::= 'decom(Terms, Terms) [function, klabel('decom)]
@@ -24,10 +28,8 @@
   syntax Bool ::= 'occur(Id, Term) [function,klabel('occur)]
   syntax Bool ::= 'occurs(Id, Terms) [function,klabel('occurs)]
   syntax KItem ::= 'eliminate(TermPair, Set, Map) [function, klabel('eliminate)]
+  syntax List ::= 'applyElim(List, Set, K, K, Set, Map) [function, klabel('applyElim)]
 
-  syntax Term ::= 'subst(K, Id, Term) [function,klabel('subst)]
-  syntax Set ::= 'substInSet(Set, Id, Term) [function,klabel('substInSet)]
-  syntax Map ::= 'substMap(Map, Id, Term) [function,klabel('substMap)]
   syntax Map ::= 'singleUnif(K, Set, Map) [function,klabel('singleUnif)]
   syntax Set ::= 'singleUnifSet(K, Set, Set, Map) [function,klabel('singleUnifSet)]
 
@@ -126,5 +128,19 @@
            => 'some('result('substInSet(S, A, B), 'substInSet(M, A, B)))
        requires 'notBool('occur(A, B))
   rule 'eliminate('termPair(A:Term, B:Term), S:Set, M:Map) => 'none(.KList) [owise]
+
+  rule 'applyElim(L:List, S:Set, .K, .K, .Set, M:Map) => L
+  rule 'applyElim(L:List, S:Set, .K, .K, SetCon(SetItem(X:K), S1:Set), M:Map)
+                 => 'applyElim(L, S, .K, X, S1, M)
+  rule 'applyElim(L:List, S:Set, .K, 'termPair(A:Term, B:Term), S1:Set, M:Map)
+          => 'applyElim(L:List, S:Set, 'eliminate('termPair(A:Term, B:Term), SetCon(S, S1), M),
+                       'termPair(A:Term, B:Term), S1:Set, M)
+  rule 'applyElim(L:List, S:Set, 'none(.KList), 'termPair(A:Term, B:Term), S1:Set, M:Map)
+         => 'applyElim(L, SetCon(S, SetItem('termPair(A:Term, B:Term))), .K, .K, S1, M)
+  rule 'applyElim(L:List, S:Set, 'some('result(RS:Set, RM:Map)),
+               'termPair(A:Term, B:Term), S1:Set, M:Map)
+         => 'applyElim(ListCon(L, ListItem('result(RS:Set, RM:Map))),
+                   SetCon(S, SetItem('termPair(A:Term, B:Term))), .K, .K, S1, M)
+
 
 

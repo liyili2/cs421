@@ -370,14 +370,14 @@ fun simpleKToSU and simpleKToSUKList where
 | "simpleKToSUKList (x#xl) database = (case (simpleKToSUKList xl database) of None \<Rightarrow> None
           | Some xl' \<Rightarrow> 
           (case simpleKToSU x database of None \<Rightarrow> None
-              | Some (KListSubs sl) \<Rightarrow> Some sl
-           | Some (KLabelSubs x') \<Rightarrow> Some [ItemKl (SUBigLabel x')]
-           | Some (KSubs x') \<Rightarrow> Some [ItemKl (SUBigBag (SUK x'))]
-           | Some (ListSubs x') \<Rightarrow> Some [ItemKl (SUBigBag (SUList x'))]
-           | Some (SetSubs x') \<Rightarrow> Some [ItemKl (SUBigBag (SUSet x'))]
-           | Some (MapSubs x') \<Rightarrow> Some [ItemKl (SUBigBag (SUMap x'))]
-           | Some (BagSubs x') \<Rightarrow> Some [ItemKl (SUBigBag (SUBag x'))]
-           | Some (KItemSubs x') \<Rightarrow> Some [ItemKl (SUBigBag (SUK [ItemFactor x']))]))"
+              | Some (KListSubs sl) \<Rightarrow> Some (sl@xl')
+           | Some (KLabelSubs x') \<Rightarrow> Some ((ItemKl (SUBigLabel x'))#xl')
+           | Some (KSubs x') \<Rightarrow> Some ((ItemKl (SUBigBag (SUK x')))#xl')
+           | Some (ListSubs x') \<Rightarrow> Some ((ItemKl (SUBigBag (SUList x')))#xl')
+           | Some (SetSubs x') \<Rightarrow> Some ((ItemKl (SUBigBag (SUSet x')))#xl')
+           | Some (MapSubs x') \<Rightarrow> Some ((ItemKl (SUBigBag (SUMap x')))#xl')
+           | Some (BagSubs x') \<Rightarrow> Some ((ItemKl (SUBigBag (SUBag x')))#xl')
+           | Some (KItemSubs x') \<Rightarrow> Some ((ItemKl (SUBigBag (SUK [ItemFactor x'])))#xl')))"
 
 fun tupleToRulePat where
 "tupleToRulePat (x,y,z,u) database = (if Macro \<in> set u then 

@@ -11161,18 +11161,19 @@ and simpleKToSUKList _A
   x0 database = match x0, database with [], database -> Some []
     | x :: xl, database ->
         (match simpleKToSUKList _A xl database with None -> None
-          | Some _ ->
+          | Some xla ->
             (match simpleKToSU _A x database with None -> None
-              | Some a ->
-                (match a with KLabelSubs xa -> Some [ItemKl (SUBigLabel xa)]
-                  | KItemSubs xa ->
-                    Some [ItemKl (SUBigBag (SUK [ItemFactor xa]))]
-                  | KListSubs aa -> Some aa
-                  | KSubs xa -> Some [ItemKl (SUBigBag (SUK xa))]
-                  | ListSubs xa -> Some [ItemKl (SUBigBag (SUList xa))]
-                  | SetSubs xa -> Some [ItemKl (SUBigBag (SUSet xa))]
-                  | MapSubs xa -> Some [ItemKl (SUBigBag (SUMap xa))]
-                  | BagSubs xa -> Some [ItemKl (SUBigBag (SUBag xa))])));;
+              | Some (KLabelSubs xa) -> Some (ItemKl (SUBigLabel xa) :: xla)
+              | Some (KItemSubs xa) ->
+                Some (ItemKl (SUBigBag (SUK [ItemFactor xa])) :: xla)
+              | Some (KListSubs sl) -> Some (sl @ xla)
+              | Some (KSubs xa) -> Some (ItemKl (SUBigBag (SUK xa)) :: xla)
+              | Some (ListSubs xa) ->
+                Some (ItemKl (SUBigBag (SUList xa)) :: xla)
+              | Some (SetSubs xa) -> Some (ItemKl (SUBigBag (SUSet xa)) :: xla)
+              | Some (MapSubs xa) -> Some (ItemKl (SUBigBag (SUMap xa)) :: xla)
+              | Some (BagSubs xa) ->
+                Some (ItemKl (SUBigBag (SUBag xa)) :: xla)));;
 
 let rec mergeFunRules _A
   l a b x3 = match l, a, b, x3 with l, a, b, [] -> Some [FunPat (l, a, b)]
