@@ -269,6 +269,11 @@ module K : sig
       (('a sort list *
          (('a sort list) list *
            ('a label kItemSyntax * (synAttrib list * bool)))) list) option
+  val genProgramState :
+    'a equal -> 'b equal ->
+      ('a, 'b, 'c) theoryParsed ->
+        ('a sort list * ('d * ('a label kItemSyntax * ('e * bool)))) list ->
+          (('a, 'b, 'c) suB list) option
   val tupleToRulePats :
     'a equal -> 'd equal -> 'e equal ->
       (('a, 'b, 'c) simpleK *
@@ -12317,6 +12322,21 @@ let rec tupleToRulePat _A _D _E
                             | Some (MapSubs _) -> None
                             | Some (BagSubs _) -> None)))));;
 
+let rec bagContainsCell _A
+  x xa1 = match x, xa1 with x, [] -> false
+    | x, b :: l ->
+        (match b
+          with ItemB (u, _, w) ->
+            (if equal_var _A x u then true
+              else bagContainsCellAux _A x w || bagContainsCell _A x l)
+          | IdB _ -> bagContainsCell _A x l)
+and bagContainsCellAux _A
+  x xa1 = match x, xa1 with x, SUBag y -> bagContainsCell _A x y
+    | x, SUK v -> false
+    | x, SUList v -> false
+    | x, SUSet v -> false
+    | x, SUMap v -> false;;
+
 let rec hasOutOfPositionStrict
   x0 l = match x0, l with [], l -> false
     | n :: la, l ->
@@ -12693,6 +12713,96 @@ let rec mergeTuples = function [] -> []
 
 let rec collectDatabase
   (Parsed (c, a, b, p)) = syntaxSetToKItems (removeSubsorts (mergeTuples a));;
+
+let rec createInitState _B
+  = function [] -> Some []
+    | b :: l ->
+        (match b
+          with ItemB (x, y, z) ->
+            (if membera equal_feature y (Multiplicity Star) ||
+                  membera equal_feature y (Multiplicity Question)
+              then (if bagContainsCellAux _B LittleK z
+                     then (match createInitStateAux _B z with None -> None
+                            | Some za ->
+                              (match createInitState _B l with None -> None
+                                | Some la -> Some (ItemB (x, y, za) :: la)))
+                     else (match createInitState _B l with None -> None
+                            | Some a -> Some a))
+              else (match createInitStateAux _B z with None -> None
+                     | Some za ->
+                       (match createInitState _B l with None -> None
+                         | Some la -> Some (ItemB (x, y, za) :: la))))
+          | IdB _ -> None)
+and createInitStateAux _B
+  = function
+    SUBag x ->
+      (match createInitState _B x with None -> None
+        | Some xa -> Some (SUBag xa))
+    | SUK v -> Some (SUK v)
+    | SUList v -> Some (SUList v)
+    | SUSet v -> Some (SUSet v)
+    | SUMap v -> Some (SUMap v);;
+
+let rec replaceProgramInBag
+  x0 p = match x0, p with [], p -> []
+    | x :: xl, p -> replaceProgramInBagFactor x p :: replaceProgramInBag xl p
+and replaceProgramInSuBigKWithBag
+  x0 p = match x0, p with SUK a, p -> SUK (replaceProgramInK a p)
+    | SUList a, p -> SUList a
+    | SUSet a, p -> SUSet a
+    | SUMap a, p -> SUMap a
+    | SUBag a, p -> SUBag (replaceProgramInBag a p)
+and replaceProgramInBagFactor
+  x0 p = match x0, p with IdB x, p -> IdB x
+    | ItemB (x, y, z), p -> ItemB (x, y, replaceProgramInSuBigKWithBag z p)
+and replaceProgramInSuBigKWithLabel
+  x0 p = match x0, p with
+    SUBigBag a, p -> SUBigBag (replaceProgramInSuBigKWithBag a p)
+    | SUBigLabel a, p -> SUBigLabel a
+and replaceProgramInKL
+  x0 p = match x0, p with
+    ItemKl l, p -> ItemKl (replaceProgramInSuBigKWithLabel l p)
+    | IdKl x, p -> IdKl x
+and replaceProgramInKList
+  x0 p = match x0, p with [], p -> []
+    | x :: xl, p -> replaceProgramInKL x p :: replaceProgramInKList xl p
+and replaceProgramInKItem
+  x0 p = match x0, p with
+    SUKItem (x, kl, t), p -> SUKItem (x, replaceProgramInKList kl p, t)
+    | SUIdKItem (x, t), p -> p
+    | SUHOLE t, p -> SUHOLE t
+and replaceProgramInKFactor
+  x0 p = match x0, p with
+    ItemFactor a, p -> ItemFactor (replaceProgramInKItem a p)
+    | IdFactor x, p -> ItemFactor p
+    | SUKKItem (x, y, z), p -> SUKKItem (x, y, z)
+and replaceProgramInK
+  x0 p = match x0, p with [], p -> []
+    | x :: xl, p -> replaceProgramInKFactor x p :: replaceProgramInK xl p;;
+
+let rec genProgramState _A _B
+  b database =
+    (match b with Parsed (None, _, _, _) -> None
+      | Parsed (Some _, _, _, None) -> None
+      | Parsed (Some c, _, _, Some p) ->
+        (match simpleKToSU _A c database with None -> None
+          | Some (KLabelSubs _) -> None | Some (KItemSubs _) -> None
+          | Some (KListSubs _) -> None | Some (KSubs _) -> None
+          | Some (ListSubs _) -> None | Some (SetSubs _) -> None
+          | Some (MapSubs _) -> None
+          | Some (BagSubs ba) ->
+            (match simpleKToSU _A p database with None -> None
+              | Some (KLabelSubs _) -> None
+              | Some (KItemSubs x) ->
+                createInitState _B (replaceProgramInBag ba x)
+              | Some (KListSubs _) -> None | Some (KSubs []) -> None
+              | Some (KSubs [ItemFactor x]) ->
+                createInitState _B (replaceProgramInBag ba x)
+              | Some (KSubs (ItemFactor _ :: _ :: _)) -> None
+              | Some (KSubs (IdFactor _ :: _)) -> None
+              | Some (KSubs (SUKKItem (_, _, _) :: _)) -> None
+              | Some (ListSubs _) -> None | Some (SetSubs _) -> None
+              | Some (MapSubs _) -> None | Some (BagSubs _) -> None)));;
 
 let rec tupleToRulePats _A _D _E
   x0 database = match x0, database with [], database -> Some []

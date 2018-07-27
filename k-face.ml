@@ -71,7 +71,11 @@ let database = match collectDatabase (interpreta()) with None -> [] | Some a -> 
 
 tupleToRuleInParsed allEqual allEqual allEqual (interpreta());;
 
-let rule = match parsed with Parsed (c, a,b) -> b;;
+genProgramState allEqual allEqual (interpreta()) database;;
+
+subsortGraph allEqual (interpreta());;
+
+let rule = match parsed with Parsed (c,a,b) -> b;;
 
 let left = match typedTerm with ((a,(b,(c,d)))::l) -> simpleKToIR allEqual a database;;
 

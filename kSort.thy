@@ -16,7 +16,7 @@ fun addImplicitSubsorts :: "'upVar \<Rightarrow> 'upVar list
                         \<Rightarrow> 'upVar list \<Rightarrow> ('upVar * 'upVar) list" where
 "addImplicitSubsorts x S [] = []"
 | "addImplicitSubsorts x S (a#l) = (if a \<in> set S then addImplicitSubsorts x S l
-                                                else (x, a)#(addImplicitSubsorts x S l))"
+                                                else (a, x)#(addImplicitSubsorts x S l))"
 
 fun formDatabase :: "('upVar * 'upVar list * 'a * 'b) list
                \<Rightarrow> ('upVar * ('upVar list * 'a * 'b) list) list" where

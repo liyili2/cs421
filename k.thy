@@ -1633,8 +1633,7 @@ definition uniqueKLabelSyntax where
 "uniqueKLabelSyntax Theory = isUnitLabel (syntaxSetToKItemSet Theory)"
 *)
 (* giving a list of input initial program and a configuration, generating a initial program state *)
-fun bagContainsCell :: "'var var \<Rightarrow> ('upVar, 'var, 'metaVar) suB list
-                  \<Rightarrow> bool"
+fun bagContainsCell :: "'var var \<Rightarrow> ('upVar, 'var, 'metaVar) suB list \<Rightarrow> bool"
    and bagContainsCellAux :: "'var var
       \<Rightarrow> ('upVar, 'var, 'metaVar) suBigKWithBag
                   \<Rightarrow> bool"
@@ -1664,35 +1663,47 @@ fun createInitState
             | Some x' \<Rightarrow> Some (SUBag x'))"
 | "createInitStateAux a = Some a"
 
-(* checks needing to be made: 1, it is a ground term. 2, it is type checked 
-definition configurationTest where
-"configurationTest Theory database subG = (case getConfiguration Theory of [a] \<Rightarrow>
-        (case toSUInBag a of None \<Rightarrow> None | Some a' \<Rightarrow>
-        if validConfiguration a' then 
-       (case checkTermsInSUBag a' []
-                  (constructSortMap (getDomainInSUBag a')) database subG of None \<Rightarrow> None
-           | Some (acc,beta, akl) \<Rightarrow> if hasNoTop acc \<and> hasNoTop beta then
-        (case replaceVarSortInSUBag akl acc beta subG of None \<Rightarrow> None
-       | Some kla \<Rightarrow> regularizeInSUBag kla subG) else None) else None) | _ \<Rightarrow> None)"
 
-definition realConfigurationTest where
-"realConfigurationTest l Theory database subG 
-    = (case getConfiguration Theory of [a] \<Rightarrow>
-        (case toSUInBag a of None \<Rightarrow> None | Some a' \<Rightarrow>
-        if validConfiguration a' then 
-          (case composeConfiAndProgInSUBag a' l subG of None \<Rightarrow> None
-             | Some aa \<Rightarrow>
-         typeCheckProgramState aa database subG) else None))"
-*)
-(*
-(checkTermsInSUBag (irToSUInBag kl) [],
-              checkTermsInSUBag r [], checkTermsInSUKItem c KItem [])
-           of (Some (acckl, kl'), Some (accsl, sl'), Some (accz, z')) \<Rightarrow>
-    (case (makeSortMap acckl, makeSortMap accsl, makeSortMap accz) of
-        (Some acckl', Some accsl', Some accz') \<Rightarrow>
-      (case (replaceVarSortInSUBag kl' acckl', replaceVarSortInSUBag sl' accsl',
-      replaceVarSortInSUKItem z' accz') of (Some kla, Some sla, Some za) \<Rightarrow>
-      (case (regularizeInSUBag kla *)
+primrec replaceProgramInKItem
+ and replaceProgramInKList
+ and replaceProgramInKL
+ and replaceProgramInSuBigKWithLabel
+ and replaceProgramInSuBigKWithBag
+ and replaceProgramInK
+ and replaceProgramInKFactor
+ and replaceProgramInBag
+ and replaceProgramInBagFactor where
+"replaceProgramInKItem (SUKItem x kl t) p = SUKItem x (replaceProgramInKList kl p) t"
+| "replaceProgramInKItem (SUIdKItem x t) p = p"
+| "replaceProgramInKItem (SUHOLE t) p = (SUHOLE t)"
+| "replaceProgramInKList [] p = []"
+| "replaceProgramInKList (x#xl) p = (replaceProgramInKL x p)#(replaceProgramInKList xl p)"
+| "replaceProgramInKL (ItemKl l) p = ItemKl (replaceProgramInSuBigKWithLabel l p)"
+| "replaceProgramInKL (IdKl x) p = (IdKl x)"
+| "replaceProgramInSuBigKWithLabel (SUBigBag a) p = SUBigBag (replaceProgramInSuBigKWithBag a p)"
+| "replaceProgramInSuBigKWithLabel (SUBigLabel a) p = SUBigLabel a"
+| "replaceProgramInSuBigKWithBag (SUK a) p = SUK (replaceProgramInK a p)"
+| "replaceProgramInSuBigKWithBag (SUList a) p = SUList a"
+| "replaceProgramInSuBigKWithBag (SUSet a) p = SUSet a"
+| "replaceProgramInSuBigKWithBag (SUMap a) p = SUMap a"
+| "replaceProgramInSuBigKWithBag (SUBag a) p = SUBag (replaceProgramInBag a p)"
+| "replaceProgramInK [] p = []"
+| "replaceProgramInK (x#xl) p = (replaceProgramInKFactor x p)#(replaceProgramInK xl p)"
+| "replaceProgramInKFactor (ItemFactor a) p = ItemFactor (replaceProgramInKItem a p)"
+| "replaceProgramInKFactor (IdFactor x) p = ItemFactor p"
+| "replaceProgramInKFactor (SUKKItem x y z) p = SUKKItem x y z"
+| "replaceProgramInBag [] p = []"
+| "replaceProgramInBag (x#xl) p = (replaceProgramInBagFactor x p)#(replaceProgramInBag xl p)"
+| "replaceProgramInBagFactor (IdB x) p = (IdB x)"
+| "replaceProgramInBagFactor (ItemB x y z) p = (ItemB x y (replaceProgramInSuBigKWithBag z p))"
+
+definition genProgramState where
+"genProgramState B database = (case B of (Parsed (Some c) x y (Some p))
+        \<Rightarrow> (case simpleKToSU c database of 
+      Some (BagSubs b) \<Rightarrow> (case simpleKToSU p database of Some (KItemSubs x) \<Rightarrow> 
+                  (createInitState (replaceProgramInBag b x))
+                 | Some (KSubs [ItemFactor x]) \<Rightarrow> (createInitState (replaceProgramInBag b x))
+                 | _ \<Rightarrow> None) | _ \<Rightarrow> None) | _ \<Rightarrow> None)"
 
 (* the pattern matching algorithm *)
 fun macroEquality where
@@ -2942,7 +2953,7 @@ export_code Eps Continue Success FunTrans Single IntConst Bool kSyntax.Set Defin
     getValueTerm irToSUInKLabel irToSUInKItem irToSUInPat irToSUInMatchFactor subsortGraph
     AllSubsorts kResultSubsorts getKResultSubsorts preSubsortGraph preSubsortTerms syntaxSetToKItems
      PreAllSubsorts getAllSubsortInKFile mergeTuples mergeList getAllSorts simpleKToIR
-     simpleKToIRKList simpleKToSU simpleKToSUKList  suToIRInKLabel suToIRInSubsFactor
+     simpleKToIRKList simpleKToSU simpleKToSUKList  suToIRInKLabel suToIRInSubsFactor genProgramState
     boolEvalFun funRuleEvalFun tupleToRulePats assignSortInRules collectDatabase tupleToRulePats
    tupleToRulePat tupleToRuleInParsed isFunctionItem getSort in OCaml  module_name K file "k.ml"
 
