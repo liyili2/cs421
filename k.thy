@@ -571,10 +571,10 @@ fun removeSubsorts where
 | "removeSubsorts (x#xl) = (case x of Subsort a b \<Rightarrow> removeSubsorts xl | _ \<Rightarrow> x#(removeSubsorts xl))"
 
 fun collectDatabase where
-"collectDatabase (Parsed c a b) = syntaxSetToKItems (removeSubsorts (mergeTuples a))"
+"collectDatabase (Parsed c a b p) = syntaxSetToKItems (removeSubsorts (mergeTuples a))"
 
 definition tupleToRuleInParsed where
-"tupleToRuleInParsed a = (case a of Parsed c x y
+"tupleToRuleInParsed a = (case a of Parsed c x y p
                  \<Rightarrow> (case assignSortInRules y of None \<Rightarrow> None
           | Some y' \<Rightarrow> (case collectDatabase a of None \<Rightarrow> None
                 | Some database \<Rightarrow> tupleToRulePats y' database)))"

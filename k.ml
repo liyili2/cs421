@@ -176,7 +176,8 @@ module K : sig
       ('a, 'b, 'c) simpleK option * ('a sort * ('a kSyntax list) list) list *
         (('a, 'b, 'c) simpleK *
           (('a, 'b, 'c) simpleK *
-            (('a, 'b, 'c) simpleK * ('b, 'a) ruleAttrib list))) list
+            (('a, 'b, 'c) simpleK * ('b, 'a) ruleAttrib list))) list *
+        ('a, 'b, 'c) simpleK option
   val inc : num -> num
   val subsort : 'a equal -> 'a -> 'a -> ('a * 'a list) list -> bool
   val getValueTerm : 'a equal -> 'a -> ('a * 'b) list -> 'b option
@@ -2252,7 +2253,8 @@ type ('a, 'b, 'c) theoryParsed =
     ('a, 'b, 'c) simpleK option * ('a sort * ('a kSyntax list) list) list *
       (('a, 'b, 'c) simpleK *
         (('a, 'b, 'c) simpleK *
-          (('a, 'b, 'c) simpleK * ('b, 'a) ruleAttrib list))) list;;
+          (('a, 'b, 'c) simpleK * ('b, 'a) ruleAttrib list))) list *
+      ('a, 'b, 'c) simpleK option;;
 
 let rec dup = function Neg n -> Neg (Bit0 n)
               | Pos n -> Pos (Bit0 n)
@@ -12690,7 +12692,7 @@ let rec mergeTuples = function [] -> []
                       | (a, b) :: l -> mergeList b @ mergeTuples l;;
 
 let rec collectDatabase
-  (Parsed (c, a, b)) = syntaxSetToKItems (removeSubsorts (mergeTuples a));;
+  (Parsed (c, a, b, p)) = syntaxSetToKItems (removeSubsorts (mergeTuples a));;
 
 let rec tupleToRulePats _A _D _E
   x0 database = match x0, database with [], database -> Some []
@@ -12735,7 +12737,7 @@ let rec getAllSubsortInTuples _B
     | (a, b) :: l -> getAllSubsortInListList _B b @ getAllSubsortInTuples _B l;;
 
 let rec getAllSubsortInKFile _A
-  (Parsed (c, a, b)) = getAllSubsortInTuples _A a;;
+  (Parsed (c, a, b, p)) = getAllSubsortInTuples _A a;;
 
 let rec addImplicitSubsorts _A
   x s xa2 = match x, s, xa2 with x, s, [] -> []
@@ -12768,8 +12770,8 @@ let rec getAllSorts _A
     | Subsort (v, va) :: xs -> getAllSorts _A xs;;
 
 let rec preAllSubsorts _A
-  (Parsed (c, a, b)) =
-    getAllSubsortInKFile _A (Parsed (c, a, b)) @
+  (Parsed (c, a, b, p)) =
+    getAllSubsortInKFile _A (Parsed (c, a, b, p)) @
       addImplicitSubsorts (equal_sort _A) KItem builtinSorts
         (getAllSorts _A (mergeTuples a)) @
         [(KResult, KItem); (KItem, K)] @ topSubsort;;
@@ -12778,23 +12780,23 @@ let rec insertAll _A a x1 = match a, x1 with a, [] -> a
                        | a, b :: l -> insertAll _A (inserta _A b a) l;;
 
 let rec preSubsortGraph _A
-  (Parsed (c, a, b)) =
+  (Parsed (c, a, b, p)) =
     formGraph (equal_sort _A)
       (insertAll (equal_sort _A) (getAllSorts _A (mergeTuples a)) builtinSorts)
-      (preAllSubsorts _A (Parsed (c, a, b)));;
+      (preAllSubsorts _A (Parsed (c, a, b, p)));;
 
 let rec kResultSubsorts _A
-  (Parsed (c, a, b)) =
+  (Parsed (c, a, b, p)) =
     getKResultSubsorts _A (getAllSorts _A (mergeTuples a))
-      (preSubsortGraph _A (Parsed (c, a, b)));;
+      (preSubsortGraph _A (Parsed (c, a, b, p)));;
 
 let rec allSubsorts _A
-  (Parsed (c, a, b)) =
-    getAllSubsortInKFile _A (Parsed (c, a, b)) @
+  (Parsed (c, a, b, p)) =
+    getAllSubsortInKFile _A (Parsed (c, a, b, p)) @
       addImplicitSubsorts (equal_sort _A) KItem builtinSorts
         (getAllSorts _A (mergeTuples a)) @
         [(KResult, KItem); (KItem, K)] @
-          topSubsort @ kResultSubsorts _A (Parsed (c, a, b));;
+          topSubsort @ kResultSubsorts _A (Parsed (c, a, b, p));;
 
 let rec collectSortInRule _A _C
   (x, (y, (z, a))) =
@@ -12819,10 +12821,10 @@ let rec formDatabase _A
     | (a, (al, (k, b))) :: l -> insertA _A (formDatabase _A l) a (al, (k, b));;
 
 let rec subsortGraph _A
-  (Parsed (c, a, b)) =
+  (Parsed (c, a, b, p)) =
     formGraph (equal_sort _A)
       (insertAll (equal_sort _A) (getAllSorts _A (mergeTuples a)) builtinSorts)
-      (allSubsorts _A (Parsed (c, a, b)));;
+      (allSubsorts _A (Parsed (c, a, b, p)));;
 
 let rec assignSortInRules _A _C
   = function [] -> Some []
@@ -12848,7 +12850,7 @@ let rec suToIRInSubsFactor _A
           | Some aa -> Some (NormalPat (BagMatching aa)));;
 
 let rec tupleToRuleInParsed _A _B _C
-  a = (let Parsed (_, _, y) = a in
+  a = (let Parsed (_, _, y, _) = a in
         (match assignSortInRules _A _C y with None -> None
           | Some ya ->
             (match collectDatabase a with None -> None

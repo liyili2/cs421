@@ -174,3 +174,16 @@
   rule 'singleUnif('eliminate(.KList), 'result(S1:Set, M1:Map), 'result(S2:Set, M2:Map))
            => 'existOneResult('applyElim(.List, .Set, .K, S1, M1), 'result(S2, M2))
 
+program 'singleUnif('decompose(.KList), 'result(SetCon(SetItem(
+      'termPair('const($f(.KList), 'listCon($x(.KList), .Terms)), 'const($f(.KList),
+     'listCon('const($g(.KList, 'listCon($y(.KList), 'listCon($z(.KList), .Terms)))), .Terms)))),
+    SetCon(SetItem(
+      'termPair('const($g(.KList), 'listCon($y(.KList),
+             'listCon('const($f(.KList), 'listCon($y(.KList), .Terms)), .Terms))), $x(.KList))),
+         .Set)), .Map),
+    'result(SetCon(SetItem(
+      'termPair($x(.KList), 'const($g(.KList), 'listCon($y(.KList), 'listCon($z(.KList), .Terms))))),
+    SetCon(SetItem(
+      'termPair('const($g(.KList), 'listCon($y(.KList),
+             'listCon('const($f(.KList), 'listCon($y(.KList), .Terms)), .Terms))), $x(.KList))),
+         .Set)), .Map))

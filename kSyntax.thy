@@ -338,6 +338,7 @@ datatype ('upVar, 'var, 'metaVar) theoryParsed =
               "('upVar sort * 'upVar kSyntax list list) list"
                       "(('upVar, 'var, 'metaVar) simpleK * ('upVar, 'var, 'metaVar) simpleK
                    * ('upVar, 'var, 'metaVar) simpleK * ('var, 'upVar) ruleAttrib list) list"
+             "('upVar, 'var, 'metaVar) simpleK option" (* program *)
 
 (* define svar var type var etc *)
 datatype 'a KItemSyntax = SingleTon "'a" | SetTon "'a \<Rightarrow> bool"
