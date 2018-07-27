@@ -114,10 +114,10 @@ fun getAllSubsortInTuples where
 | "getAllSubsortInTuples ((a,b)#l) = (getAllSubsortInListList b)@(getAllSubsortInTuples l)"
 
 fun getAllSubsortInKFile where
-"getAllSubsortInKFile (Parsed a b) = getAllSubsortInTuples a"
+"getAllSubsortInKFile (Parsed c a b) = getAllSubsortInTuples a"
 
 fun PreAllSubsorts where
-"PreAllSubsorts (Parsed a b) = (getAllSubsortInKFile (Parsed a b))
+"PreAllSubsorts (Parsed c a b) = (getAllSubsortInKFile (Parsed c a b))
                      @ (addImplicitSubsorts KItem BuiltinSorts
                           (getAllSorts (mergeTuples a)))
                      @ [(KResult, KItem), (KItem, K)]@topSubsort"
@@ -128,8 +128,8 @@ definition preSubsortTerms where
          (formDatabase database)"
 
 fun preSubsortGraph where
-"preSubsortGraph (Parsed a b) = formGraph (insertAll (getAllSorts
-        (mergeTuples a)) BuiltinSorts) (PreAllSubsorts (Parsed a b))"
+"preSubsortGraph (Parsed c a b) = formGraph (insertAll (getAllSorts
+        (mergeTuples a)) BuiltinSorts) (PreAllSubsorts (Parsed c a b))"
 
 function subsortAux :: "'upVar \<Rightarrow> 'upVar \<Rightarrow>
                            ('upVar * 'upVar list) list \<Rightarrow> bool"
@@ -153,18 +153,18 @@ primrec getKResultSubsorts where
       else (KResult,a)#(getKResultSubsorts l subG))"
 
 fun kResultSubsorts where
-"kResultSubsorts (Parsed a b) = 
-       getKResultSubsorts (getAllSorts (mergeTuples a)) (preSubsortGraph (Parsed a b))"
+"kResultSubsorts (Parsed c a b) = 
+       getKResultSubsorts (getAllSorts (mergeTuples a)) (preSubsortGraph (Parsed c a b))"
 
 fun AllSubsorts where
-"AllSubsorts (Parsed a b) = (getAllSubsortInKFile (Parsed a b))
+"AllSubsorts (Parsed c a b) = (getAllSubsortInKFile (Parsed c a b))
                      @ (addImplicitSubsorts KItem BuiltinSorts
                           (getAllSorts (mergeTuples a)))
-                     @ [(KResult, KItem), (KItem, K)]@topSubsort@(kResultSubsorts (Parsed a b))"
+                     @ [(KResult, KItem), (KItem, K)]@topSubsort@(kResultSubsorts (Parsed c a b))"
 
 fun subsortGraph where
-"subsortGraph (Parsed a b) = formGraph (insertAll (getAllSorts
-        (mergeTuples a)) BuiltinSorts) (AllSubsorts (Parsed a b))"
+"subsortGraph (Parsed c a b) = formGraph (insertAll (getAllSorts
+        (mergeTuples a)) BuiltinSorts) (AllSubsorts (Parsed c a b))"
 
 (*
 definition kResultSubsorts where

@@ -246,14 +246,6 @@ fun simpleKToIR and simpleKToIRKList where
                   \<Rightarrow> (case flattenList newkl of None \<Rightarrow> None
                        | Some sl \<Rightarrow> (case restructList sl of None \<Rightarrow> None
                            | Some sl' \<Rightarrow> Some (NormalPat (ListMatching sl')))) | _ \<Rightarrow> None)
-             | ConstToLabel (IntConst x) \<Rightarrow> Some (NormalPat
-                    (KItemMatching (IRKItem (IRKLabel (ConstToLabel (IntConst x))) kl' [kSyntax.Int])))
-             | ConstToLabel (BoolConst x) \<Rightarrow> Some (NormalPat
-                    (KItemMatching (IRKItem (IRKLabel (ConstToLabel (BoolConst x))) kl' [Bool])))
-             | ConstToLabel (StringConst x) \<Rightarrow> Some (NormalPat
-                    (KItemMatching (IRKItem (IRKLabel (ConstToLabel (StringConst x))) kl' [String])))
-             | ConstToLabel (IdConst x) \<Rightarrow> Some (NormalPat
-                    (KItemMatching (IRKItem (IRKLabel (ConstToLabel (IdConst x))) kl' [Id])))
             | _ \<Rightarrow> (case getSort l database of None \<Rightarrow> None
                  | Some t \<Rightarrow> Some (NormalPat (KItemMatching (IRKItem (IRKLabel l) kl' t)))))))"
 | "simpleKToIRKList [] database = Some (KListPatNoVar [])"
@@ -356,14 +348,6 @@ fun simpleKToSU and simpleKToSUKList where
              | SetConLabel \<Rightarrow> (case flattenSUSet kl' of Some newkl \<Rightarrow> Some (SetSubs newkl) | _ \<Rightarrow> None)
              | MapConLabel \<Rightarrow> (case flattenSUMap kl' of Some newkl \<Rightarrow> Some (MapSubs newkl) | _ \<Rightarrow> None)
              | ListConLabel \<Rightarrow>(case flattenSUList kl' of Some newkl \<Rightarrow> Some (ListSubs newkl) | _ \<Rightarrow> None)
-            | ConstToLabel (IntConst x) \<Rightarrow>  Some (KItemSubs (SUKItem (SUKLabel
-                              (ConstToLabel (IntConst x))) kl' [kSyntax.Int]))
-            | ConstToLabel (BoolConst x) \<Rightarrow>  Some (KItemSubs (SUKItem (SUKLabel
-                              (ConstToLabel (BoolConst x))) kl' [Bool]))
-            | ConstToLabel (StringConst x) \<Rightarrow>  Some (KItemSubs (SUKItem (SUKLabel
-                              (ConstToLabel (StringConst x))) kl' [String]))
-            | ConstToLabel (IdConst x) \<Rightarrow>  Some (KItemSubs (SUKItem (SUKLabel
-                              (ConstToLabel (IdConst x))) kl' [Id]))
             | _ \<Rightarrow> (case getSort l database of None \<Rightarrow> None
                  | Some t \<Rightarrow> Some (KItemSubs (SUKItem (SUKLabel l) kl' t))))))"
 | "simpleKToSUKList [] database = Some []"
@@ -587,10 +571,10 @@ fun removeSubsorts where
 | "removeSubsorts (x#xl) = (case x of Subsort a b \<Rightarrow> removeSubsorts xl | _ \<Rightarrow> x#(removeSubsorts xl))"
 
 fun collectDatabase where
-"collectDatabase (Parsed a b) = syntaxSetToKItems (removeSubsorts (mergeTuples a))"
+"collectDatabase (Parsed c a b) = syntaxSetToKItems (removeSubsorts (mergeTuples a))"
 
 definition tupleToRuleInParsed where
-"tupleToRuleInParsed a = (case a of Parsed x y
+"tupleToRuleInParsed a = (case a of Parsed c x y
                  \<Rightarrow> (case assignSortInRules y of None \<Rightarrow> None
           | Some y' \<Rightarrow> (case collectDatabase a of None \<Rightarrow> None
                 | Some database \<Rightarrow> tupleToRulePats y' database)))"
@@ -2757,7 +2741,7 @@ fun getFunRule where
 
 definition builtinLabels where
 "builtinLabels = [GetKLabel, IsKResult, AndBool, NotBool,
-                      OrBool, Sort, MapUpdate, EqualK, NotEqualK,
+                      OrBool, Sort, MapUpdate, EqualK, NotEqualK, EqualSet, EqualMap,
                        EqualKLabel, NotEqualKLabel, PlusInt, MinusInt, TimesInt]"
 
 primrec inLabelList where
@@ -2768,6 +2752,22 @@ fun evalMapUpdate where
 "evalMapUpdate [] a b = [(ItemM a b)]"
 | "evalMapUpdate (x#xl) a b = (case x of ItemM u v \<Rightarrow>
                       if u = a then (ItemM a b)#xl else x#(evalMapUpdate xl a b) | _ \<Rightarrow> x#xl)"
+
+fun turnSet where
+"turnSet [] = {}"
+| "turnSet ((ItemS s)#l) = insert s (turnSet l)"
+| "turnSet (a#l) = turnSet l"
+
+definition evalEqualSet where
+"evalEqualSet a b = ((turnSet a) = (turnSet b))"
+
+fun turnMap where
+"turnMap [] = {}"
+| "turnMap ((ItemM a b)#l) = insert (a,b) (turnMap l)"
+| "turnMap (a#l) = turnMap l"
+
+definition evalEqualMap where
+"evalEqualMap a b = ((turnMap a) = (turnMap b))"
 
 fun evalBuiltinFun where
 "evalBuiltinFun GetKLabel kl database subG =
@@ -2802,6 +2802,14 @@ fun evalBuiltinFun where
 | "evalBuiltinFun MapUpdate kl database subG =
     (case kl of [ItemKl (SUBigBag (SUMap ml)), ItemKl (SUBigBag (SUK key)),ItemKl (SUBigBag (SUK v))]
                 \<Rightarrow> Some (MapSubs (evalMapUpdate ml key v)) | _ \<Rightarrow> None)"
+| "evalBuiltinFun EqualSet kl database subG =
+    (case kl of [ItemKl (SUBigBag (SUSet a)),ItemKl (SUBigBag (SUSet b))]
+           \<Rightarrow> Some (KItemSubs (SUKItem (SUKLabel (ConstToLabel (BoolConst (evalEqualSet a b)))) [] [Bool]))
+                        | _ \<Rightarrow> None)"
+| "evalBuiltinFun EqualMap kl database subG =
+    (case kl of [ItemKl (SUBigBag (SUMap a)),ItemKl (SUBigBag (SUMap b))]
+           \<Rightarrow> Some (KItemSubs (SUKItem (SUKLabel (ConstToLabel (BoolConst (evalEqualMap a b)))) [] [Bool]))
+                        | _ \<Rightarrow> None)"
 | "evalBuiltinFun EqualK kl database subG =
     (case kl of [ItemKl (SUBigBag (SUK a)),ItemKl (SUBigBag (SUK b))]
            \<Rightarrow> Some (KItemSubs (SUKItem (SUKLabel (ConstToLabel (BoolConst (a = b)))) [] [Bool]))
@@ -2926,11 +2934,11 @@ definition funRuleEvalFun where
 "funRuleEvalFun allRules database subG C =
          Predicate.the (funEvaluation_i_i_i_i_o allRules database subG (Continue C))"
 
-export_code Eps Continue Success FunTrans Single IntConst Bool Defined UnitLabel NonTerminal
+export_code Eps Continue Success FunTrans Single IntConst Bool kSyntax.Set Defined UnitLabel NonTerminal
     Strict Syntax Star Stdin Multiplicity KTerm KLabelC Heat TheSyntax IRKLabel IRKItem SimId
        KLabelMatching KLabelFunPat SUKLabel KLabelSubs FunPat SingleTon OtherVar 
     Parsed AChar Suc Char Num.One Int.Pos Num.inc formGraph syntaxSetToKItemSetAux
-   symbolsToKLabel syntaxToKItem getKLabelName subsort getNonTerminalInList
+   symbolsToKLabel syntaxToKItem getKLabelName subsort getNonTerminalInList builtinConstTable
     getValueTerm irToSUInKLabel irToSUInKItem irToSUInPat irToSUInMatchFactor subsortGraph
     AllSubsorts kResultSubsorts getKResultSubsorts preSubsortGraph preSubsortTerms syntaxSetToKItems
      PreAllSubsorts getAllSubsortInKFile mergeTuples mergeList getAllSorts simpleKToIR

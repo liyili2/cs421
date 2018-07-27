@@ -31,7 +31,7 @@ datatype 'upVar label = UnitLabel "'upVar sort" | ConstToLabel theConstant
   | Sort | GetKLabel | IsKResult | AndBool | NotBool | OrBool | SetConLabel
   | SetItemLabel | ListConLabel | ListItemLabel | MapConLabel | MapItemLabel | MapUpdate
   | EqualK | NotEqualK | EqualKLabel | NotEqualKLabel | OtherLabel string | TokenLabel string
-  | PlusInt | MinusInt | TimesInt 
+  | PlusInt | MinusInt | TimesInt | EqualSet | EqualMap
 
 datatype 'upVar symbol = NonTerminal "'upVar sort" | Terminal string
 
@@ -334,7 +334,8 @@ datatype ('upVar, 'var, 'metaVar) simpleK = SimId "'metaVar metaVar" "'upVar sor
   | SimBag "'var var" "feature list" "('upVar, 'var, 'metaVar) simpleK"
 
 datatype ('upVar, 'var, 'metaVar) theoryParsed =
-      Parsed "('upVar sort * 'upVar kSyntax list list) list"
+      Parsed "('upVar, 'var, 'metaVar) simpleK option"
+              "('upVar sort * 'upVar kSyntax list list) list"
                       "(('upVar, 'var, 'metaVar) simpleK * ('upVar, 'var, 'metaVar) simpleK
                    * ('upVar, 'var, 'metaVar) simpleK * ('var, 'upVar) ruleAttrib list) list"
 
@@ -711,11 +712,41 @@ definition builtinSymbolTables where
   ([Map],[[Map],[K],[K]], SingleTon MapUpdate, [Function], True),
   ([Bool],[[K],[K]], SingleTon EqualK, [Function], True),
   ([Bool],[[K],[K]], SingleTon NotEqualK, [Function], True),
+  ([Bool],[[Map],[Map]], SingleTon EqualMap, [Function], True),
+  ([Bool],[[Set],[Set]], SingleTon EqualSet, [Function], True),
   ([Bool],[[KLabel],[KLabel]], SingleTon EqualKLabel, [Function], True),
   ([Bool],[[KLabel],[KLabel]], SingleTon NotEqualKLabel, [Function], True),
   ([kSyntax.Int],[[kSyntax.Int],[kSyntax.Int]], SingleTon PlusInt, [Function], True),
   ([kSyntax.Int],[[kSyntax.Int],[kSyntax.Int]], SingleTon MinusInt, [Function], True),
   ([kSyntax.Int],[[kSyntax.Int],[kSyntax.Int]], SingleTon TimesInt, [Function], True)]"
+
+fun isIntConst where
+"isIntConst (ConstToLabel (IntConst n)) = True"
+| "isIntConst a = False"
+
+fun isFloatConst where
+"isFloatConst (ConstToLabel (FloatConst n)) = True"
+| "isFloatConst a = False"
+
+fun isStringConst where
+"isStringConst (ConstToLabel (StringConst n)) = True"
+| "isStringConst a = False"
+
+fun isBoolConst where
+"isBoolConst (ConstToLabel (BoolConst n)) = True"
+| "isBoolConst a = False"
+
+fun isIdConst where
+"isIdConst (ConstToLabel (IdConst n)) = True"
+| "isIdConst a = False"
+
+definition builtinConstTable where
+"builtinConstTable =
+          [([kSyntax.Int], [], SetTon (\<lambda> x . isIntConst x), [], False),
+           ([Float], [], SetTon (\<lambda> x . isFloatConst x), [], False),
+           ([String], [], SetTon (\<lambda> x . isStringConst x), [], False),
+          ([Bool], [], SetTon (\<lambda> x . isBoolConst x), [], False),
+         ([Id], [], SetTon (\<lambda> x . isIdConst x), [], False)]"
 
 primrec syntaxSetToKItemSetAux where
 "syntaxSetToKItemSetAux [] order = Some []"
@@ -727,7 +758,7 @@ primrec syntaxSetToKItemSetAux where
 
 definition syntaxSetToKItems where
 "syntaxSetToKItems l = (case (syntaxSetToKItemSetAux l []) of None \<Rightarrow> None
-                 | Some l \<Rightarrow> Some (l@builtinSymbolTables))"
+                 | Some l \<Rightarrow> Some (l@builtinSymbolTables@builtinConstTable))"
 
 definition syntaxSetToKItemTest where
 "syntaxSetToKItemTest Theory

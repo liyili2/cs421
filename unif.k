@@ -22,16 +22,24 @@
   syntax List ::= 'applyOneDec(List, Set, K, K, Set) [function, klabel('applyOneDec)]
   syntax Bool ::= 'applyDel(TermPair) [function,klabel('applyDel)]
   syntax List ::= 'applyOneDel(List, Set, K, Set) [function, klabel('applyOneDel)]
-  syntax KItem ::= 'orient(TermPair) [function, klabel('orient)]
+  syntax KItem ::= 'toOrient(TermPair) [function, klabel('toOrient)]
   syntax List ::= 'applyOrient(List, Set, K, K, Set) [function, klabel('applyOrient)]
 
-  syntax Bool ::= 'occur(Id, Term) [function,klabel('occur)]
-  syntax Bool ::= 'occurs(Id, Terms) [function,klabel('occurs)]
-  syntax KItem ::= 'eliminate(TermPair, Set, Map) [function, klabel('eliminate)]
-  syntax List ::= 'applyElim(List, Set, K, K, Set, Map) [function, klabel('applyElim)]
+  syntax Bool ::= 'occur(Id, Term)                        [function,klabel('occur)]
+  syntax Bool ::= 'occurs(Id, Terms)                      [function,klabel('occurs)]
+  syntax KItem ::= 'toEliminate(TermPair, Set, Map)       [function, klabel('toEliminate)]
+  syntax List ::= 'applyElim(List, Set, K, K, Set, Map)   [function, klabel('applyElim)]
 
-  syntax Map ::= 'singleUnif(K, Set, Map) [function,klabel('singleUnif)]
-  syntax Set ::= 'singleUnifSet(K, Set, Set, Map) [function,klabel('singleUnifSet)]
+  syntax Bool ::= 'existOneSet(List, Set) [function, klabel('existOneSet)]
+  syntax Bool ::= 'existOneResult(List, K)  [function, klabel('existOneResult)]
+  syntax Bool ::= 'singleUnif(K, K, K) [function,klabel('singleUnif)]
+
+  syntax KItem ::= "delete"    [klabel('delete)]
+  syntax KItem ::= "orient"    [klabel('orient)]
+  syntax KItem ::= "decompose" [klabel('decompose)]
+  syntax KItem ::= "eliminate" [klabel('eliminate)]
+
+  configuration <k> PGM:KItem </k>
 
   rule 'termLength(.Terms) => '0(.KList)
   rule 'termLength('listCon(A:Term, B:Terms)) => '+Int('termLength(B), '1(.KList))
@@ -71,15 +79,15 @@
            => 'applyOneDec(ListCon(L, ListItem('resultSet(SetCon(S, SetCon(RS, S1))))),
                   SetCon(S, SetItem('termPair(A:Term, B:Term))), .K, .K, S1)
 
-  rule 'orient('termPair('const(A:Id, AL:Terms), B:Id))
+  rule 'toOrient('termPair('const(A:Id, AL:Terms), B:Id))
              => 'some('termPair(B, 'const(A, AL)))
-  rule 'orient('termPair(A:Term, B:Term)) => 'none(.KList) [owise]
+  rule 'toOrient('termPair(A:Term, B:Term)) => 'none(.KList) [owise]
 
   rule 'applyOrient(L:List, S:Set, .K, .K, .Set) => L
   rule 'applyOrient(L:List, S:Set, .K, .K, SetCon(SetItem(X:K), S1:Set))
                  => 'applyOrient(L, S, .K, X, S1)
   rule 'applyOrient(L:List, S:Set, .K, 'termPair(A:Term, B:Term), S1:Set)
-          => 'applyOrient(L:List, S:Set, 'orient('termPair(A:Term, B:Term)),
+          => 'applyOrient(L:List, S:Set, 'toOrient('termPair(A:Term, B:Term)),
                        'termPair(A:Term, B:Term), S1:Set)
   rule 'applyOrient(L:List, S:Set, 'none(.KList), 'termPair(A:Term, B:Term), S1:Set)
               => 'applyOrient(L, SetCon(S, SetItem('termPair(A:Term, B:Term))), .K, .K, S1)
@@ -124,16 +132,16 @@
           => MapCon(MapItem(Y, A), 'substMap(M, X, T))
        requires 'occur(Y, T)
 
-  rule 'eliminate('termPair(A:Id, B:Term), S:Set, M:Map)
+  rule 'toEliminate('termPair(A:Id, B:Term), S:Set, M:Map)
            => 'some('result('substInSet(S, A, B), 'substInSet(M, A, B)))
        requires 'notBool('occur(A, B))
-  rule 'eliminate('termPair(A:Term, B:Term), S:Set, M:Map) => 'none(.KList) [owise]
+  rule 'toEliminate('termPair(A:Term, B:Term), S:Set, M:Map) => 'none(.KList) [owise]
 
   rule 'applyElim(L:List, S:Set, .K, .K, .Set, M:Map) => L
   rule 'applyElim(L:List, S:Set, .K, .K, SetCon(SetItem(X:K), S1:Set), M:Map)
                  => 'applyElim(L, S, .K, X, S1, M)
   rule 'applyElim(L:List, S:Set, .K, 'termPair(A:Term, B:Term), S1:Set, M:Map)
-          => 'applyElim(L:List, S:Set, 'eliminate('termPair(A:Term, B:Term), SetCon(S, S1), M),
+          => 'applyElim(L:List, S:Set, 'toEliminate('termPair(A:Term, B:Term), SetCon(S, S1), M),
                        'termPair(A:Term, B:Term), S1:Set, M)
   rule 'applyElim(L:List, S:Set, 'none(.KList), 'termPair(A:Term, B:Term), S1:Set, M:Map)
          => 'applyElim(L, SetCon(S, SetItem('termPair(A:Term, B:Term))), .K, .K, S1, M)
@@ -142,5 +150,27 @@
          => 'applyElim(ListCon(L, ListItem('result(RS:Set, RM:Map))),
                    SetCon(S, SetItem('termPair(A:Term, B:Term))), .K, .K, S1, M)
 
+  rule 'existOneSet(.List, S2:Set) => 'false(.KList)
+  rule 'existOneSet(ListCon(ListItem('resultSet(S1:Set)), L:List), S2:Set) => 'true(.KList)
+       requires '==Set(S1, S2)
+  rule 'existOneSet(ListCon(ListItem('resultSet(S1:Set)), L:List), S2:Set)
+              => 'existOneSet(L, S2)
+       requires 'notBool('==Set(S1, S2))
 
+  rule 'existOneResult(.List, A:K) => 'false(.KList)
+  rule 'existOneResult(ListCon(ListItem('result(S1:Set, M1:Map)), L:List),
+               'result(S2:Set, M2:Map)) => 'true(.KList)
+       requires 'andBool('==Set(S1, S2), '==Map(M1, M2))
+  rule 'existOneResult(ListCon(ListItem('result(S1:Set, M1:Map)), L:List),
+           'result(S2:Set, M2:Map)) => 'existOneResult(L, 'result(S2:Set, M2:Map))
+       requires 'orBool('notBool('==Set(S1, S2)), 'notBool('==Map(M1, M2)))
+
+  rule 'singleUnif('delete(.KList), 'result(S1:Set, M1:Map), 'result(S2:Set, M2:Map))
+           => 'existOneSet('applyOneDel(.List, .Set, .K, S1), S2)
+  rule 'singleUnif('decompose(.KList), 'result(S1:Set, M1:Map), 'result(S2:Set, M2:Map))
+           => 'existOneSet('applyOneDec(.List, .Set, .K, .K, S1), S2)
+  rule 'singleUnif('orient(.KList), 'result(S1:Set, M1:Map), 'result(S2:Set, M2:Map))
+           => 'existOneSet('applyOrient(.List, .Set, .K, .K, S1), S2)
+  rule 'singleUnif('eliminate(.KList), 'result(S1:Set, M1:Map), 'result(S2:Set, M2:Map))
+           => 'existOneResult('applyElim(.List, .Set, .K, S1, M1), 'result(S2, M2))
 

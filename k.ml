@@ -8,14 +8,14 @@ module K : sig
   type real
   type theConstant = IntConst of int | FloatConst of real |
     StringConst of char list | BoolConst of bool | IdConst of char list
-  type 'a sort = Bool | K | KItem | KLabel | KResult | KList | List | Set | Map
+  type 'a sort = Bool | K | KItem | KLabel | KResult | KList | List | Seta | Map
     | Bag | OtherSort of 'a | Top | Int | Float | Id | String
   type 'a label = UnitLabel of 'a sort | ConstToLabel of theConstant | Sort |
     GetKLabel | IsKResult | AndBool | NotBool | OrBool | SetConLabel |
     SetItemLabel | ListConLabel | ListItemLabel | MapConLabel | MapItemLabel |
     MapUpdate | EqualK | NotEqualK | EqualKLabel | NotEqualKLabel |
     OtherLabel of char list | TokenLabel of char list | PlusInt | MinusInt |
-    TimesInt
+    TimesInt | EqualSet | EqualMap
   type stdType = Stdin | Stdout
   type key = Star | Question
   type feature = Multiplicity of key | Stream of stdType | DotDotDot
@@ -173,7 +173,7 @@ module K : sig
     TheConfiguration of ('a, 'b, 'd) bag | TheRule of ('a, 'b, 'd) kRule
   type ('a, 'b, 'c) theoryParsed =
     Parsed of
-      ('a sort * ('a kSyntax list) list) list *
+      ('a, 'b, 'c) simpleK option * ('a sort * ('a kSyntax list) list) list *
         (('a, 'b, 'c) simpleK *
           (('a, 'b, 'c) simpleK *
             (('a, 'b, 'c) simpleK * ('b, 'a) ruleAttrib list))) list
@@ -254,6 +254,8 @@ module K : sig
         (('a sort list *
            (('a sort list) list *
              ('a label kItemSyntax * (synAttrib list * bool)))) list) option
+  val builtinConstTable :
+    ('a sort list * ('b list * ('c label kItemSyntax * ('d list * bool)))) list
   val syntaxSetToKItems :
     'a kSyntax list ->
       (('a sort list *
@@ -440,7 +442,7 @@ type real = Ratreal of rat;;
 type theConstant = IntConst of int | FloatConst of real |
   StringConst of char list | BoolConst of bool | IdConst of char list;;
 
-type 'a sort = Bool | K | KItem | KLabel | KResult | KList | List | Set | Map |
+type 'a sort = Bool | K | KItem | KLabel | KResult | KList | List | Seta | Map |
   Bag | OtherSort of 'a | Top | Int | Float | Id | String;;
 
 type 'a label = UnitLabel of 'a sort | ConstToLabel of theConstant | Sort |
@@ -448,7 +450,7 @@ type 'a label = UnitLabel of 'a sort | ConstToLabel of theConstant | Sort |
   SetItemLabel | ListConLabel | ListItemLabel | MapConLabel | MapItemLabel |
   MapUpdate | EqualK | NotEqualK | EqualKLabel | NotEqualKLabel |
   OtherLabel of char list | TokenLabel of char list | PlusInt | MinusInt |
-  TimesInt;;
+  TimesInt | EqualSet | EqualMap;;
 
 type stdType = Stdin | Stdout;;
 
@@ -593,22 +595,22 @@ let rec equal_sorta _A x0 x1 = match x0, x1 with Id, String -> false
                          | OtherSort x11, Map -> false
                          | Map, Bag -> false
                          | Bag, Map -> false
-                         | Set, String -> false
-                         | String, Set -> false
-                         | Set, Id -> false
-                         | Id, Set -> false
-                         | Set, Float -> false
-                         | Float, Set -> false
-                         | Set, Int -> false
-                         | Int, Set -> false
-                         | Set, Top -> false
-                         | Top, Set -> false
-                         | Set, OtherSort x11 -> false
-                         | OtherSort x11, Set -> false
-                         | Set, Bag -> false
-                         | Bag, Set -> false
-                         | Set, Map -> false
-                         | Map, Set -> false
+                         | Seta, String -> false
+                         | String, Seta -> false
+                         | Seta, Id -> false
+                         | Id, Seta -> false
+                         | Seta, Float -> false
+                         | Float, Seta -> false
+                         | Seta, Int -> false
+                         | Int, Seta -> false
+                         | Seta, Top -> false
+                         | Top, Seta -> false
+                         | Seta, OtherSort x11 -> false
+                         | OtherSort x11, Seta -> false
+                         | Seta, Bag -> false
+                         | Bag, Seta -> false
+                         | Seta, Map -> false
+                         | Map, Seta -> false
                          | List, String -> false
                          | String, List -> false
                          | List, Id -> false
@@ -625,8 +627,8 @@ let rec equal_sorta _A x0 x1 = match x0, x1 with Id, String -> false
                          | Bag, List -> false
                          | List, Map -> false
                          | Map, List -> false
-                         | List, Set -> false
-                         | Set, List -> false
+                         | List, Seta -> false
+                         | Seta, List -> false
                          | KList, String -> false
                          | String, KList -> false
                          | KList, Id -> false
@@ -643,8 +645,8 @@ let rec equal_sorta _A x0 x1 = match x0, x1 with Id, String -> false
                          | Bag, KList -> false
                          | KList, Map -> false
                          | Map, KList -> false
-                         | KList, Set -> false
-                         | Set, KList -> false
+                         | KList, Seta -> false
+                         | Seta, KList -> false
                          | KList, List -> false
                          | List, KList -> false
                          | KResult, String -> false
@@ -663,8 +665,8 @@ let rec equal_sorta _A x0 x1 = match x0, x1 with Id, String -> false
                          | Bag, KResult -> false
                          | KResult, Map -> false
                          | Map, KResult -> false
-                         | KResult, Set -> false
-                         | Set, KResult -> false
+                         | KResult, Seta -> false
+                         | Seta, KResult -> false
                          | KResult, List -> false
                          | List, KResult -> false
                          | KResult, KList -> false
@@ -685,8 +687,8 @@ let rec equal_sorta _A x0 x1 = match x0, x1 with Id, String -> false
                          | Bag, KLabel -> false
                          | KLabel, Map -> false
                          | Map, KLabel -> false
-                         | KLabel, Set -> false
-                         | Set, KLabel -> false
+                         | KLabel, Seta -> false
+                         | Seta, KLabel -> false
                          | KLabel, List -> false
                          | List, KLabel -> false
                          | KLabel, KList -> false
@@ -709,8 +711,8 @@ let rec equal_sorta _A x0 x1 = match x0, x1 with Id, String -> false
                          | Bag, KItem -> false
                          | KItem, Map -> false
                          | Map, KItem -> false
-                         | KItem, Set -> false
-                         | Set, KItem -> false
+                         | KItem, Seta -> false
+                         | Seta, KItem -> false
                          | KItem, List -> false
                          | List, KItem -> false
                          | KItem, KList -> false
@@ -735,8 +737,8 @@ let rec equal_sorta _A x0 x1 = match x0, x1 with Id, String -> false
                          | Bag, K -> false
                          | K, Map -> false
                          | Map, K -> false
-                         | K, Set -> false
-                         | Set, K -> false
+                         | K, Seta -> false
+                         | Seta, K -> false
                          | K, List -> false
                          | List, K -> false
                          | K, KList -> false
@@ -763,8 +765,8 @@ let rec equal_sorta _A x0 x1 = match x0, x1 with Id, String -> false
                          | Bag, Bool -> false
                          | Bool, Map -> false
                          | Map, Bool -> false
-                         | Bool, Set -> false
-                         | Set, Bool -> false
+                         | Bool, Seta -> false
+                         | Seta, Bool -> false
                          | Bool, List -> false
                          | List, Bool -> false
                          | Bool, KList -> false
@@ -785,7 +787,7 @@ let rec equal_sorta _A x0 x1 = match x0, x1 with Id, String -> false
                          | Top, Top -> true
                          | Bag, Bag -> true
                          | Map, Map -> true
-                         | Set, Set -> true
+                         | Seta, Seta -> true
                          | List, List -> true
                          | KList, KList -> true
                          | KResult, KResult -> true
@@ -795,18 +797,40 @@ let rec equal_sorta _A x0 x1 = match x0, x1 with Id, String -> false
                          | Bool, Bool -> true;;
 
 let rec equal_labela _A
-  x0 x1 = match x0, x1 with MinusInt, TimesInt -> false
+  x0 x1 = match x0, x1 with EqualSet, EqualMap -> false
+    | EqualMap, EqualSet -> false
+    | TimesInt, EqualMap -> false
+    | EqualMap, TimesInt -> false
+    | TimesInt, EqualSet -> false
+    | EqualSet, TimesInt -> false
+    | MinusInt, EqualMap -> false
+    | EqualMap, MinusInt -> false
+    | MinusInt, EqualSet -> false
+    | EqualSet, MinusInt -> false
+    | MinusInt, TimesInt -> false
     | TimesInt, MinusInt -> false
+    | PlusInt, EqualMap -> false
+    | EqualMap, PlusInt -> false
+    | PlusInt, EqualSet -> false
+    | EqualSet, PlusInt -> false
     | PlusInt, TimesInt -> false
     | TimesInt, PlusInt -> false
     | PlusInt, MinusInt -> false
     | MinusInt, PlusInt -> false
+    | TokenLabel x21, EqualMap -> false
+    | EqualMap, TokenLabel x21 -> false
+    | TokenLabel x21, EqualSet -> false
+    | EqualSet, TokenLabel x21 -> false
     | TokenLabel x21, TimesInt -> false
     | TimesInt, TokenLabel x21 -> false
     | TokenLabel x21, MinusInt -> false
     | MinusInt, TokenLabel x21 -> false
     | TokenLabel x21, PlusInt -> false
     | PlusInt, TokenLabel x21 -> false
+    | OtherLabel x20, EqualMap -> false
+    | EqualMap, OtherLabel x20 -> false
+    | OtherLabel x20, EqualSet -> false
+    | EqualSet, OtherLabel x20 -> false
     | OtherLabel x20, TimesInt -> false
     | TimesInt, OtherLabel x20 -> false
     | OtherLabel x20, MinusInt -> false
@@ -815,6 +839,10 @@ let rec equal_labela _A
     | PlusInt, OtherLabel x20 -> false
     | OtherLabel x20, TokenLabel x21 -> false
     | TokenLabel x21, OtherLabel x20 -> false
+    | NotEqualKLabel, EqualMap -> false
+    | EqualMap, NotEqualKLabel -> false
+    | NotEqualKLabel, EqualSet -> false
+    | EqualSet, NotEqualKLabel -> false
     | NotEqualKLabel, TimesInt -> false
     | TimesInt, NotEqualKLabel -> false
     | NotEqualKLabel, MinusInt -> false
@@ -825,6 +853,10 @@ let rec equal_labela _A
     | TokenLabel x21, NotEqualKLabel -> false
     | NotEqualKLabel, OtherLabel x20 -> false
     | OtherLabel x20, NotEqualKLabel -> false
+    | EqualKLabel, EqualMap -> false
+    | EqualMap, EqualKLabel -> false
+    | EqualKLabel, EqualSet -> false
+    | EqualSet, EqualKLabel -> false
     | EqualKLabel, TimesInt -> false
     | TimesInt, EqualKLabel -> false
     | EqualKLabel, MinusInt -> false
@@ -837,6 +869,10 @@ let rec equal_labela _A
     | OtherLabel x20, EqualKLabel -> false
     | EqualKLabel, NotEqualKLabel -> false
     | NotEqualKLabel, EqualKLabel -> false
+    | NotEqualK, EqualMap -> false
+    | EqualMap, NotEqualK -> false
+    | NotEqualK, EqualSet -> false
+    | EqualSet, NotEqualK -> false
     | NotEqualK, TimesInt -> false
     | TimesInt, NotEqualK -> false
     | NotEqualK, MinusInt -> false
@@ -851,6 +887,10 @@ let rec equal_labela _A
     | NotEqualKLabel, NotEqualK -> false
     | NotEqualK, EqualKLabel -> false
     | EqualKLabel, NotEqualK -> false
+    | EqualK, EqualMap -> false
+    | EqualMap, EqualK -> false
+    | EqualK, EqualSet -> false
+    | EqualSet, EqualK -> false
     | EqualK, TimesInt -> false
     | TimesInt, EqualK -> false
     | EqualK, MinusInt -> false
@@ -867,6 +907,10 @@ let rec equal_labela _A
     | EqualKLabel, EqualK -> false
     | EqualK, NotEqualK -> false
     | NotEqualK, EqualK -> false
+    | MapUpdate, EqualMap -> false
+    | EqualMap, MapUpdate -> false
+    | MapUpdate, EqualSet -> false
+    | EqualSet, MapUpdate -> false
     | MapUpdate, TimesInt -> false
     | TimesInt, MapUpdate -> false
     | MapUpdate, MinusInt -> false
@@ -885,6 +929,10 @@ let rec equal_labela _A
     | NotEqualK, MapUpdate -> false
     | MapUpdate, EqualK -> false
     | EqualK, MapUpdate -> false
+    | MapItemLabel, EqualMap -> false
+    | EqualMap, MapItemLabel -> false
+    | MapItemLabel, EqualSet -> false
+    | EqualSet, MapItemLabel -> false
     | MapItemLabel, TimesInt -> false
     | TimesInt, MapItemLabel -> false
     | MapItemLabel, MinusInt -> false
@@ -905,6 +953,10 @@ let rec equal_labela _A
     | EqualK, MapItemLabel -> false
     | MapItemLabel, MapUpdate -> false
     | MapUpdate, MapItemLabel -> false
+    | MapConLabel, EqualMap -> false
+    | EqualMap, MapConLabel -> false
+    | MapConLabel, EqualSet -> false
+    | EqualSet, MapConLabel -> false
     | MapConLabel, TimesInt -> false
     | TimesInt, MapConLabel -> false
     | MapConLabel, MinusInt -> false
@@ -927,6 +979,10 @@ let rec equal_labela _A
     | MapUpdate, MapConLabel -> false
     | MapConLabel, MapItemLabel -> false
     | MapItemLabel, MapConLabel -> false
+    | ListItemLabel, EqualMap -> false
+    | EqualMap, ListItemLabel -> false
+    | ListItemLabel, EqualSet -> false
+    | EqualSet, ListItemLabel -> false
     | ListItemLabel, TimesInt -> false
     | TimesInt, ListItemLabel -> false
     | ListItemLabel, MinusInt -> false
@@ -951,6 +1007,10 @@ let rec equal_labela _A
     | MapItemLabel, ListItemLabel -> false
     | ListItemLabel, MapConLabel -> false
     | MapConLabel, ListItemLabel -> false
+    | ListConLabel, EqualMap -> false
+    | EqualMap, ListConLabel -> false
+    | ListConLabel, EqualSet -> false
+    | EqualSet, ListConLabel -> false
     | ListConLabel, TimesInt -> false
     | TimesInt, ListConLabel -> false
     | ListConLabel, MinusInt -> false
@@ -977,6 +1037,10 @@ let rec equal_labela _A
     | MapConLabel, ListConLabel -> false
     | ListConLabel, ListItemLabel -> false
     | ListItemLabel, ListConLabel -> false
+    | SetItemLabel, EqualMap -> false
+    | EqualMap, SetItemLabel -> false
+    | SetItemLabel, EqualSet -> false
+    | EqualSet, SetItemLabel -> false
     | SetItemLabel, TimesInt -> false
     | TimesInt, SetItemLabel -> false
     | SetItemLabel, MinusInt -> false
@@ -1005,6 +1069,10 @@ let rec equal_labela _A
     | ListItemLabel, SetItemLabel -> false
     | SetItemLabel, ListConLabel -> false
     | ListConLabel, SetItemLabel -> false
+    | SetConLabel, EqualMap -> false
+    | EqualMap, SetConLabel -> false
+    | SetConLabel, EqualSet -> false
+    | EqualSet, SetConLabel -> false
     | SetConLabel, TimesInt -> false
     | TimesInt, SetConLabel -> false
     | SetConLabel, MinusInt -> false
@@ -1035,6 +1103,10 @@ let rec equal_labela _A
     | ListConLabel, SetConLabel -> false
     | SetConLabel, SetItemLabel -> false
     | SetItemLabel, SetConLabel -> false
+    | OrBool, EqualMap -> false
+    | EqualMap, OrBool -> false
+    | OrBool, EqualSet -> false
+    | EqualSet, OrBool -> false
     | OrBool, TimesInt -> false
     | TimesInt, OrBool -> false
     | OrBool, MinusInt -> false
@@ -1067,6 +1139,10 @@ let rec equal_labela _A
     | SetItemLabel, OrBool -> false
     | OrBool, SetConLabel -> false
     | SetConLabel, OrBool -> false
+    | NotBool, EqualMap -> false
+    | EqualMap, NotBool -> false
+    | NotBool, EqualSet -> false
+    | EqualSet, NotBool -> false
     | NotBool, TimesInt -> false
     | TimesInt, NotBool -> false
     | NotBool, MinusInt -> false
@@ -1101,6 +1177,10 @@ let rec equal_labela _A
     | SetConLabel, NotBool -> false
     | NotBool, OrBool -> false
     | OrBool, NotBool -> false
+    | AndBool, EqualMap -> false
+    | EqualMap, AndBool -> false
+    | AndBool, EqualSet -> false
+    | EqualSet, AndBool -> false
     | AndBool, TimesInt -> false
     | TimesInt, AndBool -> false
     | AndBool, MinusInt -> false
@@ -1137,6 +1217,10 @@ let rec equal_labela _A
     | OrBool, AndBool -> false
     | AndBool, NotBool -> false
     | NotBool, AndBool -> false
+    | IsKResult, EqualMap -> false
+    | EqualMap, IsKResult -> false
+    | IsKResult, EqualSet -> false
+    | EqualSet, IsKResult -> false
     | IsKResult, TimesInt -> false
     | TimesInt, IsKResult -> false
     | IsKResult, MinusInt -> false
@@ -1175,6 +1259,10 @@ let rec equal_labela _A
     | NotBool, IsKResult -> false
     | IsKResult, AndBool -> false
     | AndBool, IsKResult -> false
+    | GetKLabel, EqualMap -> false
+    | EqualMap, GetKLabel -> false
+    | GetKLabel, EqualSet -> false
+    | EqualSet, GetKLabel -> false
     | GetKLabel, TimesInt -> false
     | TimesInt, GetKLabel -> false
     | GetKLabel, MinusInt -> false
@@ -1215,6 +1303,10 @@ let rec equal_labela _A
     | AndBool, GetKLabel -> false
     | GetKLabel, IsKResult -> false
     | IsKResult, GetKLabel -> false
+    | Sort, EqualMap -> false
+    | EqualMap, Sort -> false
+    | Sort, EqualSet -> false
+    | EqualSet, Sort -> false
     | Sort, TimesInt -> false
     | TimesInt, Sort -> false
     | Sort, MinusInt -> false
@@ -1257,6 +1349,10 @@ let rec equal_labela _A
     | IsKResult, Sort -> false
     | Sort, GetKLabel -> false
     | GetKLabel, Sort -> false
+    | ConstToLabel x2, EqualMap -> false
+    | EqualMap, ConstToLabel x2 -> false
+    | ConstToLabel x2, EqualSet -> false
+    | EqualSet, ConstToLabel x2 -> false
     | ConstToLabel x2, TimesInt -> false
     | TimesInt, ConstToLabel x2 -> false
     | ConstToLabel x2, MinusInt -> false
@@ -1301,6 +1397,10 @@ let rec equal_labela _A
     | GetKLabel, ConstToLabel x2 -> false
     | ConstToLabel x2, Sort -> false
     | Sort, ConstToLabel x2 -> false
+    | UnitLabel x1, EqualMap -> false
+    | EqualMap, UnitLabel x1 -> false
+    | UnitLabel x1, EqualSet -> false
+    | EqualSet, UnitLabel x1 -> false
     | UnitLabel x1, TimesInt -> false
     | TimesInt, UnitLabel x1 -> false
     | UnitLabel x1, MinusInt -> false
@@ -1351,6 +1451,8 @@ let rec equal_labela _A
     | OtherLabel x20, OtherLabel y20 -> equal_lista equal_char x20 y20
     | ConstToLabel x2, ConstToLabel y2 -> equal_theConstant x2 y2
     | UnitLabel x1, UnitLabel y1 -> equal_sorta _A x1 y1
+    | EqualMap, EqualMap -> true
+    | EqualSet, EqualSet -> true
     | TimesInt, TimesInt -> true
     | MinusInt, MinusInt -> true
     | PlusInt, PlusInt -> true
@@ -1994,6 +2096,8 @@ let rec equal_subsFactora _A _B _C
 let rec equal_subsFactor _A _B _C =
   ({equal = equal_subsFactora _A _B _C} : ('a, 'b, 'c) subsFactor equal);;
 
+type 'a set = Set of 'a list | Coset of 'a list;;
+
 type 'a rewrite = KTerm of 'a | KRewrite of 'a * 'a;;
 
 type ('a, 'b, 'c) k = Tilda of ('a, 'b, 'c) k rewrite * ('a, 'b, 'c) k rewrite |
@@ -2145,7 +2249,7 @@ type ('a, 'b, 'c, 'd) kModuleItem = TheSyntax of 'a kSyntax | Imports of 'c |
 
 type ('a, 'b, 'c) theoryParsed =
   Parsed of
-    ('a sort * ('a kSyntax list) list) list *
+    ('a, 'b, 'c) simpleK option * ('a sort * ('a kSyntax list) list) list *
       (('a, 'b, 'c) simpleK *
         (('a, 'b, 'c) simpleK *
           (('a, 'b, 'c) simpleK * ('b, 'a) ruleAttrib list))) list;;
@@ -2235,6 +2339,43 @@ let rec update _A
 let rec null = function [] -> true
                | x :: xs -> false;;
 
+let bot_set : 'a set = Set [];;
+
+let rec removeAll _A
+  x xa1 = match x, xa1 with x, [] -> []
+    | x, y :: xs ->
+        (if eq _A x y then removeAll _A x xs else y :: removeAll _A x xs);;
+
+let rec membera _A x0 y = match x0, y with [], y -> false
+                     | x :: xs, y -> eq _A x y || membera _A xs y;;
+
+let rec inserta _A x xs = (if membera _A xs x then xs else x :: xs);;
+
+let rec insert _A
+  x xa1 = match x, xa1 with x, Coset xs -> Coset (removeAll _A x xs)
+    | x, Set xs -> Set (inserta _A x xs);;
+
+let rec turnMap _A _B _C
+  = function [] -> bot_set
+    | ItemM (a, b) :: l ->
+        insert
+          (equal_prod (equal_list (equal_suKFactor _A _B _C))
+            (equal_list (equal_suKFactor _A _B _C)))
+          (a, b) (turnMap _A _B _C l)
+    | IdM v :: l -> turnMap _A _B _C l
+    | SUMapKItem (v, va) :: l -> turnMap _A _B _C l;;
+
+let rec turnSet _A _B _C
+  = function [] -> bot_set
+    | ItemS s :: l ->
+        insert (equal_list (equal_suKFactor _A _B _C)) s (turnSet _A _B _C l)
+    | IdS v :: l -> turnSet _A _B _C l
+    | SUSetKItem (v, va) :: l -> turnSet _A _B _C l;;
+
+let rec member _A
+  x xa1 = match x, xa1 with x, Coset xs -> not (membera _A xs x)
+    | x, Set xs -> membera _A xs x;;
+
 let rec existKey _A
   x xa1 = match x, xa1 with x, [] -> false
     | x, (a, b) :: xl -> (if eq _A x a then true else existKey _A x xl);;
@@ -2249,15 +2390,12 @@ let rec deleteDataBaseByKey _A
     | (x, y) :: l, a ->
         (if eq _A x a then l else (x, y) :: deleteDataBaseByKey _A l a);;
 
-let rec member _A x0 y = match x0, y with [], y -> false
-                    | x :: xs, y -> eq _A x y || member _A xs y;;
-
 let rec subsortAux _A
   a b s = match a, b, s with a, b, [] -> false
     | a, b, s ->
         (match searchDataBaseByKey _A s b with None -> false
           | Some l ->
-            (if member _A l a then true
+            (if membera _A l a then true
               else subsortInList _A a l (deleteDataBaseByKey _A s b)))
 and subsortInList _A
   a x1 s = match a, x1, s with a, [], s -> false
@@ -2289,7 +2427,7 @@ let rec getMaxSorts _A
         (if subsort _A c a subG
           then getMaxSorts _A a l subG (c :: checked)
                  (insertSortInList _A c acc subG)
-          else (if member _A checked c then getMaxSorts _A a l subG checked acc
+          else (if membera _A checked c then getMaxSorts _A a l subG checked acc
                  else (match getValueTerm _A c subG
                         with None -> getMaxSorts _A a l subG (c :: checked) acc
                         | Some newl ->
@@ -2314,8 +2452,6 @@ let rec meet _A
   x0 b subG = match x0, b, subG with [], b, subG -> []
     | x :: l, b, subG ->
         insertAllSortsInList _A (meetAux _A x b subG) (meet _A l b subG) subG;;
-
-let rec insert _A x xs = (if member _A xs x then xs else x :: xs);;
 
 let rec irToSUInKLabel = function IRKLabel a -> SUKLabel a
                          | IRIdKLabel n -> SUIdKLabel n;;
@@ -4706,7 +4842,7 @@ and checkTermsInSUBigKWithBag _A _C
                  let (betaa, ac) = ab in
                   Some (acca, (betaa, SUSet ac))))
           | Some tya ->
-            (if equal_lista (equal_sort _A) tya [Set]
+            (if equal_lista (equal_sort _A) tya [Seta]
               then (match checkTermsInSUSet _A _C a acc beta database subG
                      with None -> None
                      | Some aa ->
@@ -5013,7 +5149,8 @@ and checkTermsInSUSet _A _C
                   | Some (accaa, (betaaa, la)) ->
                     Some (accaa, (betaaa, ItemS xa :: la))))
           | IdS x ->
-            (match updateMap (equal_metaVar _C) (equal_sort _A) x [Set] acc subG
+            (match
+              updateMap (equal_metaVar _C) (equal_sort _A) x [Seta] acc subG
               with None -> None
               | Some acca ->
                 (match checkTermsInSUSet _A _C l acca beta database subG
@@ -5040,7 +5177,7 @@ and checkTermsInSUSet _A _C
                               | Some xx ->
                                 (match
                                   updateMap (equal_metaVar _C) (equal_sort _A)
-                                    xx [Set] betab subG
+                                    xx [Seta] betab subG
                                   with None -> None
                                   | Some betac ->
                                     Some (accb,
@@ -5052,7 +5189,7 @@ and checkTermsInSUSet _A _C
                            getArgSort (equal_label _A) s database)
                          with (None, _) -> None | (Some _, None) -> None
                          | (Some ty, Some tyl) ->
-                           (if subsortList (equal_sort _A) ty [Set] subG
+                           (if subsortList (equal_sort _A) ty [Seta] subG
                              then (match
                                     checkTermsInSUKList _A _C y tyl acc beta
                                       database subG
@@ -5330,7 +5467,7 @@ and localteFunTermInSUSet _A
                         (match getSUKLabelMeaning x with None -> None
                           | Some s ->
                             (if isFunctionItem (equal_label _A) s database
-                              then Some (s, (y, ([Set], IdS FunHole :: l)))
+                              then Some (s, (y, ([Seta], IdS FunHole :: l)))
                               else None))
                       | Some (la, (funa, (ty, r))) ->
                         Some (la, (funa, (ty, a :: r))))
@@ -5509,6 +5646,26 @@ let rec evalMapUpdate _A _B _C
             (if equal_lista (equal_suKFactor _A _B _C) u a
               then ItemM (a, b) :: xl else x :: evalMapUpdate _A _B _C xl a b)
           | IdM _ -> x :: xl | SUMapKItem (_, _) -> x :: xl);;
+
+let rec list_all p x1 = match p, x1 with p, [] -> true
+                   | p, x :: xs -> p x && list_all p xs;;
+
+let rec less_eq_set _A
+  a b = match a, b with Coset [], Set [] -> false
+    | a, Coset ys -> list_all (fun y -> not (member _A y a)) ys
+    | Set xs, b -> list_all (fun x -> member _A x b) xs;;
+
+let rec equal_set _A a b = less_eq_set _A a b && less_eq_set _A b a;;
+
+let rec evalEqualSet _A _B _C
+  a b = equal_set (equal_list (equal_suKFactor _A _B _C)) (turnSet _A _B _C a)
+          (turnSet _A _B _C b);;
+
+let rec evalEqualMap _A _B _C
+  a b = equal_set
+          (equal_prod (equal_list (equal_suKFactor _A _B _C))
+            (equal_list (equal_suKFactor _A _B _C)))
+          (turnMap _A _B _C a) (turnMap _A _B _C b);;
 
 let rec evalBuiltinFun _B _C _D _E
   x0 kl database subG = match x0, kl, database, subG with
@@ -5857,7 +6014,7 @@ let rec evalBuiltinFun _B _C _D _E
                   (SUK (ItemFactor
                           (SUKItem
                             (SUKLabel (ConstToLabel (BoolConst _)), _,
-                              Set :: _)) ::
+                              Seta :: _)) ::
                          _))) ::
                 _
             -> None
@@ -6261,6 +6418,30 @@ let rec evalBuiltinFun _B _C _D _E
                             [Bool]))])) ::
               ItemKl
                 (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualSet, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (BoolConst _)), _,
+                            [Bool]))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualMap, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (BoolConst _)), _,
+                            [Bool]))])) ::
+              ItemKl
+                (SUBigBag
                   (SUK (ItemFactor (SUKItem (SUIdKLabel _, _, _)) :: _))) ::
                 _
             -> None
@@ -6431,7 +6612,7 @@ let rec evalBuiltinFun _B _C _D _E
                 (SUK (ItemFactor
                         (SUKItem
                           (SUKLabel (ConstToLabel (BoolConst _)), _,
-                            Set :: _)) ::
+                            Seta :: _)) ::
                        _))) ::
               _
             -> None
@@ -6632,6 +6813,16 @@ let rec evalBuiltinFun _B _C _D _E
           | ItemKl
               (SUBigBag
                 (SUK (ItemFactor (SUKItem (SUKLabel TimesInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualSet, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualMap, _, _)) :: _))) ::
               _
             -> None
           | ItemKl
@@ -6938,7 +7129,7 @@ let rec evalBuiltinFun _B _C _D _E
                   (SUK (ItemFactor
                           (SUKItem
                             (SUKLabel (ConstToLabel (BoolConst _)), _,
-                              Set :: _)) ::
+                              Seta :: _)) ::
                          _))) ::
                 _
             -> None
@@ -7342,6 +7533,30 @@ let rec evalBuiltinFun _B _C _D _E
                             [Bool]))])) ::
               ItemKl
                 (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualSet, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (BoolConst _)), _,
+                            [Bool]))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualMap, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (BoolConst _)), _,
+                            [Bool]))])) ::
+              ItemKl
+                (SUBigBag
                   (SUK (ItemFactor (SUKItem (SUIdKLabel _, _, _)) :: _))) ::
                 _
             -> None
@@ -7512,7 +7727,7 @@ let rec evalBuiltinFun _B _C _D _E
                 (SUK (ItemFactor
                         (SUKItem
                           (SUKLabel (ConstToLabel (BoolConst _)), _,
-                            Set :: _)) ::
+                            Seta :: _)) ::
                        _))) ::
               _
             -> None
@@ -7713,6 +7928,16 @@ let rec evalBuiltinFun _B _C _D _E
           | ItemKl
               (SUBigBag
                 (SUK (ItemFactor (SUKItem (SUKLabel TimesInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualSet, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualMap, _, _)) :: _))) ::
               _
             -> None
           | ItemKl
@@ -7868,7 +8093,7 @@ let rec evalBuiltinFun _B _C _D _E
                 (SUK (ItemFactor
                         (SUKItem
                           (SUKLabel (ConstToLabel (BoolConst _)), _,
-                            Set :: _)) ::
+                            Seta :: _)) ::
                        _))) ::
               _
             -> None
@@ -8073,6 +8298,16 @@ let rec evalBuiltinFun _B _C _D _E
             -> None
           | ItemKl
               (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualSet, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualMap, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
                 (SUK (ItemFactor (SUKItem (SUIdKLabel _, _, _)) :: _))) ::
               _
             -> None
@@ -8133,6 +8368,60 @@ let rec evalBuiltinFun _B _C _D _E
           | ItemKl (SUBigBag (SUMap _)) :: IdKl _ :: _ -> None
           | ItemKl (SUBigBag (SUBag _)) :: _ -> None
           | ItemKl (SUBigLabel _) :: _ -> None | IdKl _ :: _ -> None)
+    | EqualSet, kl, database, subG ->
+        (match kl with [] -> None
+          | ItemKl a :: lista ->
+            (match a
+              with SUBigBag aa ->
+                (match aa with SUK _ -> None | SUList _ -> None
+                  | SUSet ab ->
+                    (match lista with [] -> None
+                      | ItemKl b :: listaa ->
+                        (match b
+                          with SUBigBag ba ->
+                            (match ba with SUK _ -> None | SUList _ -> None
+                              | SUSet bb ->
+                                (match listaa
+                                  with [] ->
+                                    Some (KItemSubs
+   (SUKItem
+     (SUKLabel (ConstToLabel (BoolConst (evalEqualSet _B _C _D ab bb))), [],
+       [Bool])))
+                                  | _ :: _ -> None)
+                              | SUMap _ -> None | SUBag _ -> None)
+                          | SUBigLabel _ -> None)
+                      | IdKl _ :: _ -> None)
+                  | SUMap _ -> None | SUBag _ -> None)
+              | SUBigLabel _ -> None)
+          | IdKl _ :: _ -> None)
+    | EqualMap, kl, database, subG ->
+        (match kl with [] -> None
+          | ItemKl a :: lista ->
+            (match a
+              with SUBigBag aa ->
+                (match aa with SUK _ -> None | SUList _ -> None
+                  | SUSet _ -> None
+                  | SUMap ab ->
+                    (match lista with [] -> None
+                      | ItemKl b :: listaa ->
+                        (match b
+                          with SUBigBag ba ->
+                            (match ba with SUK _ -> None | SUList _ -> None
+                              | SUSet _ -> None
+                              | SUMap bb ->
+                                (match listaa
+                                  with [] ->
+                                    Some (KItemSubs
+   (SUKItem
+     (SUKLabel (ConstToLabel (BoolConst (evalEqualMap _B _C _D ab bb))), [],
+       [Bool])))
+                                  | _ :: _ -> None)
+                              | SUBag _ -> None)
+                          | SUBigLabel _ -> None)
+                      | IdKl _ :: _ -> None)
+                  | SUBag _ -> None)
+              | SUBigLabel _ -> None)
+          | IdKl _ :: _ -> None)
     | EqualK, kl, database, subG ->
         (match kl with [] -> None
           | ItemKl a :: lista ->
@@ -8608,6 +8897,28 @@ let rec evalBuiltinFun _B _C _D _E
                           (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
               ItemKl
                 (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualSet, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualMap, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
                   (SUK (ItemFactor (SUKItem (SUIdKLabel _, _, _)) :: _))) ::
                 _
             -> None
@@ -8849,6 +9160,16 @@ let rec evalBuiltinFun _B _C _D _E
           | ItemKl
               (SUBigBag
                 (SUK (ItemFactor (SUKItem (SUKLabel TimesInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualSet, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualMap, _, _)) :: _))) ::
               _
             -> None
           | ItemKl
@@ -9237,6 +9558,28 @@ let rec evalBuiltinFun _B _C _D _E
                           (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
               ItemKl
                 (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualSet, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualMap, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
                   (SUK (ItemFactor (SUKItem (SUIdKLabel _, _, _)) :: _))) ::
                 _
             -> None
@@ -9478,6 +9821,16 @@ let rec evalBuiltinFun _B _C _D _E
           | ItemKl
               (SUBigBag
                 (SUK (ItemFactor (SUKItem (SUKLabel TimesInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualSet, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualMap, _, _)) :: _))) ::
               _
             -> None
           | ItemKl
@@ -9866,6 +10219,28 @@ let rec evalBuiltinFun _B _C _D _E
                           (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
               ItemKl
                 (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualSet, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualMap, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
                   (SUK (ItemFactor (SUKItem (SUIdKLabel _, _, _)) :: _))) ::
                 _
             -> None
@@ -10111,6 +10486,16 @@ let rec evalBuiltinFun _B _C _D _E
             -> None
           | ItemKl
               (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualSet, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualMap, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
                 (SUK (ItemFactor (SUKItem (SUIdKLabel _, _, _)) :: _))) ::
               _
             -> None
@@ -10143,7 +10528,8 @@ let rec evalBuiltinFun _B _C _D _E
 
 let builtinLabels : 'a label list
   = [GetKLabel; IsKResult; AndBool; NotBool; OrBool; Sort; MapUpdate; EqualK;
-      NotEqualK; EqualKLabel; NotEqualKLabel; PlusInt; MinusInt; TimesInt];;
+      NotEqualK; EqualSet; EqualMap; EqualKLabel; NotEqualKLabel; PlusInt;
+      MinusInt; TimesInt];;
 
 let rec funEvaluationBool_i_i_i_i_o _A _B _C
   x xa xb xc =
@@ -10168,7 +10554,7 @@ let rec funEvaluationBool_i_i_i_i_o _A _B _C
                         (match aa with None -> bot_pred
                           | Some (l, (funa, (_, cr))) ->
                             bind (if_pred
-                                   (member (equal_label _A) builtinLabels l))
+                                   (membera (equal_label _A) builtinLabels l))
                               (fun () ->
                                 bind (eq_i_o
                                        (evalBuiltinFun _A _B _C _A l funa
@@ -10198,7 +10584,7 @@ bind (eq_i_o (substitutionInSUKItem _C cr [(FunHole, r)]))
                         (match aa with None -> bot_pred
                           | Some (l, (funa, (_, cr))) ->
                             bind (if_pred
-                                   (not (member (equal_label _A) builtinLabels
+                                   (not (membera (equal_label _A) builtinLabels
   l)))
                               (fun () ->
                                 bind (eq_i_o (getFunRule _A l allRules))
@@ -10443,7 +10829,7 @@ let rec simpleKToIR _A
         | KResult -> Some (NormalPat (KItemMatching (IRIdKItem (x, [y]))))
         | KList -> Some (NormalPat (KListMatching (KListPat ([], x, []))))
         | List -> Some (NormalPat (ListMatching (ListPat ([], x, []))))
-        | Set -> Some (NormalPat (SetMatching (SetPat ([], Some x))))
+        | Seta -> Some (NormalPat (SetMatching (SetPat ([], Some x))))
         | Map -> Some (NormalPat (MapMatching (MapPat ([], Some x))))
         | Bag -> Some (NormalPat (BagMatching (BagPat ([], Some x))))
         | OtherSort _ -> Some (NormalPat (KItemMatching (IRIdKItem (x, [y]))))
@@ -10473,7 +10859,7 @@ let rec simpleKToIR _A
                      (IRKItem (IRKLabel (UnitLabel y), KListPatNoVar [], [y]))))
           | KList -> Some (NormalPat (KListMatching (KListPatNoVar [])))
           | List -> Some (NormalPat (ListMatching (ListPatNoVar [])))
-          | Set -> Some (NormalPat (SetMatching (SetPat ([], None))))
+          | Seta -> Some (NormalPat (SetMatching (SetPat ([], None))))
           | Map -> Some (NormalPat (MapMatching (MapPat ([], None))))
           | Bag -> Some (NormalPat (BagMatching (BagPat ([], None))))
           | OtherSort _ ->
@@ -10572,7 +10958,7 @@ let rec simpleKToIR _A
                                 else (if equal_lista (equal_sort _A) t [List]
                                        then Some (ListFunPat (l, kla))
                                        else (if equal_lista (equal_sort _A) t
-          [Set]
+          [Seta]
       then Some (SetFunPat (l, kla))
       else (if equal_lista (equal_sort _A) t [Map]
              then Some (MapFunPat (l, kla))
@@ -10585,37 +10971,13 @@ let rec simpleKToIR _A
                            Some (NormalPat
                                   (KItemMatching
                                     (IRKItem (IRKLabel l, kla, t)))))
-                     | ConstToLabel (IntConst x) ->
-                       Some (NormalPat
-                              (KItemMatching
-                                (IRKItem
-                                  (IRKLabel (ConstToLabel (IntConst x)), kla,
-                                    [Int]))))
-                     | ConstToLabel (FloatConst _) ->
+                     | ConstToLabel _ ->
                        (match getSort (equal_label _A) l database
                          with None -> None
                          | Some t ->
                            Some (NormalPat
                                   (KItemMatching
                                     (IRKItem (IRKLabel l, kla, t)))))
-                     | ConstToLabel (StringConst x) ->
-                       Some (NormalPat
-                              (KItemMatching
-                                (IRKItem
-                                  (IRKLabel (ConstToLabel (StringConst x)), kla,
-                                    [String]))))
-                     | ConstToLabel (BoolConst x) ->
-                       Some (NormalPat
-                              (KItemMatching
-                                (IRKItem
-                                  (IRKLabel (ConstToLabel (BoolConst x)), kla,
-                                    [Bool]))))
-                     | ConstToLabel (IdConst x) ->
-                       Some (NormalPat
-                              (KItemMatching
-                                (IRKItem
-                                  (IRKLabel (ConstToLabel (IdConst x)), kla,
-                                    [Id]))))
                      | Sort ->
                        (match getSort (equal_label _A) l database
                          with None -> None
@@ -10805,6 +11167,20 @@ let rec simpleKToIR _A
                          | Some t ->
                            Some (NormalPat
                                   (KItemMatching
+                                    (IRKItem (IRKLabel l, kla, t)))))
+                     | EqualSet ->
+                       (match getSort (equal_label _A) l database
+                         with None -> None
+                         | Some t ->
+                           Some (NormalPat
+                                  (KItemMatching
+                                    (IRKItem (IRKLabel l, kla, t)))))
+                     | EqualMap ->
+                       (match getSort (equal_label _A) l database
+                         with None -> None
+                         | Some t ->
+                           Some (NormalPat
+                                  (KItemMatching
                                     (IRKItem (IRKLabel l, kla, t))))))))
 and simpleKToIRKList _A
   x0 database = match x0, database with [], database -> Some (KListPatNoVar [])
@@ -10908,7 +11284,7 @@ let rec simpleKToSU _A
         | KLabel -> Some (KLabelSubs (SUIdKLabel x))
         | KResult -> Some (KItemSubs (SUIdKItem (x, [y])))
         | KList -> Some (KListSubs [IdKl x]) | List -> Some (ListSubs [IdL x])
-        | Set -> Some (SetSubs [IdS x]) | Map -> Some (MapSubs [IdM x])
+        | Seta -> Some (SetSubs [IdS x]) | Map -> Some (MapSubs [IdM x])
         | Bag -> Some (BagSubs [IdB x])
         | OtherSort _ -> Some (KItemSubs (SUIdKItem (x, [y])))
         | Top -> Some (KItemSubs (SUIdKItem (x, [y])))
@@ -10928,7 +11304,7 @@ let rec simpleKToSU _A
           | KResult ->
             Some (KItemSubs (SUKItem (SUKLabel (UnitLabel y), [], [y])))
           | KList -> Some (KListSubs []) | List -> Some (ListSubs [])
-          | Set -> Some (SetSubs []) | Map -> Some (MapSubs [])
+          | Seta -> Some (SetSubs []) | Map -> Some (MapSubs [])
           | Bag -> Some (BagSubs [])
           | OtherSort _ ->
             Some (KItemSubs (SUKItem (SUKLabel (UnitLabel y), [], [y])))
@@ -10979,7 +11355,7 @@ let rec simpleKToSU _A
                                        then Some (ListSubs
            [SUListKItem (SUKLabel l, kla)])
                                        else (if equal_lista (equal_sort _A) t
-          [Set]
+          [Seta]
       then Some (SetSubs [SUSetKItem (SUKLabel l, kla)])
       else (if equal_lista (equal_sort _A) t [Map]
              then Some (MapSubs [SUMapKItem (SUKLabel l, kla)])
@@ -10990,31 +11366,11 @@ let rec simpleKToSU _A
                          with None -> None
                          | Some t ->
                            Some (KItemSubs (SUKItem (SUKLabel l, kla, t))))
-                     | ConstToLabel (IntConst x) ->
-                       Some (KItemSubs
-                              (SUKItem
-                                (SUKLabel (ConstToLabel (IntConst x)), kla,
-                                  [Int])))
-                     | ConstToLabel (FloatConst _) ->
+                     | ConstToLabel _ ->
                        (match getSort (equal_label _A) l database
                          with None -> None
                          | Some t ->
                            Some (KItemSubs (SUKItem (SUKLabel l, kla, t))))
-                     | ConstToLabel (StringConst x) ->
-                       Some (KItemSubs
-                              (SUKItem
-                                (SUKLabel (ConstToLabel (StringConst x)), kla,
-                                  [String])))
-                     | ConstToLabel (BoolConst x) ->
-                       Some (KItemSubs
-                              (SUKItem
-                                (SUKLabel (ConstToLabel (BoolConst x)), kla,
-                                  [Bool])))
-                     | ConstToLabel (IdConst x) ->
-                       Some (KItemSubs
-                              (SUKItem
-                                (SUKLabel (ConstToLabel (IdConst x)), kla,
-                                  [Id])))
                      | Sort ->
                        (match getSort (equal_label _A) l database
                          with None -> None
@@ -11153,6 +11509,16 @@ let rec simpleKToSU _A
                          | Some t ->
                            Some (KItemSubs (SUKItem (SUKLabel l, kla, t))))
                      | TimesInt ->
+                       (match getSort (equal_label _A) l database
+                         with None -> None
+                         | Some t ->
+                           Some (KItemSubs (SUKItem (SUKLabel l, kla, t))))
+                     | EqualSet ->
+                       (match getSort (equal_label _A) l database
+                         with None -> None
+                         | Some t ->
+                           Some (KItemSubs (SUKItem (SUKLabel l, kla, t))))
+                     | EqualMap ->
                        (match getSort (equal_label _A) l database
                          with None -> None
                          | Some t ->
@@ -11371,7 +11737,7 @@ let rec funEvaluation_i_i_i_i_o _A _B _C
                         (match aa with None -> bot_pred
                           | Some (l, (funa, (_, cr))) ->
                             bind (if_pred
-                                   (member (equal_label _A) builtinLabels l))
+                                   (membera (equal_label _A) builtinLabels l))
                               (fun () ->
                                 bind (eq_i_o
                                        (evalBuiltinFun _A _B _C _A l funa
@@ -11401,7 +11767,7 @@ bind (eq_i_o (substitutionInSUBag _C cr [(FunHole, r)]))
                         (match aa with None -> bot_pred
                           | Some (l, (funa, (_, br))) ->
                             bind (if_pred
-                                   (not (member (equal_label _A) builtinLabels
+                                   (not (membera (equal_label _A) builtinLabels
   l)))
                               (fun () ->
                                 bind (eq_i_o (getFunRule _A l allRules))
@@ -11437,7 +11803,7 @@ let rec removeSubsorts
 
 let rec tupleToRulePat _A _D _E
   (x, (y, (z, u))) database =
-    (if member (equal_ruleAttrib _D _E) u Macro
+    (if membera (equal_ruleAttrib _D _E) u Macro
       then (match simpleKToIR _A x database with None -> None
              | Some (KLabelFunPat (_, _)) -> None
              | Some (KFunPat (_, _)) -> None | Some (KItemFunPat (_, _)) -> None
@@ -11472,7 +11838,8 @@ let rec tupleToRulePat _A _D _E
                          | Some NotEqualKLabel -> None
                          | Some (OtherLabel _) -> None
                          | Some (TokenLabel _) -> None | Some PlusInt -> None
-                         | Some MinusInt -> None | Some TimesInt -> None)
+                         | Some MinusInt -> None | Some TimesInt -> None
+                         | Some EqualSet -> None | Some EqualMap -> None)
                      | Some (KListSubs _) -> None | Some (KSubs _) -> None
                      | Some (ListSubs _) -> None | Some (SetSubs _) -> None
                      | Some (MapSubs _) -> None | Some (BagSubs _) -> None)
@@ -11502,7 +11869,8 @@ let rec tupleToRulePat _A _D _E
                          | Some NotEqualKLabel -> None
                          | Some (OtherLabel _) -> None
                          | Some (TokenLabel _) -> None | Some PlusInt -> None
-                         | Some MinusInt -> None | Some TimesInt -> None)
+                         | Some MinusInt -> None | Some TimesInt -> None
+                         | Some EqualSet -> None | Some EqualMap -> None)
                      | Some (KListSubs _) -> None | Some (KSubs _) -> None
                      | Some (ListSubs _) -> None | Some (SetSubs _) -> None
                      | Some (MapSubs _) -> None | Some (BagSubs _) -> None)
@@ -11545,7 +11913,8 @@ let rec tupleToRulePat _A _D _E
                             | Some NotEqualKLabel -> None
                             | Some (OtherLabel _) -> None
                             | Some (TokenLabel _) -> None | Some PlusInt -> None
-                            | Some MinusInt -> None | Some TimesInt -> None)
+                            | Some MinusInt -> None | Some TimesInt -> None
+                            | Some EqualSet -> None | Some EqualMap -> None)
                         | Some (KListSubs _) -> None | Some (KSubs _) -> None
                         | Some (ListSubs _) -> None | Some (SetSubs _) -> None
                         | Some (MapSubs _) -> None | Some (BagSubs _) -> None)
@@ -11577,7 +11946,8 @@ let rec tupleToRulePat _A _D _E
                             | Some NotEqualKLabel -> None
                             | Some (OtherLabel _) -> None
                             | Some (TokenLabel _) -> None | Some PlusInt -> None
-                            | Some MinusInt -> None | Some TimesInt -> None)
+                            | Some MinusInt -> None | Some TimesInt -> None
+                            | Some EqualSet -> None | Some EqualMap -> None)
                         | Some (KListSubs _) -> None | Some (KSubs _) -> None
                         | Some (ListSubs _) -> None | Some (SetSubs _) -> None
                         | Some (MapSubs _) -> None | Some (BagSubs _) -> None)
@@ -11600,7 +11970,7 @@ let rec tupleToRulePat _A _D _E
              | Some (NormalPat (SetMatching _)) -> None
              | Some (NormalPat (MapMatching _)) -> None
              | Some (NormalPat (BagMatching _)) -> None)
-      else (if member (equal_ruleAttrib _D _E) u Anywhere
+      else (if membera (equal_ruleAttrib _D _E) u Anywhere
              then (match simpleKToIR _A x database with None -> None
                     | Some (KLabelFunPat (_, _)) -> None
                     | Some (KFunPat (_, _)) -> None
@@ -11707,7 +12077,7 @@ let rec tupleToRulePat _A _D _E
                           (match simpleKToSU _A z database with None -> None
                             | Some (KLabelSubs _) -> None
                             | Some (KItemSubs za) ->
-                              (if not (member (equal_ruleAttrib _D _E) u Owise)
+                              (if not (membera (equal_ruleAttrib _D _E) u Owise)
                                 then Some (FunPat
     (l, [(KLabelFunPat (l, kl), (KLabelSubs ya, za))], None))
                                 else Some (FunPat
@@ -11728,7 +12098,7 @@ let rec tupleToRulePat _A _D _E
                           (match simpleKToSU _A z database with None -> None
                             | Some (KLabelSubs _) -> None
                             | Some (KItemSubs za) ->
-                              (if not (member (equal_ruleAttrib _D _E) u Owise)
+                              (if not (membera (equal_ruleAttrib _D _E) u Owise)
                                 then Some (FunPat
     (l, [(KFunPat (l, kl), (KSubs [ItemFactor ya], za))], None))
                                 else Some (FunPat
@@ -11743,7 +12113,7 @@ let rec tupleToRulePat _A _D _E
                           (match simpleKToSU _A z database with None -> None
                             | Some (KLabelSubs _) -> None
                             | Some (KItemSubs za) ->
-                              (if not (member (equal_ruleAttrib _D _E) u Owise)
+                              (if not (membera (equal_ruleAttrib _D _E) u Owise)
                                 then Some (FunPat
     (l, [(KFunPat (l, kl), (KSubs ya, za))], None))
                                 else Some (FunPat
@@ -11762,7 +12132,7 @@ let rec tupleToRulePat _A _D _E
                           (match simpleKToSU _A z database with None -> None
                             | Some (KLabelSubs _) -> None
                             | Some (KItemSubs za) ->
-                              (if not (member (equal_ruleAttrib _D _E) u Owise)
+                              (if not (membera (equal_ruleAttrib _D _E) u Owise)
                                 then Some (FunPat
     (l, [(KItemFunPat (l, kl), (KItemSubs ya, za))], None))
                                 else Some (FunPat
@@ -11777,7 +12147,7 @@ let rec tupleToRulePat _A _D _E
                           (match simpleKToSU _A z database with None -> None
                             | Some (KLabelSubs _) -> None
                             | Some (KItemSubs za) ->
-                              (if not (member (equal_ruleAttrib _D _E) u Owise)
+                              (if not (membera (equal_ruleAttrib _D _E) u Owise)
                                 then Some (FunPat
     (l, [(KItemFunPat (l, kl), (KItemSubs ya, za))], None))
                                 else Some (FunPat
@@ -11801,7 +12171,7 @@ let rec tupleToRulePat _A _D _E
                           (match simpleKToSU _A z database with None -> None
                             | Some (KLabelSubs _) -> None
                             | Some (KItemSubs za) ->
-                              (if not (member (equal_ruleAttrib _D _E) u Owise)
+                              (if not (membera (equal_ruleAttrib _D _E) u Owise)
                                 then Some (FunPat
     (l, [(ListFunPat (l, kl), (ListSubs ya, za))], None))
                                 else Some (FunPat
@@ -11823,7 +12193,7 @@ let rec tupleToRulePat _A _D _E
                           (match simpleKToSU _A z database with None -> None
                             | Some (KLabelSubs _) -> None
                             | Some (KItemSubs za) ->
-                              (if not (member (equal_ruleAttrib _D _E) u Owise)
+                              (if not (membera (equal_ruleAttrib _D _E) u Owise)
                                 then Some (FunPat
     (l, [(SetFunPat (l, kl), (SetSubs ya, za))], None))
                                 else Some (FunPat
@@ -11844,7 +12214,7 @@ let rec tupleToRulePat _A _D _E
                           (match simpleKToSU _A z database with None -> None
                             | Some (KLabelSubs _) -> None
                             | Some (KItemSubs za) ->
-                              (if not (member (equal_ruleAttrib _D _E) u Owise)
+                              (if not (membera (equal_ruleAttrib _D _E) u Owise)
                                 then Some (FunPat
     (l, [(MapFunPat (l, kl), (MapSubs ya, za))], None))
                                 else Some (FunPat
@@ -11864,7 +12234,7 @@ let rec tupleToRulePat _A _D _E
                             | Some (KItemSubs za) ->
                               Some (KRulePat
                                      (KPat ([xa], None), [ItemFactor ya], za,
-                                       (if member (equal_ruleAttrib _D _E) u
+                                       (if membera (equal_ruleAttrib _D _E) u
      Transition
  then true else false)))
                             | Some (KListSubs _) -> None
@@ -11879,7 +12249,7 @@ let rec tupleToRulePat _A _D _E
                             | Some (KItemSubs za) ->
                               Some (KRulePat
                                      (KPat ([xa], None), ya, za,
-                                       (if member (equal_ruleAttrib _D _E) u
+                                       (if membera (equal_ruleAttrib _D _E) u
      Transition
  then true else false)))
                             | Some (KListSubs _) -> None
@@ -11898,7 +12268,7 @@ let rec tupleToRulePat _A _D _E
                             | Some (KItemSubs za) ->
                               Some (KRulePat
                                      (xa, [ItemFactor ya], za,
-                                       (if member (equal_ruleAttrib _D _E) u
+                                       (if membera (equal_ruleAttrib _D _E) u
      Transition
  then true else false)))
                             | Some (KListSubs _) -> None
@@ -11913,7 +12283,7 @@ let rec tupleToRulePat _A _D _E
                             | Some (KItemSubs za) ->
                               Some (KRulePat
                                      (xa, ya, za,
-                                       (if member (equal_ruleAttrib _D _E) u
+                                       (if membera (equal_ruleAttrib _D _E) u
      Transition
  then true else false)))
                             | Some (KListSubs _) -> None
@@ -11936,7 +12306,7 @@ let rec tupleToRulePat _A _D _E
                             | Some (KItemSubs za) ->
                               Some (BagRulePat
                                      (xa, ya, za,
-                                       (if member (equal_ruleAttrib _D _E) u
+                                       (if membera (equal_ruleAttrib _D _E) u
      Transition
  then true else false)))
                             | Some (KListSubs _) -> None
@@ -12053,7 +12423,7 @@ let rec syntaxToKItem
       (if isBracket c then None
         else (match getKLabelName c
                with None ->
-                 (if member equal_synAttrib c Function
+                 (if membera equal_synAttrib c Function
                    then Some [([a], (getArgSortsInSyntax b,
                                       (SingleTon (symbolsToKLabel b),
 (getRidStrictAttrs c, true))))]
@@ -12064,7 +12434,7 @@ let rec syntaxToKItem
                           else Some [([a], (getArgSortsInSyntax b,
      (SingleTon (symbolsToKLabel b), (c, false))))]))
                | Some t ->
-                 (if member equal_synAttrib c Function
+                 (if membera equal_synAttrib c Function
                    then Some [([a], (getArgSortsInSyntax b,
                                       (SingleTon t,
 (getRidStrictAttrs c, true))))]
@@ -12090,9 +12460,10 @@ let rec syntaxToKItem
                                 | OtherLabel _ -> false
                                 | TokenLabel ab -> regMatch s ab
                                 | PlusInt -> false | MinusInt -> false
-                                | TimesInt -> false)),
+                                | TimesInt -> false | EqualSet -> false
+                                | EqualMap -> false)),
                            (getRidStrictAttrs c,
-                             member equal_synAttrib c Function))))]
+                             membera equal_synAttrib c Function))))]
     | Subsort (a, b) -> None
     | ListSyntax (a, b, s, c) ->
         (match getKLabelName c
@@ -12135,6 +12506,8 @@ let builtinSymbolTables :
       ([Map], ([[Map]; [K]; [K]], (SingleTon MapUpdate, ([Function], true))));
       ([Bool], ([[K]; [K]], (SingleTon EqualK, ([Function], true))));
       ([Bool], ([[K]; [K]], (SingleTon NotEqualK, ([Function], true))));
+      ([Bool], ([[Map]; [Map]], (SingleTon EqualMap, ([Function], true))));
+      ([Bool], ([[Seta]; [Seta]], (SingleTon EqualSet, ([Function], true))));
       ([Bool],
         ([[KLabel]; [KLabel]], (SingleTon EqualKLabel, ([Function], true))));
       ([Bool],
@@ -12143,9 +12516,172 @@ let builtinSymbolTables :
       ([Int], ([[Int]; [Int]], (SingleTon MinusInt, ([Function], true))));
       ([Int], ([[Int]; [Int]], (SingleTon TimesInt, ([Function], true))))];;
 
+let rec isStringConst = function ConstToLabel (StringConst n) -> true
+                        | UnitLabel v -> false
+                        | ConstToLabel (IntConst va) -> false
+                        | ConstToLabel (FloatConst va) -> false
+                        | ConstToLabel (BoolConst va) -> false
+                        | ConstToLabel (IdConst va) -> false
+                        | Sort -> false
+                        | GetKLabel -> false
+                        | IsKResult -> false
+                        | AndBool -> false
+                        | NotBool -> false
+                        | OrBool -> false
+                        | SetConLabel -> false
+                        | SetItemLabel -> false
+                        | ListConLabel -> false
+                        | ListItemLabel -> false
+                        | MapConLabel -> false
+                        | MapItemLabel -> false
+                        | MapUpdate -> false
+                        | EqualK -> false
+                        | NotEqualK -> false
+                        | EqualKLabel -> false
+                        | NotEqualKLabel -> false
+                        | OtherLabel v -> false
+                        | TokenLabel v -> false
+                        | PlusInt -> false
+                        | MinusInt -> false
+                        | TimesInt -> false
+                        | EqualSet -> false
+                        | EqualMap -> false;;
+
+let rec isFloatConst = function ConstToLabel (FloatConst n) -> true
+                       | UnitLabel v -> false
+                       | ConstToLabel (IntConst va) -> false
+                       | ConstToLabel (StringConst va) -> false
+                       | ConstToLabel (BoolConst va) -> false
+                       | ConstToLabel (IdConst va) -> false
+                       | Sort -> false
+                       | GetKLabel -> false
+                       | IsKResult -> false
+                       | AndBool -> false
+                       | NotBool -> false
+                       | OrBool -> false
+                       | SetConLabel -> false
+                       | SetItemLabel -> false
+                       | ListConLabel -> false
+                       | ListItemLabel -> false
+                       | MapConLabel -> false
+                       | MapItemLabel -> false
+                       | MapUpdate -> false
+                       | EqualK -> false
+                       | NotEqualK -> false
+                       | EqualKLabel -> false
+                       | NotEqualKLabel -> false
+                       | OtherLabel v -> false
+                       | TokenLabel v -> false
+                       | PlusInt -> false
+                       | MinusInt -> false
+                       | TimesInt -> false
+                       | EqualSet -> false
+                       | EqualMap -> false;;
+
+let rec isBoolConst = function ConstToLabel (BoolConst n) -> true
+                      | UnitLabel v -> false
+                      | ConstToLabel (IntConst va) -> false
+                      | ConstToLabel (FloatConst va) -> false
+                      | ConstToLabel (StringConst va) -> false
+                      | ConstToLabel (IdConst va) -> false
+                      | Sort -> false
+                      | GetKLabel -> false
+                      | IsKResult -> false
+                      | AndBool -> false
+                      | NotBool -> false
+                      | OrBool -> false
+                      | SetConLabel -> false
+                      | SetItemLabel -> false
+                      | ListConLabel -> false
+                      | ListItemLabel -> false
+                      | MapConLabel -> false
+                      | MapItemLabel -> false
+                      | MapUpdate -> false
+                      | EqualK -> false
+                      | NotEqualK -> false
+                      | EqualKLabel -> false
+                      | NotEqualKLabel -> false
+                      | OtherLabel v -> false
+                      | TokenLabel v -> false
+                      | PlusInt -> false
+                      | MinusInt -> false
+                      | TimesInt -> false
+                      | EqualSet -> false
+                      | EqualMap -> false;;
+
+let rec isIntConst = function ConstToLabel (IntConst n) -> true
+                     | UnitLabel v -> false
+                     | ConstToLabel (FloatConst va) -> false
+                     | ConstToLabel (StringConst va) -> false
+                     | ConstToLabel (BoolConst va) -> false
+                     | ConstToLabel (IdConst va) -> false
+                     | Sort -> false
+                     | GetKLabel -> false
+                     | IsKResult -> false
+                     | AndBool -> false
+                     | NotBool -> false
+                     | OrBool -> false
+                     | SetConLabel -> false
+                     | SetItemLabel -> false
+                     | ListConLabel -> false
+                     | ListItemLabel -> false
+                     | MapConLabel -> false
+                     | MapItemLabel -> false
+                     | MapUpdate -> false
+                     | EqualK -> false
+                     | NotEqualK -> false
+                     | EqualKLabel -> false
+                     | NotEqualKLabel -> false
+                     | OtherLabel v -> false
+                     | TokenLabel v -> false
+                     | PlusInt -> false
+                     | MinusInt -> false
+                     | TimesInt -> false
+                     | EqualSet -> false
+                     | EqualMap -> false;;
+
+let rec isIdConst = function ConstToLabel (IdConst n) -> true
+                    | UnitLabel v -> false
+                    | ConstToLabel (IntConst va) -> false
+                    | ConstToLabel (FloatConst va) -> false
+                    | ConstToLabel (StringConst va) -> false
+                    | ConstToLabel (BoolConst va) -> false
+                    | Sort -> false
+                    | GetKLabel -> false
+                    | IsKResult -> false
+                    | AndBool -> false
+                    | NotBool -> false
+                    | OrBool -> false
+                    | SetConLabel -> false
+                    | SetItemLabel -> false
+                    | ListConLabel -> false
+                    | ListItemLabel -> false
+                    | MapConLabel -> false
+                    | MapItemLabel -> false
+                    | MapUpdate -> false
+                    | EqualK -> false
+                    | NotEqualK -> false
+                    | EqualKLabel -> false
+                    | NotEqualKLabel -> false
+                    | OtherLabel v -> false
+                    | TokenLabel v -> false
+                    | PlusInt -> false
+                    | MinusInt -> false
+                    | TimesInt -> false
+                    | EqualSet -> false
+                    | EqualMap -> false;;
+
+let builtinConstTable :
+  ('a sort list * ('b list * ('c label kItemSyntax * ('d list * bool)))) list
+  = [([Int], ([], (SetTon isIntConst, ([], false))));
+      ([Float], ([], (SetTon isFloatConst, ([], false))));
+      ([String], ([], (SetTon isStringConst, ([], false))));
+      ([Bool], ([], (SetTon isBoolConst, ([], false))));
+      ([Id], ([], (SetTon isIdConst, ([], false))))];;
+
 let rec syntaxSetToKItems
   l = (match syntaxSetToKItemSetAux l [] with None -> None
-        | Some la -> Some (la @ builtinSymbolTables));;
+        | Some la -> Some (la @ builtinSymbolTables @ builtinConstTable));;
 
 let rec mergeList = function [] -> []
                     | x :: l -> x @ mergeList l;;
@@ -12154,7 +12690,7 @@ let rec mergeTuples = function [] -> []
                       | (a, b) :: l -> mergeList b @ mergeTuples l;;
 
 let rec collectDatabase
-  (Parsed (a, b)) = syntaxSetToKItems (removeSubsorts (mergeTuples a));;
+  (Parsed (c, a, b)) = syntaxSetToKItems (removeSubsorts (mergeTuples a));;
 
 let rec tupleToRulePats _A _D _E
   x0 database = match x0, database with [], database -> Some []
@@ -12184,7 +12720,7 @@ let rec tupleToRulePats _A _D _E
 let rec getAllSubsortInList _A
   = function [] -> []
     | Subsort (a, b) :: l ->
-        insert (equal_prod (equal_sort _A) (equal_sort _A)) (a, b)
+        inserta (equal_prod (equal_sort _A) (equal_sort _A)) (a, b)
           (getAllSubsortInList _A l)
     | Syntax (v, va, vb) :: l -> getAllSubsortInList _A l
     | Token (v, va, vb) :: l -> getAllSubsortInList _A l
@@ -12198,66 +12734,67 @@ let rec getAllSubsortInTuples _B
   = function [] -> []
     | (a, b) :: l -> getAllSubsortInListList _B b @ getAllSubsortInTuples _B l;;
 
-let rec getAllSubsortInKFile _A (Parsed (a, b)) = getAllSubsortInTuples _A a;;
+let rec getAllSubsortInKFile _A
+  (Parsed (c, a, b)) = getAllSubsortInTuples _A a;;
 
 let rec addImplicitSubsorts _A
   x s xa2 = match x, s, xa2 with x, s, [] -> []
     | x, s, a :: l ->
-        (if member _A s a then addImplicitSubsorts _A x s l
+        (if membera _A s a then addImplicitSubsorts _A x s l
           else (x, a) :: addImplicitSubsorts _A x s l);;
 
 let builtinSorts : 'a sort list
-  = [KItem; K; KList; List; Set; Bag; Map; KResult; KLabel];;
+  = [KItem; K; KList; List; Seta; Bag; Map; KResult; KLabel];;
 
 let rec getKResultSubsorts _A
   x0 subG = match x0, subG with [], subG -> []
     | a :: l, subG ->
-        (if member (equal_sort _A) builtinSorts a
+        (if membera (equal_sort _A) builtinSorts a
           then getKResultSubsorts _A l subG
           else (if subsortAux (equal_sort _A) KResult a subG
                  then getKResultSubsorts _A l subG
                  else (KResult, a) :: getKResultSubsorts _A l subG));;
 
 let topSubsort : ('a sort * 'b sort) list
-  = [(K, Top); (KList, Top); (List, Top); (Set, Top); (Bag, Top); (Map, Top);
+  = [(K, Top); (KList, Top); (List, Top); (Seta, Top); (Bag, Top); (Map, Top);
       (KLabel, Top)];;
 
 let rec getAllSorts _A
   = function [] -> []
-    | Syntax (x, pros, l) :: xs -> insert (equal_sort _A) x (getAllSorts _A xs)
+    | Syntax (x, pros, l) :: xs -> inserta (equal_sort _A) x (getAllSorts _A xs)
     | ListSyntax (a, b, pros, l) :: xs ->
-        insert (equal_sort _A) a (getAllSorts _A xs)
-    | Token (a, s, l) :: xs -> insert (equal_sort _A) a (getAllSorts _A xs)
+        inserta (equal_sort _A) a (getAllSorts _A xs)
+    | Token (a, s, l) :: xs -> inserta (equal_sort _A) a (getAllSorts _A xs)
     | Subsort (v, va) :: xs -> getAllSorts _A xs;;
 
 let rec preAllSubsorts _A
-  (Parsed (a, b)) =
-    getAllSubsortInKFile _A (Parsed (a, b)) @
+  (Parsed (c, a, b)) =
+    getAllSubsortInKFile _A (Parsed (c, a, b)) @
       addImplicitSubsorts (equal_sort _A) KItem builtinSorts
         (getAllSorts _A (mergeTuples a)) @
         [(KResult, KItem); (KItem, K)] @ topSubsort;;
 
 let rec insertAll _A a x1 = match a, x1 with a, [] -> a
-                       | a, b :: l -> insertAll _A (insert _A b a) l;;
+                       | a, b :: l -> insertAll _A (inserta _A b a) l;;
 
 let rec preSubsortGraph _A
-  (Parsed (a, b)) =
+  (Parsed (c, a, b)) =
     formGraph (equal_sort _A)
       (insertAll (equal_sort _A) (getAllSorts _A (mergeTuples a)) builtinSorts)
-      (preAllSubsorts _A (Parsed (a, b)));;
+      (preAllSubsorts _A (Parsed (c, a, b)));;
 
 let rec kResultSubsorts _A
-  (Parsed (a, b)) =
+  (Parsed (c, a, b)) =
     getKResultSubsorts _A (getAllSorts _A (mergeTuples a))
-      (preSubsortGraph _A (Parsed (a, b)));;
+      (preSubsortGraph _A (Parsed (c, a, b)));;
 
 let rec allSubsorts _A
-  (Parsed (a, b)) =
-    getAllSubsortInKFile _A (Parsed (a, b)) @
+  (Parsed (c, a, b)) =
+    getAllSubsortInKFile _A (Parsed (c, a, b)) @
       addImplicitSubsorts (equal_sort _A) KItem builtinSorts
         (getAllSorts _A (mergeTuples a)) @
         [(KResult, KItem); (KItem, K)] @
-          topSubsort @ kResultSubsorts _A (Parsed (a, b));;
+          topSubsort @ kResultSubsorts _A (Parsed (c, a, b));;
 
 let rec collectSortInRule _A _C
   (x, (y, (z, a))) =
@@ -12282,10 +12819,10 @@ let rec formDatabase _A
     | (a, (al, (k, b))) :: l -> insertA _A (formDatabase _A l) a (al, (k, b));;
 
 let rec subsortGraph _A
-  (Parsed (a, b)) =
+  (Parsed (c, a, b)) =
     formGraph (equal_sort _A)
       (insertAll (equal_sort _A) (getAllSorts _A (mergeTuples a)) builtinSorts)
-      (allSubsorts _A (Parsed (a, b)));;
+      (allSubsorts _A (Parsed (c, a, b)));;
 
 let rec assignSortInRules _A _C
   = function [] -> Some []
@@ -12311,7 +12848,7 @@ let rec suToIRInSubsFactor _A
           | Some aa -> Some (NormalPat (BagMatching aa)));;
 
 let rec tupleToRuleInParsed _A _B _C
-  a = (let Parsed (_, y) = a in
+  a = (let Parsed (_, _, y) = a in
         (match assignSortInRules _A _C y with None -> None
           | Some ya ->
             (match collectDatabase a with None -> None
