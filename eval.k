@@ -156,11 +156,15 @@
   rule 'minusMap(S:Map, MapCon(MapItem(A:K, B:K), S':Map))
             => 'minusMap(S, S') [owise]
 
+  syntax Bool ::= 'isAKey(K, Map) [function, klabel('isAKey)]
+  rule 'isAKey(A:K, MapCon(MapItem(A:K, B:K), M:Map))
+          => 'true(.KList)
+  rule 'isAKey(A:K, M:Map) => 'false(.KList) [owise]
+
 
   syntax KItem ::= 'judgeEval(Terms, Map, Map, Map, Int) [function, klabel('judgeEval)]
                  | 'judgeEvalAux(K, Map, K) [function, klabel('judgeEvalAux)]
                  | 'findError(Map, Map) [function, klabel('findError)]
-                 | 'compareEntry(K, K)  [function, klabel('compareEntry)]
 
   rule 'judgeEval(Ts:Terms, Pre:Map, Point:Map, An:Map, I:Int)
           => 'judgeEvalAux('lookup('evalTerms(Ts, Pre), I), Point, 'lookup(An, I))
@@ -169,6 +173,31 @@
   rule 'judgeEvalAux('some('result(M:Map)), Point:Map, 'some('result(M':Map)))
              => 'error("Student makes a mistake on input the wrong previous environment before the checking point.")
        requires 'notBool('subMap(Point, M'))
+
+  rule 'judgeEvalAux('some('result(M:Map)), Point:Map, 'some('result(M':Map)))
+             => 'findError('minusMap(M, Point), 'minusMap(M', Point))
+       requires 'andBool('subMap(Point, M'), 'subMap(Point, M))
+  rule 'judgeEvalAux(A:K, Point:Map, B:K) => 'error("unknown error, maybe syntactic error.") [owise]
+
+  rule 'findError(MapCon(MapItem(A:K, C:Int), M:Map), MapCon(MapItem(A:K, D:Int), M':Map))
+            => 'error("An integer value of an environment key is calculated wrong.")
+       requires '=/=K(C, D)
+  rule 'findError(MapCon(MapItem(A:K, 'closure(X:Id, T:Term, M1:Map)), M:Map),
+                 MapCon(MapItem(A:K, 'closure(X':Id, T':Term, M1':Map)), M':Map))
+            => 'error("The closure has the wrong function name for an environment key.")
+       requires '=/=K(X, X')
+  rule 'findError(MapCon(MapItem(A:K, 'closure(X:Id, T:Term, M1:Map)), M:Map),
+                 MapCon(MapItem(A:K, 'closure(X:Id, T':Term, M1':Map)), M':Map))
+            => 'error("User mis-calculated the function body for the closure for an environment key.")
+       requires '=/=K(T, T')
+  rule 'findError(MapCon(MapItem(A:K, 'closure(X:Id, T:Term, M1:Map)), M:Map),
+                 MapCon(MapItem(A:K, 'closure(X:Id, T:Term, M1':Map)), M':Map))
+            => 'error("User mis-calculated the environment associated with a closure.")
+       requires 'notBool('==Map(M1, M1'))
+  rule 'findError(MapCon(MapItem(A:K, B:K), M:Map), M':Map)
+            => 'error("User misses a key in the environment.")
+       requires 'isAKey(A, M')
+  rule 'findError(M:Map, M':Map) => 'error("Unknown error") [owise]
 
   syntax Terms ::= 'getRidFirstMarker(Terms) [function]
                  | 'getRidFirstAux(Term, Term, Terms) [function]
@@ -185,7 +214,7 @@
                  | 'judgeAllEvalNext(Terms, K, K, Map, Int) [function]
                  | 'judgeAllEvals(Terms, Map) [function]
   rule 'judgeAllEvalAux(Ts:Terms, MapCon(MapItem(I, 'result(M:Map)), RM:Map), Point:Map, I:Int) 
-            => 'judgeAllEvalNext(Ts, 'judgeEval(Ts, .Map, Point, M),
+            => 'judgeAllEvalNext(Ts, 'judgeEval(Ts, .Map, Point, M, I),
                         'lookup('evalTerms(Ts, .Map), I), RM, I)
   rule 'judgeAllEvalAux(Ts:Terms, M:Map, Point:Map, I:Int) => 'success(.KList) [owise]
   rule 'judgeAllEvalNext(Ts:Terms, 'success(.KList), 'some('result(M:Map)), RM:Map, I:Int)
