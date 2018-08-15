@@ -1,21 +1,21 @@
 module K : sig
   type num = One | Bit0 of num | Bit1 of num
   type int = Zero_int | Pos of num | Neg of num
-  type 'a equal = {equal : 'a -> 'a -> bool};;
+  type 'a equal = {equal : 'a -> 'a -> bool}
   type nat = Zero_nat | Suc of nat
   type char = Zero_char | Char of num
   type 'a metaVar = Defined of 'a | Generated of nat | FunHole
   type real
   type theConstant = IntConst of int | FloatConst of real |
     StringConst of char list | BoolConst of bool | IdConst of char list
-  type 'a sort = Bool | K | KItem | KLabel | KResult | KList | List | Seta | Map
+  type 'a sort = Bool | K | KItem | KLabel | KResult | KList | List | Set | Map
     | Bag | OtherSort of 'a | Top | Int | Float | Id | String
   type 'a label = UnitLabel of 'a sort | ConstToLabel of theConstant | Sort |
     GetKLabel | IsKResult | AndBool | NotBool | OrBool | SetConLabel |
     SetItemLabel | ListConLabel | ListItemLabel | MapConLabel | MapItemLabel |
     MapUpdate | EqualK | NotEqualK | EqualKLabel | NotEqualKLabel |
     OtherLabel of char list | TokenLabel of char list | PlusInt | MinusInt |
-    TimesInt | EqualSet | EqualMap
+    TimesInt | EqualSet | EqualMap | StringCon | IntToString
   type stdType = Stdin | Stdout
   type key = Star | Question
   type feature = Multiplicity of key | Stream of stdType | DotDotDot
@@ -181,7 +181,9 @@ module K : sig
   val inc : num -> num
   val subsort : 'a equal -> 'a -> 'a -> ('a * 'a list) list -> bool
   val getValueTerm : 'a equal -> 'a -> ('a * 'b) list -> 'b option
+  val meet : 'a equal -> 'a list -> 'a list -> ('a * 'a list) list -> 'a list
   val irToSUInKLabel : ('a, 'b) irKLabel -> ('a, 'c, 'b) suKLabel
+  val irToSUInKList : 'a equal -> ('a, 'b, 'c) irKList -> ('a, 'b, 'c) suKl list
   val irToSUInKItem : 'a equal -> ('a, 'b, 'c) irKItem -> ('a, 'b, 'c) suKItem
   val isFunctionItem :
     'a equal -> 'a -> ('b * ('c * ('a kItemSyntax * ('d * bool)))) list -> bool
@@ -190,9 +192,212 @@ module K : sig
       ('a, 'b, 'c) suKLabel ->
         ('d * ('e * ('a label kItemSyntax * ('f * bool)))) list ->
           ('a, 'b, 'c) pat option
+  val patternMacroingInSUMapAux :
+    'a equal -> 'b equal -> 'c equal -> 'd equal ->
+      ((('a metaVar * ('b, 'c, 'd) subsFactor) list) list *
+        ('b, 'c, 'd) suM list) list ->
+        'a metaVar option ->
+          ('b sort * 'b sort list) list ->
+            ((('a metaVar * ('b, 'c, 'd) subsFactor) list) list) option
+  val subsortList :
+    'a equal -> 'a list -> 'a list -> ('a * 'a list) list -> bool
+  val patternMacroingInSUK :
+    'a equal -> 'b equal -> 'c equal -> 'd equal ->
+      ('a, 'b, 'c) irK ->
+        ('a, 'b, 'd) suKFactor list ->
+          (('c metaVar * ('a, 'b, 'd) subsFactor) list) list ->
+            ('a sort * 'a sort list) list ->
+              ((('c metaVar * ('a, 'b, 'd) subsFactor) list) list) option
+  val patternMacroingInSUMapMember :
+    'a equal -> 'b equal -> 'c equal -> 'd equal ->
+      ('a, 'b, 'c) irK * ('a, 'b, 'c) irK ->
+        ('a, 'b, 'd) suM list ->
+          ('a, 'b, 'd) suM list ->
+            (('c metaVar * ('a, 'b, 'd) subsFactor) list) list ->
+              ('a sort * 'a sort list) list ->
+                ((('c metaVar * ('a, 'b, 'd) subsFactor) list) list *
+                  ('a, 'b, 'd) suM list) list
+  val patternMacroingInAllSUMapMember :
+    'a equal -> 'b equal -> 'c equal -> 'd equal ->
+      (('a, 'b, 'c) irK * ('a, 'b, 'c) irK) list ->
+        ('a, 'b, 'd) suM list ->
+          (('c metaVar * ('a, 'b, 'd) subsFactor) list) list ->
+            ('a sort * 'a sort list) list ->
+              (((('c metaVar * ('a, 'b, 'd) subsFactor) list) list *
+                 ('a, 'b, 'd) suM list) list) option
+  val patternMacroingInSUMap :
+    'a equal -> 'b equal -> 'c equal -> 'd equal ->
+      ('a, 'b, 'c) irMap ->
+        ('a, 'b, 'd) suM list ->
+          (('c metaVar * ('a, 'b, 'd) subsFactor) list) list ->
+            ('a sort * 'a sort list) list ->
+              ((('c metaVar * ('a, 'b, 'd) subsFactor) list) list) option
+  val patternMacroingInAllSUMapMemberAux :
+    'a equal -> 'b equal -> 'c equal -> 'd equal ->
+      (('a, 'b, 'c) irK * ('a, 'b, 'c) irK) list ->
+        ((('c metaVar * ('a, 'b, 'd) subsFactor) list) list *
+          ('a, 'b, 'd) suM list) list ->
+          ('a sort * 'a sort list) list ->
+            (((('c metaVar * ('a, 'b, 'd) subsFactor) list) list *
+               ('a, 'b, 'd) suM list) list) option
+  val patternMacroingInSUBigKWithBag :
+    'a equal -> 'b equal -> 'c equal -> 'd equal ->
+      ('a, 'b, 'c) irBigKWithBag ->
+        ('a, 'b, 'd) suBigKWithBag ->
+          (('c metaVar * ('a, 'b, 'd) subsFactor) list) list ->
+            ('a sort * 'a sort list) list ->
+              ((('c metaVar * ('a, 'b, 'd) subsFactor) list) list) option
+  val patternMacroingInSUBigKWithLabel :
+    'a equal -> 'b equal -> 'c equal -> 'd equal ->
+      ('a, 'b, 'c) irBigKWithLabel ->
+        ('a, 'b, 'd) suBigKWithLabel ->
+          (('c metaVar * ('a, 'b, 'd) subsFactor) list) list ->
+            ('a sort * 'a sort list) list ->
+              ((('c metaVar * ('a, 'b, 'd) subsFactor) list) list) option
+  val patternMacroingInSUKList :
+    'a equal -> 'b equal -> 'c equal -> 'd equal ->
+      ('a, 'b, 'c) irKList ->
+        ('a, 'b, 'd) suKl list ->
+          (('c metaVar * ('a, 'b, 'd) subsFactor) list) list ->
+            ('a sort * 'a sort list) list ->
+              ((('c metaVar * ('a, 'b, 'd) subsFactor) list) list) option
+  val getFunRule :
+    'a equal ->
+      'a label ->
+        ('a, 'b, 'c) rulePat list ->
+          ((('a, 'b, 'c) irKList *
+             (('a, 'b, 'c) subsFactor * ('a, 'b, 'c) suKItem)) list) option
+  val substitutionInSUKItem :
+    'c equal ->
+      ('a, 'b, 'c) suKItem ->
+        ('c metaVar * ('a, 'b, 'c) subsFactor) list ->
+          ('a, 'b, 'c) suKItem option
+  val substitutionInSUBag :
+    'c equal ->
+      ('a, 'b, 'c) suB list ->
+        ('c metaVar * ('a, 'b, 'c) subsFactor) list ->
+          (('a, 'b, 'c) suB list) option
+  val substitutionInSubsFactor :
+    'c equal ->
+      ('a, 'b, 'c) subsFactor ->
+        ('c metaVar * ('a, 'b, 'c) subsFactor) list ->
+          ('a, 'b, 'c) subsFactor option
+  val getArgSort :
+    'a equal ->
+      'a -> ('b * ('c * ('a kItemSyntax * ('d * 'e)))) list -> 'c option
   val getSort :
     'a equal ->
       'a -> ('b * ('c * ('a kItemSyntax * ('d * 'e)))) list -> 'b option
+  val checkTermsInSUKItem :
+    'a equal -> 'c equal ->
+      ('a, 'b, 'c) suKItem ->
+        'a sort list ->
+          ('c metaVar * 'a sort list) list ->
+            ('c metaVar * 'a sort list) list ->
+              ('a sort list *
+                (('a sort list) list *
+                  ('a label kItemSyntax * ('d * bool)))) list ->
+                ('a sort * 'a sort list) list ->
+                  (('c metaVar * 'a sort list) list *
+                    (('c metaVar * 'a sort list) list *
+                      ('a, 'b, 'c) suKItem)) option
+  val checkTermsInSUK :
+    'a equal -> 'c equal ->
+      ('a, 'b, 'c) suKFactor list ->
+        'a sort list ->
+          ('c metaVar * 'a sort list) list ->
+            ('c metaVar * 'a sort list) list ->
+              ('a sort list *
+                (('a sort list) list *
+                  ('a label kItemSyntax * ('d * bool)))) list ->
+                ('a sort * 'a sort list) list ->
+                  (('c metaVar * 'a sort list) list *
+                    (('c metaVar * 'a sort list) list *
+                      ('a, 'b, 'c) suKFactor list)) option
+  val checkTermsInSUBag :
+    'a equal -> 'c equal ->
+      ('a, 'b, 'c) suB list ->
+        ('c metaVar * 'a sort list) list ->
+          ('c metaVar * 'a sort list) list ->
+            ('a sort list *
+              (('a sort list) list *
+                ('a label kItemSyntax * ('d * bool)))) list ->
+              ('a sort * 'a sort list) list ->
+                (('c metaVar * 'a sort list) list *
+                  (('c metaVar * 'a sort list) list *
+                    ('a, 'b, 'c) suB list)) option
+  val checkTermsInSUKList :
+    'a equal -> 'c equal ->
+      ('a, 'b, 'c) suKl list ->
+        ('a sort list) list ->
+          ('c metaVar * 'a sort list) list ->
+            ('c metaVar * 'a sort list) list ->
+              ('a sort list *
+                (('a sort list) list *
+                  ('a label kItemSyntax * ('d * bool)))) list ->
+                ('a sort * 'a sort list) list ->
+                  (('c metaVar * 'a sort list) list *
+                    (('c metaVar * 'a sort list) list *
+                      ('a, 'b, 'c) suKl list)) option
+  val checkTermsInSUKLabel :
+    'a equal -> 'c equal ->
+      ('a, 'b, 'c) suKLabel ->
+        ('c metaVar * 'a sort list) list ->
+          ('c metaVar * 'a sort list) list ->
+            ('a sort list *
+              (('a sort list) list *
+                ('a label kItemSyntax * ('d * bool)))) list ->
+              ('a sort * 'a sort list) list ->
+                (('c metaVar * 'a sort list) list *
+                  (('c metaVar * 'a sort list) list *
+                    ('a, 'b, 'c) suKLabel)) option
+  val checkTermsInSUMap :
+    'a equal -> 'c equal ->
+      ('a, 'b, 'c) suM list ->
+        ('c metaVar * 'a sort list) list ->
+          ('c metaVar * 'a sort list) list ->
+            ('a sort list *
+              (('a sort list) list *
+                ('a label kItemSyntax * ('d * bool)))) list ->
+              ('a sort * 'a sort list) list ->
+                (('c metaVar * 'a sort list) list *
+                  (('c metaVar * 'a sort list) list *
+                    ('a, 'b, 'c) suM list)) option
+  val checkTermsInSUSet :
+    'a equal -> 'c equal ->
+      ('a, 'b, 'c) suS list ->
+        ('c metaVar * 'a sort list) list ->
+          ('c metaVar * 'a sort list) list ->
+            ('a sort list *
+              (('a sort list) list *
+                ('a label kItemSyntax * ('d * bool)))) list ->
+              ('a sort * 'a sort list) list ->
+                (('c metaVar * 'a sort list) list *
+                  (('c metaVar * 'a sort list) list *
+                    ('a, 'b, 'c) suS list)) option
+  val checkTermsInSUList :
+    'a equal -> 'c equal ->
+      ('a, 'b, 'c) suL list ->
+        ('c metaVar * 'a sort list) list ->
+          ('c metaVar * 'a sort list) list ->
+            ('a sort list *
+              (('a sort list) list *
+                ('a label kItemSyntax * ('d * bool)))) list ->
+              ('a sort * 'a sort list) list ->
+                (('c metaVar * 'a sort list) list *
+                  (('c metaVar * 'a sort list) list *
+                    ('a, 'b, 'c) suL list)) option
+  val localteFunTermInSUBag :
+    'a equal ->
+      ('a, 'b, 'c) suB list ->
+        ('d * ('e * ('a label kItemSyntax * ('f * bool)))) list ->
+          ('a label *
+            (('a, 'b, 'c) suKl list *
+              ('a sort list * ('a, 'b, 'c) suB list))) option
+  val hasFunLabelInSUBag :
+    'a equal ->
+      ('a, 'b, 'c) suB list ->
+        ('d * ('e * ('a label kItemSyntax * ('f * bool)))) list -> bool
   val boolEvalFun :
     'a equal -> 'b equal -> 'c equal ->
       ('a, 'b, 'c) rulePat list ->
@@ -227,6 +432,7 @@ module K : sig
       ('a, 'b, 'c) simpleK list ->
         ('a sort list * ('d * ('a label kItemSyntax * ('e * bool)))) list ->
           (('a, 'b, 'c) suKl list) option
+  val wellFormRules : 'c equal -> ('a, 'b, 'c) rulePat list -> bool
   val formGraph : 'a equal -> 'a list -> ('a * 'a) list -> ('a * 'a list) list
   val funRuleEvalFun :
     'a equal -> 'b equal -> 'c equal ->
@@ -235,6 +441,7 @@ module K : sig
           (('a sort list) list * ('a label kItemSyntax * ('d * bool)))) list ->
           ('a sort * 'a sort list) list ->
             ('a, 'b, 'c) suB list -> (('a, 'b, 'c) suB list) state
+  val getDomainInIRKList : ('a, 'b, 'c) irKList -> 'c metaVar list
   val tupleToRulePat :
     'a equal -> 'd equal -> 'e equal ->
       ('a, 'b, 'c) simpleK *
@@ -242,6 +449,28 @@ module K : sig
           (('a, 'b, 'c) simpleK * ('d, 'e) ruleAttrib list)) ->
         ('a sort list * ('f * ('a label kItemSyntax * ('g * bool)))) list ->
           ('a, 'b, 'c) rulePat option
+  val constructSortMap : 'a list -> ('a * 'b sort list) list
+  val checkTypesInFunPats :
+    'a equal -> 'c equal ->
+      'a label ->
+        (('a, 'b, 'c) pat *
+          (('a, 'd, 'c) subsFactor * ('a, 'e, 'c) suKItem)) list ->
+          ('a sort list *
+            (('a sort list) list *
+              ('a label kItemSyntax * ('f * bool)))) list ->
+            ('a sort * 'a sort list) list -> bool
+  val checkTypesInRules :
+    'a equal -> 'c equal ->
+      ('a, 'b, 'c) rulePat list ->
+        ('a sort list *
+          (('a sort list) list * ('a label kItemSyntax * ('d * bool)))) list ->
+          ('a sort * 'a sort list) list -> bool
+  val typeCheckRules :
+    'a equal -> 'c equal ->
+      ('a, 'b, 'c) rulePat list ->
+        ('a sort list *
+          (('a sort list) list * ('a label kItemSyntax * ('d * bool)))) list ->
+          ('a sort * 'a sort list) list -> bool
   val symbolsToKLabel : 'a symbol nelist -> 'b label
   val getKLabelName : synAttrib list -> 'a label option
   val syntaxToKItem :
@@ -270,10 +499,11 @@ module K : sig
          (('a sort list) list *
            ('a label kItemSyntax * (synAttrib list * bool)))) list) option
   val genProgramState :
-    'a equal -> 'b equal ->
+    'a equal -> 'b equal -> 'c equal ->
       ('a, 'b, 'c) theoryParsed ->
-        ('a sort list * ('d * ('a label kItemSyntax * ('e * bool)))) list ->
-          (('a, 'b, 'c) suB list) option
+        ('a sort list *
+          (('a sort list) list * ('a label kItemSyntax * ('d * bool)))) list ->
+          ('a sort * 'a sort list) list -> (('a, 'b, 'c) suB list) option
   val tupleToRulePats :
     'a equal -> 'd equal -> 'e equal ->
       (('a, 'b, 'c) simpleK *
@@ -283,6 +513,8 @@ module K : sig
           (('a, 'b, 'c) rulePat list) option
   val getAllSubsortInKFile :
     'a equal -> ('a, 'b, 'c) theoryParsed -> ('a sort * 'a sort) list
+  val addImplicitSubsorts :
+    'a equal -> 'a -> 'a list -> 'a list -> ('a * 'a) list
   val getKResultSubsorts :
     'a equal ->
       'a sort list -> ('a sort * 'a sort list) list -> ('b sort * 'a sort) list
@@ -348,6 +580,231 @@ let equal _A = _A.equal;;
 
 let equal_int = ({equal = equal_inta} : int equal);;
 
+let rec plus_num
+  x0 x1 = match x0, x1 with Bit1 m, Bit1 n -> Bit0 (plus_num (plus_num m n) One)
+    | Bit1 m, Bit0 n -> Bit1 (plus_num m n)
+    | Bit1 m, One -> Bit0 (plus_num m One)
+    | Bit0 m, Bit1 n -> Bit1 (plus_num m n)
+    | Bit0 m, Bit0 n -> Bit0 (plus_num m n)
+    | Bit0 m, One -> Bit1 m
+    | One, Bit1 n -> Bit0 (plus_num n One)
+    | One, Bit0 n -> Bit1 n
+    | One, One -> Bit0 One;;
+
+let rec times_num
+  m n = match m, n with
+    Bit1 m, Bit1 n -> Bit1 (plus_num (plus_num m n) (Bit0 (times_num m n)))
+    | Bit1 m, Bit0 n -> Bit0 (times_num (Bit1 m) n)
+    | Bit0 m, Bit1 n -> Bit0 (times_num m (Bit1 n))
+    | Bit0 m, Bit0 n -> Bit0 (Bit0 (times_num m n))
+    | One, n -> n
+    | m, One -> m;;
+
+let rec times_inta k l = match k, l with Neg m, Neg n -> Pos (times_num m n)
+                     | Neg m, Pos n -> Neg (times_num m n)
+                     | Pos m, Neg n -> Neg (times_num m n)
+                     | Pos m, Pos n -> Pos (times_num m n)
+                     | Zero_int, l -> Zero_int
+                     | k, Zero_int -> Zero_int;;
+
+type 'a times = {times : 'a -> 'a -> 'a};;
+let times _A = _A.times;;
+
+type 'a dvd = {times_dvd : 'a times};;
+
+let times_int = ({times = times_inta} : int times);;
+
+let dvd_int = ({times_dvd = times_int} : int dvd);;
+
+let one_inta : int = Pos One;;
+
+type 'a one = {one : 'a};;
+let one _A = _A.one;;
+
+let one_int = ({one = one_inta} : int one);;
+
+let rec uminus_inta = function Neg m -> Pos m
+                      | Pos m -> Neg m
+                      | Zero_int -> Zero_int;;
+
+let rec bitM = function One -> One
+               | Bit0 n -> Bit1 (bitM n)
+               | Bit1 n -> Bit1 (Bit0 n);;
+
+let rec dup = function Neg n -> Neg (Bit0 n)
+              | Pos n -> Pos (Bit0 n)
+              | Zero_int -> Zero_int;;
+
+let rec plus_inta k l = match k, l with Neg m, Neg n -> Neg (plus_num m n)
+                    | Neg m, Pos n -> sub n m
+                    | Pos m, Neg n -> sub m n
+                    | Pos m, Pos n -> Pos (plus_num m n)
+                    | Zero_int, l -> l
+                    | k, Zero_int -> k
+and sub
+  x0 x1 = match x0, x1 with Bit0 m, Bit1 n -> minus_int (dup (sub m n)) one_inta
+    | Bit1 m, Bit0 n -> plus_inta (dup (sub m n)) one_inta
+    | Bit1 m, Bit1 n -> dup (sub m n)
+    | Bit0 m, Bit0 n -> dup (sub m n)
+    | One, Bit1 n -> Neg (Bit0 n)
+    | One, Bit0 n -> Neg (bitM n)
+    | Bit1 m, One -> Pos (Bit0 m)
+    | Bit0 m, One -> Pos (bitM m)
+    | One, One -> Zero_int
+and minus_int k l = match k, l with Neg m, Neg n -> sub n m
+                | Neg m, Pos n -> Neg (plus_num m n)
+                | Pos m, Neg n -> Pos (plus_num m n)
+                | Pos m, Pos n -> sub m n
+                | Zero_int, l -> uminus_inta l
+                | k, Zero_int -> k;;
+
+type 'a plus = {plus : 'a -> 'a -> 'a};;
+let plus _A = _A.plus;;
+
+let plus_int = ({plus = plus_inta} : int plus);;
+
+type 'a zero = {zero : 'a};;
+let zero _A = _A.zero;;
+
+let zero_int = ({zero = Zero_int} : int zero);;
+
+type 'a semigroup_add = {plus_semigroup_add : 'a plus};;
+
+type 'a numeral =
+  {one_numeral : 'a one; semigroup_add_numeral : 'a semigroup_add};;
+
+let semigroup_add_int = ({plus_semigroup_add = plus_int} : int semigroup_add);;
+
+let numeral_int =
+  ({one_numeral = one_int; semigroup_add_numeral = semigroup_add_int} :
+    int numeral);;
+
+let rec less_eq_num x0 n = match x0, n with Bit1 m, Bit0 n -> less_num m n
+                      | Bit1 m, Bit1 n -> less_eq_num m n
+                      | Bit0 m, Bit1 n -> less_eq_num m n
+                      | Bit0 m, Bit0 n -> less_eq_num m n
+                      | Bit1 m, One -> false
+                      | Bit0 m, One -> false
+                      | One, n -> true
+and less_num m x1 = match m, x1 with Bit1 m, Bit0 n -> less_num m n
+               | Bit1 m, Bit1 n -> less_num m n
+               | Bit0 m, Bit1 n -> less_eq_num m n
+               | Bit0 m, Bit0 n -> less_num m n
+               | One, Bit1 n -> true
+               | One, Bit0 n -> true
+               | m, One -> false;;
+
+let rec less_eq_int x0 x1 = match x0, x1 with Neg k, Neg l -> less_eq_num l k
+                      | Neg k, Pos l -> true
+                      | Neg k, Zero_int -> true
+                      | Pos k, Neg l -> false
+                      | Pos k, Pos l -> less_eq_num k l
+                      | Pos k, Zero_int -> false
+                      | Zero_int, Neg l -> false
+                      | Zero_int, Pos l -> true
+                      | Zero_int, Zero_int -> true;;
+
+let rec divmod_step_int
+  l (q, r) =
+    (if less_eq_int (Pos l) r
+      then (plus_inta (times_inta (Pos (Bit0 One)) q) one_inta,
+             minus_int r (Pos l))
+      else (times_inta (Pos (Bit0 One)) q, r));;
+
+let rec divmod_int
+  x0 x1 = match x0, x1 with
+    Bit1 m, Bit1 n ->
+      (if less_num m n then (Zero_int, Pos (Bit1 m))
+        else divmod_step_int (Bit1 n) (divmod_int (Bit1 m) (Bit0 (Bit1 n))))
+    | Bit0 m, Bit1 n ->
+        (if less_eq_num m n then (Zero_int, Pos (Bit0 m))
+          else divmod_step_int (Bit1 n) (divmod_int (Bit0 m) (Bit0 (Bit1 n))))
+    | Bit1 m, Bit0 n ->
+        (let (q, r) = divmod_int m n in
+          (q, plus_inta (times_inta (Pos (Bit0 One)) r) one_inta))
+    | Bit0 m, Bit0 n ->
+        (let (q, r) = divmod_int m n in (q, times_inta (Pos (Bit0 One)) r))
+    | One, Bit1 n -> (Zero_int, Pos One)
+    | One, Bit0 n -> (Zero_int, Pos One)
+    | Bit1 m, One -> (Pos (Bit1 m), Zero_int)
+    | Bit0 m, One -> (Pos (Bit0 m), Zero_int)
+    | One, One -> (Pos One, Zero_int);;
+
+let rec fst (x1, x2) = x1;;
+
+type 'a zero_neq_one =
+  {one_zero_neq_one : 'a one; zero_zero_neq_one : 'a zero};;
+
+let rec of_bool _A = function true -> one _A.one_zero_neq_one
+                     | false -> zero _A.zero_zero_neq_one;;
+
+let zero_neq_one_int =
+  ({one_zero_neq_one = one_int; zero_zero_neq_one = zero_int} :
+    int zero_neq_one);;
+
+let rec adjust_div
+  (q, r) =
+    plus_inta q (of_bool zero_neq_one_int (not (equal_inta r Zero_int)));;
+
+let rec divide_inta
+  k ka = match k, ka with Neg m, Neg n -> fst (divmod_int m n)
+    | Pos m, Neg n -> uminus_inta (adjust_div (divmod_int m n))
+    | Neg m, Pos n -> uminus_inta (adjust_div (divmod_int m n))
+    | Pos m, Pos n -> fst (divmod_int m n)
+    | k, Neg One -> uminus_inta k
+    | k, Pos One -> k
+    | Zero_int, k -> Zero_int
+    | k, Zero_int -> Zero_int;;
+
+type 'a divide = {divide : 'a -> 'a -> 'a};;
+let divide _A = _A.divide;;
+
+let divide_int = ({divide = divide_inta} : int divide);;
+
+let rec snd (x1, x2) = x2;;
+
+let rec adjust_mod
+  l r = (if equal_inta r Zero_int then Zero_int else minus_int l r);;
+
+let rec modulo_inta
+  k ka = match k, ka with Neg m, Neg n -> uminus_inta (snd (divmod_int m n))
+    | Pos m, Neg n -> uminus_inta (adjust_mod (Pos n) (snd (divmod_int m n)))
+    | Neg m, Pos n -> adjust_mod (Pos n) (snd (divmod_int m n))
+    | Pos m, Pos n -> snd (divmod_int m n)
+    | k, Neg One -> Zero_int
+    | k, Pos One -> Zero_int
+    | Zero_int, k -> Zero_int
+    | k, Zero_int -> k;;
+
+type 'a modulo =
+  {divide_modulo : 'a divide; dvd_modulo : 'a dvd; modulo : 'a -> 'a -> 'a};;
+let modulo _A = _A.modulo;;
+
+let modulo_int =
+  ({divide_modulo = divide_int; dvd_modulo = dvd_int; modulo = modulo_inta} :
+    int modulo);;
+
+type 'a uminus = {uminus : 'a -> 'a};;
+let uminus _A = _A.uminus;;
+
+let uminus_int = ({uminus = uminus_inta} : int uminus);;
+
+type 'a ord = {less_eq : 'a -> 'a -> bool; less : 'a -> 'a -> bool};;
+let less_eq _A = _A.less_eq;;
+let less _A = _A.less;;
+
+let rec less_int x0 x1 = match x0, x1 with Neg k, Neg l -> less_num l k
+                   | Neg k, Pos l -> true
+                   | Neg k, Zero_int -> true
+                   | Pos k, Neg l -> false
+                   | Pos k, Pos l -> less_num k l
+                   | Pos k, Zero_int -> false
+                   | Zero_int, Neg l -> false
+                   | Zero_int, Pos l -> true
+                   | Zero_int, Zero_int -> false;;
+
+let ord_int = ({less_eq = less_eq_int; less = less_int} : int ord);;
+
 type nat = Zero_nat | Suc of nat;;
 
 let rec equal_nata x0 x1 = match x0, x1 with Zero_nat, Suc x2 -> false
@@ -359,21 +816,12 @@ let equal_nat = ({equal = equal_nata} : nat equal);;
 
 let one_nata : nat = Suc Zero_nat;;
 
-type 'a one = {one : 'a};;
-let one _A = _A.one;;
-
 let one_nat = ({one = one_nata} : nat one);;
 
 let rec plus_nata x0 n = match x0, n with Suc m, n -> plus_nata m (Suc n)
                     | Zero_nat, n -> n;;
 
-type 'a plus = {plus : 'a -> 'a -> 'a};;
-let plus _A = _A.plus;;
-
 let plus_nat = ({plus = plus_nata} : nat plus);;
-
-type 'a zero = {zero : 'a};;
-let zero _A = _A.zero;;
 
 let zero_nat = ({zero = Zero_nat} : nat zero);;
 
@@ -386,8 +834,6 @@ let rec equal_lista _A
     | [], [] -> true;;
 
 let rec equal_list _A = ({equal = equal_lista _A} : ('a list) equal);;
-
-let rec snd (x1, x2) = x2;;
 
 let rec minus_nat m n = match m, n with Suc m, Suc n -> minus_nat m n
                     | Zero_nat, n -> Zero_nat
@@ -448,7 +894,7 @@ type real = Ratreal of rat;;
 type theConstant = IntConst of int | FloatConst of real |
   StringConst of char list | BoolConst of bool | IdConst of char list;;
 
-type 'a sort = Bool | K | KItem | KLabel | KResult | KList | List | Seta | Map |
+type 'a sort = Bool | K | KItem | KLabel | KResult | KList | List | Set | Map |
   Bag | OtherSort of 'a | Top | Int | Float | Id | String;;
 
 type 'a label = UnitLabel of 'a sort | ConstToLabel of theConstant | Sort |
@@ -456,7 +902,7 @@ type 'a label = UnitLabel of 'a sort | ConstToLabel of theConstant | Sort |
   SetItemLabel | ListConLabel | ListItemLabel | MapConLabel | MapItemLabel |
   MapUpdate | EqualK | NotEqualK | EqualKLabel | NotEqualKLabel |
   OtherLabel of char list | TokenLabel of char list | PlusInt | MinusInt |
-  TimesInt | EqualSet | EqualMap;;
+  TimesInt | EqualSet | EqualMap | StringCon | IntToString;;
 
 type stdType = Stdin | Stdout;;
 
@@ -601,22 +1047,22 @@ let rec equal_sorta _A x0 x1 = match x0, x1 with Id, String -> false
                          | OtherSort x11, Map -> false
                          | Map, Bag -> false
                          | Bag, Map -> false
-                         | Seta, String -> false
-                         | String, Seta -> false
-                         | Seta, Id -> false
-                         | Id, Seta -> false
-                         | Seta, Float -> false
-                         | Float, Seta -> false
-                         | Seta, Int -> false
-                         | Int, Seta -> false
-                         | Seta, Top -> false
-                         | Top, Seta -> false
-                         | Seta, OtherSort x11 -> false
-                         | OtherSort x11, Seta -> false
-                         | Seta, Bag -> false
-                         | Bag, Seta -> false
-                         | Seta, Map -> false
-                         | Map, Seta -> false
+                         | Set, String -> false
+                         | String, Set -> false
+                         | Set, Id -> false
+                         | Id, Set -> false
+                         | Set, Float -> false
+                         | Float, Set -> false
+                         | Set, Int -> false
+                         | Int, Set -> false
+                         | Set, Top -> false
+                         | Top, Set -> false
+                         | Set, OtherSort x11 -> false
+                         | OtherSort x11, Set -> false
+                         | Set, Bag -> false
+                         | Bag, Set -> false
+                         | Set, Map -> false
+                         | Map, Set -> false
                          | List, String -> false
                          | String, List -> false
                          | List, Id -> false
@@ -633,8 +1079,8 @@ let rec equal_sorta _A x0 x1 = match x0, x1 with Id, String -> false
                          | Bag, List -> false
                          | List, Map -> false
                          | Map, List -> false
-                         | List, Seta -> false
-                         | Seta, List -> false
+                         | List, Set -> false
+                         | Set, List -> false
                          | KList, String -> false
                          | String, KList -> false
                          | KList, Id -> false
@@ -651,8 +1097,8 @@ let rec equal_sorta _A x0 x1 = match x0, x1 with Id, String -> false
                          | Bag, KList -> false
                          | KList, Map -> false
                          | Map, KList -> false
-                         | KList, Seta -> false
-                         | Seta, KList -> false
+                         | KList, Set -> false
+                         | Set, KList -> false
                          | KList, List -> false
                          | List, KList -> false
                          | KResult, String -> false
@@ -671,8 +1117,8 @@ let rec equal_sorta _A x0 x1 = match x0, x1 with Id, String -> false
                          | Bag, KResult -> false
                          | KResult, Map -> false
                          | Map, KResult -> false
-                         | KResult, Seta -> false
-                         | Seta, KResult -> false
+                         | KResult, Set -> false
+                         | Set, KResult -> false
                          | KResult, List -> false
                          | List, KResult -> false
                          | KResult, KList -> false
@@ -693,8 +1139,8 @@ let rec equal_sorta _A x0 x1 = match x0, x1 with Id, String -> false
                          | Bag, KLabel -> false
                          | KLabel, Map -> false
                          | Map, KLabel -> false
-                         | KLabel, Seta -> false
-                         | Seta, KLabel -> false
+                         | KLabel, Set -> false
+                         | Set, KLabel -> false
                          | KLabel, List -> false
                          | List, KLabel -> false
                          | KLabel, KList -> false
@@ -717,8 +1163,8 @@ let rec equal_sorta _A x0 x1 = match x0, x1 with Id, String -> false
                          | Bag, KItem -> false
                          | KItem, Map -> false
                          | Map, KItem -> false
-                         | KItem, Seta -> false
-                         | Seta, KItem -> false
+                         | KItem, Set -> false
+                         | Set, KItem -> false
                          | KItem, List -> false
                          | List, KItem -> false
                          | KItem, KList -> false
@@ -743,8 +1189,8 @@ let rec equal_sorta _A x0 x1 = match x0, x1 with Id, String -> false
                          | Bag, K -> false
                          | K, Map -> false
                          | Map, K -> false
-                         | K, Seta -> false
-                         | Seta, K -> false
+                         | K, Set -> false
+                         | Set, K -> false
                          | K, List -> false
                          | List, K -> false
                          | K, KList -> false
@@ -771,8 +1217,8 @@ let rec equal_sorta _A x0 x1 = match x0, x1 with Id, String -> false
                          | Bag, Bool -> false
                          | Bool, Map -> false
                          | Map, Bool -> false
-                         | Bool, Seta -> false
-                         | Seta, Bool -> false
+                         | Bool, Set -> false
+                         | Set, Bool -> false
                          | Bool, List -> false
                          | List, Bool -> false
                          | Bool, KList -> false
@@ -793,7 +1239,7 @@ let rec equal_sorta _A x0 x1 = match x0, x1 with Id, String -> false
                          | Top, Top -> true
                          | Bag, Bag -> true
                          | Map, Map -> true
-                         | Seta, Seta -> true
+                         | Set, Set -> true
                          | List, List -> true
                          | KList, KList -> true
                          | KResult, KResult -> true
@@ -803,18 +1249,40 @@ let rec equal_sorta _A x0 x1 = match x0, x1 with Id, String -> false
                          | Bool, Bool -> true;;
 
 let rec equal_labela _A
-  x0 x1 = match x0, x1 with EqualSet, EqualMap -> false
+  x0 x1 = match x0, x1 with StringCon, IntToString -> false
+    | IntToString, StringCon -> false
+    | EqualMap, IntToString -> false
+    | IntToString, EqualMap -> false
+    | EqualMap, StringCon -> false
+    | StringCon, EqualMap -> false
+    | EqualSet, IntToString -> false
+    | IntToString, EqualSet -> false
+    | EqualSet, StringCon -> false
+    | StringCon, EqualSet -> false
+    | EqualSet, EqualMap -> false
     | EqualMap, EqualSet -> false
+    | TimesInt, IntToString -> false
+    | IntToString, TimesInt -> false
+    | TimesInt, StringCon -> false
+    | StringCon, TimesInt -> false
     | TimesInt, EqualMap -> false
     | EqualMap, TimesInt -> false
     | TimesInt, EqualSet -> false
     | EqualSet, TimesInt -> false
+    | MinusInt, IntToString -> false
+    | IntToString, MinusInt -> false
+    | MinusInt, StringCon -> false
+    | StringCon, MinusInt -> false
     | MinusInt, EqualMap -> false
     | EqualMap, MinusInt -> false
     | MinusInt, EqualSet -> false
     | EqualSet, MinusInt -> false
     | MinusInt, TimesInt -> false
     | TimesInt, MinusInt -> false
+    | PlusInt, IntToString -> false
+    | IntToString, PlusInt -> false
+    | PlusInt, StringCon -> false
+    | StringCon, PlusInt -> false
     | PlusInt, EqualMap -> false
     | EqualMap, PlusInt -> false
     | PlusInt, EqualSet -> false
@@ -823,6 +1291,10 @@ let rec equal_labela _A
     | TimesInt, PlusInt -> false
     | PlusInt, MinusInt -> false
     | MinusInt, PlusInt -> false
+    | TokenLabel x21, IntToString -> false
+    | IntToString, TokenLabel x21 -> false
+    | TokenLabel x21, StringCon -> false
+    | StringCon, TokenLabel x21 -> false
     | TokenLabel x21, EqualMap -> false
     | EqualMap, TokenLabel x21 -> false
     | TokenLabel x21, EqualSet -> false
@@ -833,6 +1305,10 @@ let rec equal_labela _A
     | MinusInt, TokenLabel x21 -> false
     | TokenLabel x21, PlusInt -> false
     | PlusInt, TokenLabel x21 -> false
+    | OtherLabel x20, IntToString -> false
+    | IntToString, OtherLabel x20 -> false
+    | OtherLabel x20, StringCon -> false
+    | StringCon, OtherLabel x20 -> false
     | OtherLabel x20, EqualMap -> false
     | EqualMap, OtherLabel x20 -> false
     | OtherLabel x20, EqualSet -> false
@@ -845,6 +1321,10 @@ let rec equal_labela _A
     | PlusInt, OtherLabel x20 -> false
     | OtherLabel x20, TokenLabel x21 -> false
     | TokenLabel x21, OtherLabel x20 -> false
+    | NotEqualKLabel, IntToString -> false
+    | IntToString, NotEqualKLabel -> false
+    | NotEqualKLabel, StringCon -> false
+    | StringCon, NotEqualKLabel -> false
     | NotEqualKLabel, EqualMap -> false
     | EqualMap, NotEqualKLabel -> false
     | NotEqualKLabel, EqualSet -> false
@@ -859,6 +1339,10 @@ let rec equal_labela _A
     | TokenLabel x21, NotEqualKLabel -> false
     | NotEqualKLabel, OtherLabel x20 -> false
     | OtherLabel x20, NotEqualKLabel -> false
+    | EqualKLabel, IntToString -> false
+    | IntToString, EqualKLabel -> false
+    | EqualKLabel, StringCon -> false
+    | StringCon, EqualKLabel -> false
     | EqualKLabel, EqualMap -> false
     | EqualMap, EqualKLabel -> false
     | EqualKLabel, EqualSet -> false
@@ -875,6 +1359,10 @@ let rec equal_labela _A
     | OtherLabel x20, EqualKLabel -> false
     | EqualKLabel, NotEqualKLabel -> false
     | NotEqualKLabel, EqualKLabel -> false
+    | NotEqualK, IntToString -> false
+    | IntToString, NotEqualK -> false
+    | NotEqualK, StringCon -> false
+    | StringCon, NotEqualK -> false
     | NotEqualK, EqualMap -> false
     | EqualMap, NotEqualK -> false
     | NotEqualK, EqualSet -> false
@@ -893,6 +1381,10 @@ let rec equal_labela _A
     | NotEqualKLabel, NotEqualK -> false
     | NotEqualK, EqualKLabel -> false
     | EqualKLabel, NotEqualK -> false
+    | EqualK, IntToString -> false
+    | IntToString, EqualK -> false
+    | EqualK, StringCon -> false
+    | StringCon, EqualK -> false
     | EqualK, EqualMap -> false
     | EqualMap, EqualK -> false
     | EqualK, EqualSet -> false
@@ -913,6 +1405,10 @@ let rec equal_labela _A
     | EqualKLabel, EqualK -> false
     | EqualK, NotEqualK -> false
     | NotEqualK, EqualK -> false
+    | MapUpdate, IntToString -> false
+    | IntToString, MapUpdate -> false
+    | MapUpdate, StringCon -> false
+    | StringCon, MapUpdate -> false
     | MapUpdate, EqualMap -> false
     | EqualMap, MapUpdate -> false
     | MapUpdate, EqualSet -> false
@@ -935,6 +1431,10 @@ let rec equal_labela _A
     | NotEqualK, MapUpdate -> false
     | MapUpdate, EqualK -> false
     | EqualK, MapUpdate -> false
+    | MapItemLabel, IntToString -> false
+    | IntToString, MapItemLabel -> false
+    | MapItemLabel, StringCon -> false
+    | StringCon, MapItemLabel -> false
     | MapItemLabel, EqualMap -> false
     | EqualMap, MapItemLabel -> false
     | MapItemLabel, EqualSet -> false
@@ -959,6 +1459,10 @@ let rec equal_labela _A
     | EqualK, MapItemLabel -> false
     | MapItemLabel, MapUpdate -> false
     | MapUpdate, MapItemLabel -> false
+    | MapConLabel, IntToString -> false
+    | IntToString, MapConLabel -> false
+    | MapConLabel, StringCon -> false
+    | StringCon, MapConLabel -> false
     | MapConLabel, EqualMap -> false
     | EqualMap, MapConLabel -> false
     | MapConLabel, EqualSet -> false
@@ -985,6 +1489,10 @@ let rec equal_labela _A
     | MapUpdate, MapConLabel -> false
     | MapConLabel, MapItemLabel -> false
     | MapItemLabel, MapConLabel -> false
+    | ListItemLabel, IntToString -> false
+    | IntToString, ListItemLabel -> false
+    | ListItemLabel, StringCon -> false
+    | StringCon, ListItemLabel -> false
     | ListItemLabel, EqualMap -> false
     | EqualMap, ListItemLabel -> false
     | ListItemLabel, EqualSet -> false
@@ -1013,6 +1521,10 @@ let rec equal_labela _A
     | MapItemLabel, ListItemLabel -> false
     | ListItemLabel, MapConLabel -> false
     | MapConLabel, ListItemLabel -> false
+    | ListConLabel, IntToString -> false
+    | IntToString, ListConLabel -> false
+    | ListConLabel, StringCon -> false
+    | StringCon, ListConLabel -> false
     | ListConLabel, EqualMap -> false
     | EqualMap, ListConLabel -> false
     | ListConLabel, EqualSet -> false
@@ -1043,6 +1555,10 @@ let rec equal_labela _A
     | MapConLabel, ListConLabel -> false
     | ListConLabel, ListItemLabel -> false
     | ListItemLabel, ListConLabel -> false
+    | SetItemLabel, IntToString -> false
+    | IntToString, SetItemLabel -> false
+    | SetItemLabel, StringCon -> false
+    | StringCon, SetItemLabel -> false
     | SetItemLabel, EqualMap -> false
     | EqualMap, SetItemLabel -> false
     | SetItemLabel, EqualSet -> false
@@ -1075,6 +1591,10 @@ let rec equal_labela _A
     | ListItemLabel, SetItemLabel -> false
     | SetItemLabel, ListConLabel -> false
     | ListConLabel, SetItemLabel -> false
+    | SetConLabel, IntToString -> false
+    | IntToString, SetConLabel -> false
+    | SetConLabel, StringCon -> false
+    | StringCon, SetConLabel -> false
     | SetConLabel, EqualMap -> false
     | EqualMap, SetConLabel -> false
     | SetConLabel, EqualSet -> false
@@ -1109,6 +1629,10 @@ let rec equal_labela _A
     | ListConLabel, SetConLabel -> false
     | SetConLabel, SetItemLabel -> false
     | SetItemLabel, SetConLabel -> false
+    | OrBool, IntToString -> false
+    | IntToString, OrBool -> false
+    | OrBool, StringCon -> false
+    | StringCon, OrBool -> false
     | OrBool, EqualMap -> false
     | EqualMap, OrBool -> false
     | OrBool, EqualSet -> false
@@ -1145,6 +1669,10 @@ let rec equal_labela _A
     | SetItemLabel, OrBool -> false
     | OrBool, SetConLabel -> false
     | SetConLabel, OrBool -> false
+    | NotBool, IntToString -> false
+    | IntToString, NotBool -> false
+    | NotBool, StringCon -> false
+    | StringCon, NotBool -> false
     | NotBool, EqualMap -> false
     | EqualMap, NotBool -> false
     | NotBool, EqualSet -> false
@@ -1183,6 +1711,10 @@ let rec equal_labela _A
     | SetConLabel, NotBool -> false
     | NotBool, OrBool -> false
     | OrBool, NotBool -> false
+    | AndBool, IntToString -> false
+    | IntToString, AndBool -> false
+    | AndBool, StringCon -> false
+    | StringCon, AndBool -> false
     | AndBool, EqualMap -> false
     | EqualMap, AndBool -> false
     | AndBool, EqualSet -> false
@@ -1223,6 +1755,10 @@ let rec equal_labela _A
     | OrBool, AndBool -> false
     | AndBool, NotBool -> false
     | NotBool, AndBool -> false
+    | IsKResult, IntToString -> false
+    | IntToString, IsKResult -> false
+    | IsKResult, StringCon -> false
+    | StringCon, IsKResult -> false
     | IsKResult, EqualMap -> false
     | EqualMap, IsKResult -> false
     | IsKResult, EqualSet -> false
@@ -1265,6 +1801,10 @@ let rec equal_labela _A
     | NotBool, IsKResult -> false
     | IsKResult, AndBool -> false
     | AndBool, IsKResult -> false
+    | GetKLabel, IntToString -> false
+    | IntToString, GetKLabel -> false
+    | GetKLabel, StringCon -> false
+    | StringCon, GetKLabel -> false
     | GetKLabel, EqualMap -> false
     | EqualMap, GetKLabel -> false
     | GetKLabel, EqualSet -> false
@@ -1309,6 +1849,10 @@ let rec equal_labela _A
     | AndBool, GetKLabel -> false
     | GetKLabel, IsKResult -> false
     | IsKResult, GetKLabel -> false
+    | Sort, IntToString -> false
+    | IntToString, Sort -> false
+    | Sort, StringCon -> false
+    | StringCon, Sort -> false
     | Sort, EqualMap -> false
     | EqualMap, Sort -> false
     | Sort, EqualSet -> false
@@ -1355,6 +1899,10 @@ let rec equal_labela _A
     | IsKResult, Sort -> false
     | Sort, GetKLabel -> false
     | GetKLabel, Sort -> false
+    | ConstToLabel x2, IntToString -> false
+    | IntToString, ConstToLabel x2 -> false
+    | ConstToLabel x2, StringCon -> false
+    | StringCon, ConstToLabel x2 -> false
     | ConstToLabel x2, EqualMap -> false
     | EqualMap, ConstToLabel x2 -> false
     | ConstToLabel x2, EqualSet -> false
@@ -1403,6 +1951,10 @@ let rec equal_labela _A
     | GetKLabel, ConstToLabel x2 -> false
     | ConstToLabel x2, Sort -> false
     | Sort, ConstToLabel x2 -> false
+    | UnitLabel x1, IntToString -> false
+    | IntToString, UnitLabel x1 -> false
+    | UnitLabel x1, StringCon -> false
+    | StringCon, UnitLabel x1 -> false
     | UnitLabel x1, EqualMap -> false
     | EqualMap, UnitLabel x1 -> false
     | UnitLabel x1, EqualSet -> false
@@ -1457,6 +2009,8 @@ let rec equal_labela _A
     | OtherLabel x20, OtherLabel y20 -> equal_lista equal_char x20 y20
     | ConstToLabel x2, ConstToLabel y2 -> equal_theConstant x2 y2
     | UnitLabel x1, UnitLabel y1 -> equal_sorta _A x1 y1
+    | IntToString, IntToString -> true
+    | StringCon, StringCon -> true
     | EqualMap, EqualMap -> true
     | EqualSet, EqualSet -> true
     | TimesInt, TimesInt -> true
@@ -2102,8 +2656,6 @@ let rec equal_subsFactora _A _B _C
 let rec equal_subsFactor _A _B _C =
   ({equal = equal_subsFactora _A _B _C} : ('a, 'b, 'c) subsFactor equal);;
 
-type 'a set = Set of 'a list | Coset of 'a list;;
-
 type 'a rewrite = KTerm of 'a | KRewrite of 'a * 'a;;
 
 type ('a, 'b, 'c) k = Tilda of ('a, 'b, 'c) k rewrite * ('a, 'b, 'c) k rewrite |
@@ -2261,53 +2813,8 @@ type ('a, 'b, 'c) theoryParsed =
           (('a, 'b, 'c) simpleK * ('b, 'a) ruleAttrib list))) list *
       ('a, 'b, 'c) simpleK option;;
 
-let rec dup = function Neg n -> Neg (Bit0 n)
-              | Pos n -> Pos (Bit0 n)
-              | Zero_int -> Zero_int;;
-
-let rec uminus_int = function Neg m -> Pos m
-                     | Pos m -> Neg m
-                     | Zero_int -> Zero_int;;
-
-let rec plus_num
-  x0 x1 = match x0, x1 with Bit1 m, Bit1 n -> Bit0 (plus_num (plus_num m n) One)
-    | Bit1 m, Bit0 n -> Bit1 (plus_num m n)
-    | Bit1 m, One -> Bit0 (plus_num m One)
-    | Bit0 m, Bit1 n -> Bit1 (plus_num m n)
-    | Bit0 m, Bit0 n -> Bit0 (plus_num m n)
-    | Bit0 m, One -> Bit1 m
-    | One, Bit1 n -> Bit0 (plus_num n One)
-    | One, Bit0 n -> Bit1 n
-    | One, One -> Bit0 One;;
-
-let one_int : int = Pos One;;
-
-let rec bitM = function One -> One
-               | Bit0 n -> Bit1 (bitM n)
-               | Bit1 n -> Bit1 (Bit0 n);;
-
-let rec sub
-  x0 x1 = match x0, x1 with Bit0 m, Bit1 n -> minus_int (dup (sub m n)) one_int
-    | Bit1 m, Bit0 n -> plus_int (dup (sub m n)) one_int
-    | Bit1 m, Bit1 n -> dup (sub m n)
-    | Bit0 m, Bit0 n -> dup (sub m n)
-    | One, Bit1 n -> Neg (Bit0 n)
-    | One, Bit0 n -> Neg (bitM n)
-    | Bit1 m, One -> Pos (Bit0 m)
-    | Bit0 m, One -> Pos (bitM m)
-    | One, One -> Zero_int
-and plus_int k l = match k, l with Neg m, Neg n -> Neg (plus_num m n)
-               | Neg m, Pos n -> sub n m
-               | Pos m, Neg n -> sub m n
-               | Pos m, Pos n -> Pos (plus_num m n)
-               | Zero_int, l -> l
-               | k, Zero_int -> k
-and minus_int k l = match k, l with Neg m, Neg n -> sub n m
-                | Neg m, Pos n -> Neg (plus_num m n)
-                | Pos m, Neg n -> Pos (plus_num m n)
-                | Pos m, Pos n -> sub m n
-                | Zero_int, l -> uminus_int l
-                | k, Zero_int -> k;;
+let rec abs (_A1, _A2, _A3)
+  a = (if less _A3 a (zero _A2) then uminus _A1 a else a);;
 
 let rec inc = function One -> Bit0 One
               | Bit0 x -> Bit1 x
@@ -2346,46 +2853,20 @@ let rec update _A
 let rec null = function [] -> true
                | x :: xs -> false;;
 
-let bot_set : 'a set = Set [];;
-
-let rec removeAll _A
-  x xa1 = match x, xa1 with x, [] -> []
-    | x, y :: xs ->
-        (if eq _A x y then removeAll _A x xs else y :: removeAll _A x xs);;
-
-let rec membera _A x0 y = match x0, y with [], y -> false
-                     | x :: xs, y -> eq _A x y || membera _A xs y;;
-
-let rec inserta _A x xs = (if membera _A xs x then xs else x :: xs);;
-
-let rec insert _A
-  x xa1 = match x, xa1 with x, Coset xs -> Coset (removeAll _A x xs)
-    | x, Set xs -> Set (inserta _A x xs);;
-
-let rec turnMap _A _B _C
-  = function [] -> bot_set
-    | ItemM (a, b) :: l ->
-        insert
-          (equal_prod (equal_list (equal_suKFactor _A _B _C))
-            (equal_list (equal_suKFactor _A _B _C)))
-          (a, b) (turnMap _A _B _C l)
-    | IdM v :: l -> turnMap _A _B _C l
-    | SUMapKItem (v, va) :: l -> turnMap _A _B _C l;;
-
-let rec turnSet _A _B _C
-  = function [] -> bot_set
-    | ItemS s :: l ->
-        insert (equal_list (equal_suKFactor _A _B _C)) s (turnSet _A _B _C l)
-    | IdS v :: l -> turnSet _A _B _C l
-    | SUSetKItem (v, va) :: l -> turnSet _A _B _C l;;
-
-let rec member _A
-  x xa1 = match x, xa1 with x, Coset xs -> not (membera _A xs x)
-    | x, Set xs -> membera _A xs x;;
+let rec foldl f a x2 = match f, a, x2 with f, a, [] -> a
+                | f, a, x :: xs -> foldl f (f a x) xs;;
 
 let rec existKey _A
   x xa1 = match x, xa1 with x, [] -> false
     | x, (a, b) :: xl -> (if eq _A x a then true else existKey _A x xl);;
+
+let rec member _A x0 y = match x0, y with [], y -> false
+                    | x :: xs, y -> eq _A x y || member _A xs y;;
+
+let rec hasNoTop _B
+  = function [] -> true
+    | (a, b) :: l ->
+        (if member (equal_sort _B) b Top then false else hasNoTop _B l);;
 
 let rec searchDataBaseByKey _A
   xa0 x = match xa0, x with [], x -> None
@@ -2402,7 +2883,7 @@ let rec subsortAux _A
     | a, b, s ->
         (match searchDataBaseByKey _A s b with None -> false
           | Some l ->
-            (if membera _A l a then true
+            (if member _A l a then true
               else subsortInList _A a l (deleteDataBaseByKey _A s b)))
 and subsortInList _A
   a x1 s = match a, x1, s with a, [], s -> false
@@ -2434,7 +2915,7 @@ let rec getMaxSorts _A
         (if subsort _A c a subG
           then getMaxSorts _A a l subG (c :: checked)
                  (insertSortInList _A c acc subG)
-          else (if membera _A checked c then getMaxSorts _A a l subG checked acc
+          else (if member _A checked c then getMaxSorts _A a l subG checked acc
                  else (match getValueTerm _A c subG
                         with None -> getMaxSorts _A a l subG (c :: checked) acc
                         | Some newl ->
@@ -2459,6 +2940,8 @@ let rec meet _A
   x0 b subG = match x0, b, subG with [], b, subG -> []
     | x :: l, b, subG ->
         insertAllSortsInList _A (meetAux _A x b subG) (meet _A l b subG) subG;;
+
+let rec insert _A x xs = (if member _A xs x then xs else x :: xs);;
 
 let rec irToSUInKLabel = function IRKLabel a -> SUKLabel a
                          | IRIdKLabel n -> SUIdKLabel n;;
@@ -2532,46 +3015,6 @@ and irToSUInKItem _A
     IRKItem (l, r, ty) -> SUKItem (irToSUInKLabel l, irToSUInKList _A r, ty)
     | IRIdKItem (a, b) -> SUIdKItem (a, b)
     | IRHOLE a -> SUHOLE a;;
-
-let rec eliminateEntry _A
-  a x1 = match a, x1 with a, [] -> []
-    | a, (b, c) :: l ->
-        (if eq _A a b then l else (b, c) :: eliminateEntry _A a l);;
-
-let rec eliminateEntryList _A
-  a x1 = match a, x1 with a, [] -> []
-    | a, (b, c) :: l ->
-        (b, eliminateEntry _A a c) :: eliminateEntryList _A a l;;
-
-let rec eliminateEntryMap _B
-  x0 s = match x0, s with [], s -> Some s
-    | (a, (b, c)) :: l, s ->
-        eliminateEntryMap _B l (eliminateEntryList _B b s);;
-
-let rec searchOneAux
-  = function [] -> ([], [])
-    | (a, b) :: l ->
-        (let (have, noHave) = searchOneAux l in
-          (match b with [] -> (have, (a, b) :: noHave)
-            | [ba] -> ((a, ba) :: have, noHave)
-            | _ :: _ :: _ -> (have, (a, b) :: noHave)));;
-
-let rec searchZero
-  = function [] -> ([], [])
-    | (a, b) :: l ->
-        (let (have, noHave) = searchZero l in
-          (if null b then ((a, b) :: have, noHave)
-            else (have, (a, b) :: noHave)));;
-
-let rec searchOne _B
-  l acc =
-    (let (x, y) = searchZero l in
-      (if null x
-        then (let (u, v) = searchOneAux y in
-               (if null u then Some (acc, v)
-                 else (match eliminateEntryMap _B u v with None -> None
-                        | Some va -> searchOne _B va (u @ acc))))
-        else None));;
 
 let rec getSUKLabelMeaning
   x = (match x with SUKLabel a -> Some a | SUIdKLabel _ -> None
@@ -3141,357 +3584,6 @@ and assignSorts _A _C
             (match assignSorts _A _C xl acc with None -> None
               | Some xla -> Some (xa :: xla)));;
 
-let rec flattenMapVar = function None -> []
-                        | Some v -> [MapPat ([], Some v)];;
-
-let rec flattenMapAux = function [] -> []
-                        | x :: xl -> MapPat ([x], None) :: flattenMapAux xl;;
-
-let rec flattenMap
-  = function [] -> Some []
-    | x :: xl ->
-        (match flattenMap xl with None -> None
-          | Some xla ->
-            (match x with IRBigBag (IRK _) -> None | IRBigBag (IRList _) -> None
-              | IRBigBag (IRSet _) -> None
-              | IRBigBag (IRMap (MapPat (sl, sv))) ->
-                Some (flattenMapAux sl @ flattenMapVar sv @ xla)
-              | IRBigBag (IRBag _) -> None | IRBigLabel _ -> None));;
-
-let rec flattenSetVar = function None -> []
-                        | Some v -> [SetPat ([], Some v)];;
-
-let rec flattenSetAux = function [] -> []
-                        | x :: xl -> SetPat ([x], None) :: flattenSetAux xl;;
-
-let rec flattenSet
-  = function [] -> Some []
-    | x :: xl ->
-        (match flattenSet xl with None -> None
-          | Some xla ->
-            (match x with IRBigBag (IRK _) -> None | IRBigBag (IRList _) -> None
-              | IRBigBag (IRSet (SetPat (sl, sv))) ->
-                Some (flattenSetAux sl @ flattenSetVar sv @ xla)
-              | IRBigBag (IRMap _) -> None | IRBigBag (IRBag _) -> None
-              | IRBigLabel _ -> None));;
-
-let rec getRidOfLabel
-  = function [] -> Some []
-    | (KLabelFunPat (s, kl), (b, c)) :: l ->
-        (match getRidOfLabel l with None -> None
-          | Some la -> Some ((kl, (b, c)) :: la))
-    | (KFunPat (s, kl), (b, c)) :: l ->
-        (match getRidOfLabel l with None -> None
-          | Some la -> Some ((kl, (b, c)) :: la))
-    | (KItemFunPat (s, kl), (b, c)) :: l ->
-        (match getRidOfLabel l with None -> None
-          | Some la -> Some ((kl, (b, c)) :: la))
-    | (ListFunPat (s, kl), (b, c)) :: l ->
-        (match getRidOfLabel l with None -> None
-          | Some la -> Some ((kl, (b, c)) :: la))
-    | (SetFunPat (s, kl), (b, c)) :: l ->
-        (match getRidOfLabel l with None -> None
-          | Some la -> Some ((kl, (b, c)) :: la))
-    | (MapFunPat (s, kl), (b, c)) :: l ->
-        (match getRidOfLabel l with None -> None
-          | Some la -> Some ((kl, (b, c)) :: la))
-    | (NormalPat a, (b, c)) :: l -> None;;
-
-let rec getFunRule _A
-  s x1 = match s, x1 with s, [] -> None
-    | sa, FunPat (s, fl, f) :: l ->
-        (if equal_labela _A sa s
-          then (match f with None -> getRidOfLabel fl
-                 | Some fa -> getRidOfLabel (fl @ [fa]))
-          else getFunRule _A sa l)
-    | s, MacroPat (v, va, vb) :: l -> getFunRule _A s l
-    | s, AnywherePat (v, va, vb, vc) :: l -> getFunRule _A s l
-    | s, KRulePat (v, va, vb, vc) :: l -> getFunRule _A s l
-    | s, BagRulePat (v, va, vb, vc) :: l -> getFunRule _A s l;;
-
-let rec updateBeta _A _B
-  a b x2 subG = match a, b, x2, subG with a, b, [], subG -> Some []
-    | a, b, x :: l, subG ->
-        (let (aa, ba) = x in
-          (if eq _A a aa
-            then (match meet _B b ba subG with [] -> None
-                   | ty :: tyl -> Some ((a, ty :: tyl) :: l))
-            else (match updateBeta _A _B a b l subG with None -> None
-                   | Some la -> Some (x :: la))));;
-
-let rec is_empty (Seq f) = nulla (f ())
-and nulla = function Empty -> true
-            | Insert (x, p) -> false
-            | Join (p, xq) -> is_empty p && nulla xq;;
-
-let rec singleton _A
-  default (Seq f) =
-    (match f () with Empty -> default ()
-      | Insert (x, p) ->
-        (if is_empty p then x
-          else (let y = singleton _A default p in
-                 (if eq _A x y then x else default ())))
-      | Join (p, xq) ->
-        (if is_empty p then the_only _A default xq
-          else (if nulla xq then singleton _A default p
-                 else (let x = singleton _A default p in
-                       let y = the_only _A default xq in
-                        (if eq _A x y then x else default ())))))
-and the_only _A
-  default x1 = match default, x1 with default, Empty -> default ()
-    | default, Insert (x, p) ->
-        (if is_empty p then x
-          else (let y = singleton _A default p in
-                 (if eq _A x y then x else default ())))
-    | default, Join (p, xq) ->
-        (if is_empty p then the_only _A default xq
-          else (if nulla xq then singleton _A default p
-                 else (let x = singleton _A default p in
-                       let y = the_only _A default xq in
-                        (if eq _A x y then x else default ()))));;
-
-let rec the _A
-  a = singleton _A (fun _ -> failwith "not_unique" (fun _ -> the _A a)) a;;
-
-let rec sup_pred
-  (Seq f) (Seq g) =
-    Seq (fun _ ->
-          (match f () with Empty -> g ()
-            | Insert (x, p) -> Insert (x, sup_pred p (Seq g))
-            | Join (p, xq) -> adjunct (Seq g) (Join (p, xq))))
-and adjunct p x1 = match p, x1 with p, Empty -> Join (p, Empty)
-              | p, Insert (x, q) -> Insert (x, sup_pred q p)
-              | p, Join (q, xq) -> Join (q, adjunct p xq);;
-
-let rec getValueInMatchingMap _A
-  a x1 = match a, x1 with a, [] -> None
-    | a, b :: l ->
-        (let (x, y) = b in
-          (if eq _A a x then Some y else getValueInMatchingMap _A a l));;
-
-let rec substitutionInSUKLabel _C
-  x0 acc = match x0, acc with SUKLabel a, acc -> Some (SUKLabel a)
-    | SUIdKLabel a, acc ->
-        (match getValueInMatchingMap (equal_metaVar _C) a acc with None -> None
-          | Some aa ->
-            (match aa with KLabelSubs ab -> Some ab | KItemSubs _ -> None
-              | KListSubs _ -> None | KSubs _ -> None | ListSubs _ -> None
-              | SetSubs _ -> None | MapSubs _ -> None | BagSubs _ -> None))
-    | SUKLabelFun (a, b), acc ->
-        (match (substitutionInSUKLabel _C a acc, substitutionInSUKList _C b acc)
-          with (None, _) -> None | (Some _, None) -> None
-          | (Some x, Some y) -> Some (SUKLabelFun (x, y)))
-and substitutionInSUBigKWithLabel _C
-  x0 acc = match x0, acc with
-    SUBigBag a, acc ->
-      (match substitutionInSUBigKWithBag _C a acc with None -> None
-        | Some aa -> Some (SUBigBag aa))
-    | SUBigLabel a, acc ->
-        (match substitutionInSUKLabel _C a acc with None -> None
-          | Some aa -> Some (SUBigLabel aa))
-and substitutionInSUKList _C
-  x0 acc = match x0, acc with [], acc -> Some []
-    | b :: l, acc ->
-        (match b
-          with ItemKl x ->
-            (match substitutionInSUBigKWithLabel _C x acc with None -> None
-              | Some xa ->
-                (match substitutionInSUKList _C l acc with None -> None
-                  | Some la -> Some (ItemKl xa :: la)))
-          | IdKl x ->
-            (match getValueInMatchingMap (equal_metaVar _C) x acc
-              with None -> None | Some (KLabelSubs _) -> None
-              | Some (KItemSubs _) -> None
-              | Some (KListSubs xa) ->
-                (match substitutionInSUKList _C l acc with None -> None
-                  | Some la -> Some (xa @ la))
-              | Some (KSubs _) -> None | Some (ListSubs _) -> None
-              | Some (SetSubs _) -> None | Some (MapSubs _) -> None
-              | Some (BagSubs _) -> None))
-and substitutionInSUKItem _C
-  x0 acc = match x0, acc with
-    SUKItem (l, r, ty), acc ->
-      (match (substitutionInSUKLabel _C l acc, substitutionInSUKList _C r acc)
-        with (None, _) -> None | (Some _, None) -> None
-        | (Some x, Some y) -> Some (SUKItem (x, y, ty)))
-    | SUHOLE a, acc -> Some (SUHOLE a)
-    | SUIdKItem (a, b), acc ->
-        (match getValueInMatchingMap (equal_metaVar _C) a acc with None -> None
-          | Some aa ->
-            (match aa with KLabelSubs _ -> None | KItemSubs ab -> Some ab
-              | KListSubs _ -> None | KSubs _ -> None | ListSubs _ -> None
-              | SetSubs _ -> None | MapSubs _ -> None | BagSubs _ -> None))
-and substitutionInSUK _C
-  x0 acc = match x0, acc with [], acc -> Some []
-    | b :: l, acc ->
-        (match b
-          with ItemFactor x ->
-            (match substitutionInSUKItem _C x acc with None -> None
-              | Some xa ->
-                (match substitutionInSUK _C l acc with None -> None
-                  | Some la -> Some (ItemFactor xa :: la)))
-          | IdFactor x ->
-            (match getValueInMatchingMap (equal_metaVar _C) x acc
-              with None -> None | Some (KLabelSubs _) -> None
-              | Some (KItemSubs _) -> None | Some (KListSubs _) -> None
-              | Some (KSubs xa) ->
-                (match substitutionInSUK _C l acc with None -> None
-                  | Some la -> Some (xa @ la))
-              | Some (ListSubs _) -> None | Some (SetSubs _) -> None
-              | Some (MapSubs _) -> None | Some (BagSubs _) -> None)
-          | SUKKItem (x, y, ty) ->
-            (match
-              (substitutionInSUKLabel _C x acc,
-                (substitutionInSUKList _C y acc, substitutionInSUK _C l acc))
-              with (None, _) -> None | (Some _, (None, _)) -> None
-              | (Some _, (Some _, None)) -> None
-              | (Some xa, (Some ya, Some la)) ->
-                Some (SUKKItem (xa, ya, ty) :: la)))
-and substitutionInSUMap _C
-  x0 acc = match x0, acc with [], acc -> Some []
-    | b :: l, acc ->
-        (match b
-          with ItemM (x, y) ->
-            (match
-              (substitutionInSUK _C x acc,
-                (substitutionInSUK _C y acc, substitutionInSUMap _C l acc))
-              with (None, _) -> None | (Some _, (None, _)) -> None
-              | (Some _, (Some _, None)) -> None
-              | (Some xa, (Some ya, Some la)) -> Some (ItemM (xa, ya) :: la))
-          | IdM x ->
-            (match getValueInMatchingMap (equal_metaVar _C) x acc
-              with None -> None | Some (KLabelSubs _) -> None
-              | Some (KItemSubs _) -> None | Some (KListSubs _) -> None
-              | Some (KSubs _) -> None | Some (ListSubs _) -> None
-              | Some (SetSubs _) -> None
-              | Some (MapSubs xa) ->
-                (match substitutionInSUMap _C l acc with None -> None
-                  | Some la -> Some (xa @ la))
-              | Some (BagSubs _) -> None)
-          | SUMapKItem (x, y) ->
-            (match
-              (substitutionInSUKLabel _C x acc,
-                (substitutionInSUKList _C y acc, substitutionInSUMap _C l acc))
-              with (None, _) -> None | (Some _, (None, _)) -> None
-              | (Some _, (Some _, None)) -> None
-              | (Some xa, (Some ya, Some la)) ->
-                Some (SUMapKItem (xa, ya) :: la)))
-and substitutionInSUSet _C
-  x0 acc = match x0, acc with [], acc -> Some []
-    | b :: l, acc ->
-        (match b
-          with ItemS x ->
-            (match substitutionInSUK _C x acc with None -> None
-              | Some xa ->
-                (match substitutionInSUSet _C l acc with None -> None
-                  | Some la -> Some (ItemS xa :: la)))
-          | IdS x ->
-            (match getValueInMatchingMap (equal_metaVar _C) x acc
-              with None -> None | Some (KLabelSubs _) -> None
-              | Some (KItemSubs _) -> None | Some (KListSubs _) -> None
-              | Some (KSubs _) -> None | Some (ListSubs _) -> None
-              | Some (SetSubs xa) ->
-                (match substitutionInSUSet _C l acc with None -> None
-                  | Some la -> Some (xa @ la))
-              | Some (MapSubs _) -> None | Some (BagSubs _) -> None)
-          | SUSetKItem (x, y) ->
-            (match
-              (substitutionInSUKLabel _C x acc,
-                (substitutionInSUKList _C y acc, substitutionInSUSet _C l acc))
-              with (None, _) -> None | (Some _, (None, _)) -> None
-              | (Some _, (Some _, None)) -> None
-              | (Some xa, (Some ya, Some la)) ->
-                Some (SUSetKItem (xa, ya) :: la)))
-and substitutionInSUList _C
-  x0 acc = match x0, acc with [], acc -> Some []
-    | b :: l, acc ->
-        (match b
-          with ItemL x ->
-            (match substitutionInSUK _C x acc with None -> None
-              | Some xa ->
-                (match substitutionInSUList _C l acc with None -> None
-                  | Some la -> Some (ItemL xa :: la)))
-          | IdL x ->
-            (match getValueInMatchingMap (equal_metaVar _C) x acc
-              with None -> None | Some (KLabelSubs _) -> None
-              | Some (KItemSubs _) -> None | Some (KListSubs _) -> None
-              | Some (KSubs _) -> None
-              | Some (ListSubs xa) ->
-                (match substitutionInSUList _C l acc with None -> None
-                  | Some la -> Some (xa @ la))
-              | Some (SetSubs _) -> None | Some (MapSubs _) -> None
-              | Some (BagSubs _) -> None)
-          | SUListKItem (x, y) ->
-            (match
-              (substitutionInSUKLabel _C x acc,
-                (substitutionInSUKList _C y acc, substitutionInSUList _C l acc))
-              with (None, _) -> None | (Some _, (None, _)) -> None
-              | (Some _, (Some _, None)) -> None
-              | (Some xa, (Some ya, Some la)) ->
-                Some (SUListKItem (xa, ya) :: la)))
-and substitutionInSUBigKWithBag _C
-  x0 acc = match x0, acc with
-    SUK a, acc ->
-      (match substitutionInSUK _C a acc with None -> None
-        | Some aa -> Some (SUK aa))
-    | SUList a, acc ->
-        (match substitutionInSUList _C a acc with None -> None
-          | Some aa -> Some (SUList aa))
-    | SUSet a, acc ->
-        (match substitutionInSUSet _C a acc with None -> None
-          | Some aa -> Some (SUSet aa))
-    | SUMap a, acc ->
-        (match substitutionInSUMap _C a acc with None -> None
-          | Some aa -> Some (SUMap aa))
-    | SUBag a, acc ->
-        (match substitutionInSUBag _C a acc with None -> None
-          | Some aa -> Some (SUBag aa))
-and substitutionInSUBag _C
-  x0 acc = match x0, acc with [], acc -> Some []
-    | b :: l, acc ->
-        (match b
-          with ItemB (x, y, z) ->
-            (match substitutionInSUBigKWithBag _C z acc with None -> None
-              | Some za ->
-                (match substitutionInSUBag _C l acc with None -> None
-                  | Some la -> Some (ItemB (x, y, za) :: la)))
-          | IdB x ->
-            (match getValueInMatchingMap (equal_metaVar _C) x acc
-              with None -> None | Some (KLabelSubs _) -> None
-              | Some (KItemSubs _) -> None | Some (KListSubs _) -> None
-              | Some (KSubs _) -> None | Some (ListSubs _) -> None
-              | Some (SetSubs _) -> None | Some (MapSubs _) -> None
-              | Some (BagSubs xa) ->
-                (match substitutionInSUBag _C l acc with None -> None
-                  | Some la -> Some (xa @ la))));;
-
-let rec substitutionInSubsFactor _C
-  x0 acc = match x0, acc with
-    KLabelSubs a, acc ->
-      (match substitutionInSUKLabel _C a acc with None -> None
-        | Some aa -> Some (KLabelSubs aa))
-    | KItemSubs a, acc ->
-        (match substitutionInSUKItem _C a acc with None -> None
-          | Some aa -> Some (KItemSubs aa))
-    | KListSubs a, acc ->
-        (match substitutionInSUKList _C a acc with None -> None
-          | Some aa -> Some (KListSubs aa))
-    | KSubs a, acc ->
-        (match substitutionInSUK _C a acc with None -> None
-          | Some aa -> Some (KSubs aa))
-    | ListSubs a, acc ->
-        (match substitutionInSUList _C a acc with None -> None
-          | Some aa -> Some (ListSubs aa))
-    | SetSubs a, acc ->
-        (match substitutionInSUSet _C a acc with None -> None
-          | Some aa -> Some (SetSubs aa))
-    | MapSubs a, acc ->
-        (match substitutionInSUMap _C a acc with None -> None
-          | Some aa -> Some (MapSubs aa))
-    | BagSubs a, acc ->
-        (match substitutionInSUBag _C a acc with None -> None
-          | Some aa -> Some (BagSubs aa));;
-
 let rec syntacticMonoidInSUKLabel _A _B _C
   x0 s subG = match x0, s, subG with
     SUKLabel a, s, subG ->
@@ -3905,6 +3997,15 @@ let rec updateMatchingMapMacro _A _B _C _D
           else (match updateMatchingMapMacro _A _B _C _D x y l subG
                  with None -> None | Some la -> Some ((a, b) :: la)));;
 
+let rec updateMatchingMapMacros _A _B _C _D
+  x y xa2 subG = match x, y, xa2, subG with x, y, [], subG -> None
+    | x, y, a :: l, subG ->
+        (match updateMatchingMapMacro _A _B _C _D x y a subG
+          with None -> updateMatchingMapMacros _A _B _C _D x y l subG
+          | Some aa ->
+            (match updateMatchingMapMacros _A _B _C _D x y l subG
+              with None -> Some [aa] | Some la -> Some (aa :: la)));;
+
 let rec patternMacroingInSUKLabel _A _B _C _D
   x0 s acc subG = match x0, s, acc, subG with
     IRKLabel a, s, acc, subG ->
@@ -3912,8 +4013,118 @@ let rec patternMacroingInSUKLabel _A _B _C _D
         with SUKLabel b -> (if equal_labela _A a b then Some acc else None)
         | SUIdKLabel _ -> None | SUKLabelFun (_, _) -> None)
     | IRIdKLabel a, s, acc, subG ->
-        updateMatchingMapMacro (equal_metaVar _B) _A _C _D a (KLabelSubs s) acc
+        updateMatchingMapMacros (equal_metaVar _B) _A _C _D a (KLabelSubs s) acc
           subG;;
+
+let rec matchingMapMember _A _B _C _D
+  x0 x1 subG = match x0, x1, subG with (x, y), [], subG -> false
+    | (x, y), (a, b) :: l, subG ->
+        (if eq _A x a
+          then (match macroEquality _B _C _D y b subG with None -> false
+                 | Some _ -> true)
+          else matchingMapMember _A _B _C _D (x, y) l subG);;
+
+let rec matchingMapSubset _A _B _C _D
+  x0 s subG = match x0, s, subG with [], s, subG -> true
+    | a :: l, s, subG ->
+        matchingMapMember _A _B _C _D a s subG &&
+          matchingMapSubset _A _B _C _D l s subG;;
+
+let rec list_all p x1 = match p, x1 with p, [] -> true
+                   | p, x :: xs -> p x && list_all p xs;;
+
+let rec keys = function [] -> []
+               | (a, b) :: l -> a :: keys l;;
+
+let rec matchingMapEqual _A _B _C _D
+  l s subG =
+    list_all (member _A (keys s)) (keys l) &&
+      (list_all (member _A (keys l)) (keys s) &&
+        matchingMapSubset _A _B _C _D l s subG);;
+
+let rec mergeSingleMatching _A _B _C _D
+  acc x1 subG = match acc, x1, subG with acc, [], subG -> [acc]
+    | acc, ax :: l, subG ->
+        (if matchingMapEqual _A _B _C _D acc ax subG then ax :: l
+          else ax :: mergeSingleMatching _A _B _C _D acc l subG);;
+
+let rec mergeMatchingMaps _A _B _C _D
+  x0 s subG = match x0, s, subG with [], s, subG -> s
+    | acc :: l, s, subG ->
+        mergeMatchingMaps _A _B _C _D l
+          (mergeSingleMatching _A _B _C _D acc s subG) subG;;
+
+let rec patternMacroingInSUSetAux _A _B _C _D
+  x0 v subG = match x0, v, subG with [], v, subG -> None
+    | (acc, remain) :: l, v, subG ->
+        (match v
+          with None ->
+            (if null remain
+              then (match patternMacroingInSUSetAux _A _B _C _D l v subG
+                     with None -> Some acc
+                     | Some acca ->
+                       Some (mergeMatchingMaps (equal_metaVar _A) _B _C _D acc
+                              acca subG))
+              else patternMacroingInSUSetAux _A _B _C _D l v subG)
+          | Some var ->
+            (match
+              updateMatchingMapMacros (equal_metaVar _A) _B _C _D var
+                (SetSubs remain) acc subG
+              with None -> patternMacroingInSUSetAux _A _B _C _D l v subG
+              | Some acca ->
+                (match patternMacroingInSUSetAux _A _B _C _D l v subG
+                  with None -> Some acca
+                  | Some accaa ->
+                    Some (mergeMatchingMaps (equal_metaVar _A) _B _C _D acca
+                           accaa subG))));;
+
+let rec patternMacroingInSUMapAux _A _B _C _D
+  x0 v subG = match x0, v, subG with [], v, subG -> None
+    | (acc, remain) :: l, v, subG ->
+        (match v
+          with None ->
+            (if null remain
+              then (match patternMacroingInSUMapAux _A _B _C _D l v subG
+                     with None -> Some acc
+                     | Some acca ->
+                       Some (mergeMatchingMaps (equal_metaVar _A) _B _C _D acc
+                              acca subG))
+              else patternMacroingInSUMapAux _A _B _C _D l v subG)
+          | Some var ->
+            (match
+              updateMatchingMapMacros (equal_metaVar _A) _B _C _D var
+                (MapSubs remain) acc subG
+              with None -> patternMacroingInSUMapAux _A _B _C _D l v subG
+              | Some acca ->
+                (match patternMacroingInSUMapAux _A _B _C _D l v subG
+                  with None -> Some acca
+                  | Some accaa ->
+                    Some (mergeMatchingMaps (equal_metaVar _A) _B _C _D acca
+                           accaa subG))));;
+
+let rec patternMacroingInSUBagAux _A _B _C _D
+  x0 v subG = match x0, v, subG with [], v, subG -> None
+    | (acc, remain) :: l, v, subG ->
+        (match v
+          with None ->
+            (if null remain
+              then (match patternMacroingInSUBagAux _A _B _C _D l v subG
+                     with None -> Some acc
+                     | Some acca ->
+                       Some (mergeMatchingMaps (equal_metaVar _A) _B _C _D acc
+                              acca subG))
+              else patternMacroingInSUBagAux _A _B _C _D l v subG)
+          | Some var ->
+            (match
+              updateMatchingMapMacros (equal_metaVar _A) _B _C _D var
+                (BagSubs remain) acc subG
+              with None -> patternMacroingInSUBagAux _A _B _C _D l v subG
+              | Some acca ->
+                (match patternMacroingInSUBagAux _A _B _C _D l v subG
+                  with None -> Some acca
+                  | Some accaa ->
+                    Some (mergeMatchingMaps (equal_metaVar _A) _B _C _D acca
+                           accaa subG))));;
 
 let rec subsortListAux _A
   a x1 subG = match a, x1, subG with a, [], subG -> false
@@ -3926,61 +4137,240 @@ let rec subsortList _A
         (if subsortListAux _A x b subG then subsortList _A l b subG
           else false);;
 
-let rec searchAllNonTermsInSUSet
-  = function [] -> []
-    | a :: l ->
-        (match a with ItemS _ -> searchAllNonTermsInSUSet l
-          | IdS _ -> a :: searchAllNonTermsInSUSet l
-          | SUSetKItem (_, _) -> a :: searchAllNonTermsInSUSet l);;
-
-let rec mergePatMatchMap _A _B _C _D
-  x0 s subG = match x0, s, subG with [], s, subG -> Some s
-    | (a, b) :: l, s, subG ->
-        (match updateMatchingMapMacro _A _B _C _D a b s subG with None -> None
-          | Some sa -> mergePatMatchMap _A _B _C _D l sa subG);;
-
-let rec mergeMapWithOnes _C _D _E _F
-  x0 acc subG = match x0, acc, subG with [], acc, subG -> Some acc
-    | (a, (b, c)) :: l, acc, subG ->
-        (match mergePatMatchMap _C _D _E _F c acc subG with None -> None
-          | Some acca -> mergeMapWithOnes _C _D _E _F l acca subG);;
-
-let rec findBijection _B
-  l = (match searchOne _B l [] with None -> None
-        | Some a ->
-          (let (ones, aa) = a in
-            (match aa with [] -> Some (ones, [])
-              | (ab, b) :: al ->
-                (if null al then Some (ones, b)
-                  else findBijectionAux _B ab b al))))
-and findBijectionAux _B
-  a x1 s = match a, x1, s with a, [], s -> None
-    | a, (b, c) :: al, s ->
-        (match searchOne _B (eliminateEntryList _B b s) []
-          with None -> findBijectionAux _B a al s
-          | Some (ones, mores) ->
-            (if null mores then Some ((a, (b, c)) :: ones, [])
-              else (match findBijection _B mores with None -> None
-                     | Some (onesa, remains) ->
-                       Some ((a, (b, c)) :: ones @ onesa, remains))));;
-
-let rec keys = function [] -> []
-               | (a, b) :: l -> a :: keys l;;
-
-let rec searchAllNonTermsInSUMap
-  = function [] -> []
-    | a :: l ->
-        (match a with ItemM (_, _) -> searchAllNonTermsInSUMap l
-          | IdM _ -> a :: searchAllNonTermsInSUMap l
-          | SUMapKItem (_, _) -> a :: searchAllNonTermsInSUMap l);;
-
-let rec searchAllNonTermsInSUBag
-  = function [] -> []
-    | a :: l ->
-        (match a with ItemB (_, _, _) -> searchAllNonTermsInSUBag l
-          | IdB _ -> a :: searchAllNonTermsInSUBag l);;
-
-let rec patternMacroingInSUKList _A _B _C _D
+let rec patternMacroingInSUK _A _B _C _D
+  (KPat (l, n)) s acc subG =
+    (match l
+      with [] ->
+        (match n with None -> (match s with [] -> Some acc | _ :: _ -> None)
+          | Some v ->
+            updateMatchingMapMacros (equal_metaVar _C) _A _B _D v (KSubs s) acc
+              subG)
+      | la :: ll ->
+        (match s with [] -> None
+          | ItemFactor x :: sul ->
+            (match patternMacroingInSUKItem _A _B _C _D la x acc subG
+              with None -> None
+              | Some acca ->
+                patternMacroingInSUK _A _B _C _D (KPat (ll, n)) sul acca subG)
+          | IdFactor x :: sul ->
+            (match la with IRKItem (_, _, _) -> None
+              | IRIdKItem (xa, ty) ->
+                (if equal_lista (equal_sort _A) ty [K]
+                  then (match
+                         updateMatchingMapMacros (equal_metaVar _C) _A _B _D xa
+                           (KSubs [IdFactor x]) acc subG
+                         with None -> None
+                         | Some acca ->
+                           patternMacroingInSUK _A _B _C _D (KPat (ll, n)) sul
+                             acca subG)
+                  else None)
+              | IRHOLE _ -> None)
+          | SUKKItem (x, y, ty) :: sul ->
+            (match la with IRKItem (_, _, _) -> None
+              | IRIdKItem (xa, tya) ->
+                (if equal_lista (equal_sort _A) tya [K]
+                  then (match
+                         updateMatchingMapMacros (equal_metaVar _C) _A _B _D xa
+                           (KSubs [SUKKItem (x, y, ty)]) acc subG
+                         with None -> None
+                         | Some acca ->
+                           patternMacroingInSUK _A _B _C _D (KPat (ll, n)) sul
+                             acca subG)
+                  else None)
+              | IRHOLE _ -> None)))
+and patternMacroingInSUList _A _B _C _D
+  x0 s acc subG = match x0, s, acc, subG with
+    ListPatNoVar l, s, acc, subG ->
+      (match l with [] -> (match s with [] -> Some acc | _ :: _ -> None)
+        | la :: ll ->
+          (match s with [] -> None
+            | ItemL x :: sul ->
+              (match patternMacroingInSUK _A _B _C _D la x acc subG
+                with None -> None
+                | Some acca ->
+                  patternMacroingInSUList _A _B _C _D (ListPatNoVar ll) sul acca
+                    subG)
+            | IdL _ :: _ -> None | SUListKItem (_, _) :: _ -> None))
+    | ListPat (l, n, r), s, acc, subG ->
+        (match l
+          with [] ->
+            (match rev r
+              with [] ->
+                updateMatchingMapMacros (equal_metaVar _C) _A _B _D n
+                  (ListSubs s) acc subG
+              | ra :: rl ->
+                (match rev s with [] -> None
+                  | ItemL x :: sul ->
+                    (match patternMacroingInSUK _A _B _C _D ra x acc subG
+                      with None -> None
+                      | Some acca ->
+                        patternMacroingInSUList _A _B _C _D
+                          (ListPat (l, n, rev rl)) (rev sul) acca subG)
+                  | IdL _ :: _ -> None | SUListKItem (_, _) :: _ -> None))
+          | la :: ll ->
+            (match s with [] -> None
+              | ItemL x :: sul ->
+                (match patternMacroingInSUK _A _B _C _D la x acc subG
+                  with None -> None
+                  | Some acca ->
+                    patternMacroingInSUList _A _B _C _D (ListPat (ll, n, r)) sul
+                      acca subG)
+              | IdL _ :: _ -> None | SUListKItem (_, _) :: _ -> None))
+and patternMacroingInSUMember _A _B _C _D
+  a r x2 acc subG = match a, r, x2, acc, subG with a, r, [], acc, subG -> []
+    | a, r, t :: l, acc, subG ->
+        (match t
+          with ItemS x ->
+            (match patternMacroingInSUK _A _B _C _D a x acc subG
+              with None ->
+                patternMacroingInSUMember _A _B _C _D a (r @ [t]) l acc subG
+              | Some acca ->
+                (acca, r @ l) ::
+                  patternMacroingInSUMember _A _B _C _D a (r @ [t]) l acc subG)
+          | IdS _ ->
+            patternMacroingInSUMember _A _B _C _D a (r @ [t]) l acc subG
+          | SUSetKItem (_, _) ->
+            patternMacroingInSUMember _A _B _C _D a (r @ [t]) l acc subG)
+and patternMacroingInAllSUMember _A _B _C _D
+  x0 s acc subG = match x0, s, acc, subG with
+    [], s, acc, subG -> Some [(acc, s)]
+    | a :: l, s, acc, subG ->
+        (match patternMacroingInSUMember _A _B _C _D a [] s acc subG
+          with [] -> None
+          | r :: rl ->
+            patternMacroingInAllSUMemberAux _A _B _C _D l (r :: rl) subG)
+and patternMacroingInSUSet _A _B _C _D
+  (SetPat (l, n)) s acc subG =
+    (match patternMacroingInAllSUMember _A _B _C _D l s acc subG
+      with None -> None
+      | Some rl -> patternMacroingInSUSetAux _C _A _B _D rl n subG)
+and patternMacroingInAllSUMemberAux _A _B _C _D
+  p x1 subG = match p, x1, subG with p, [], subG -> None
+    | p, (acc, remain) :: l, subG ->
+        (match patternMacroingInAllSUMember _A _B _C _D p remain acc subG
+          with None -> patternMacroingInAllSUMemberAux _A _B _C _D p l subG
+          | Some la ->
+            (match patternMacroingInAllSUMemberAux _A _B _C _D p l subG
+              with None -> Some la | Some laa -> Some (la @ laa)))
+and patternMacroingInSUMapMember _A _B _C _D
+  a r x2 acc subG = match a, r, x2, acc, subG with a, r, [], acc, subG -> []
+    | (a, b), r, t :: l, acc, subG ->
+        (match t
+          with ItemM (x, y) ->
+            (match patternMacroingInSUK _A _B _C _D a x acc subG
+              with None ->
+                patternMacroingInSUMapMember _A _B _C _D (a, b) (r @ [t]) l acc
+                  subG
+              | Some acca ->
+                (match patternMacroingInSUK _A _B _C _D b y acca subG
+                  with None ->
+                    patternMacroingInSUMapMember _A _B _C _D (a, b) (r @ [t]) l
+                      acc subG
+                  | Some accaa ->
+                    (accaa, r @ l) ::
+                      patternMacroingInSUMapMember _A _B _C _D (a, b) (r @ [t])
+                        l acc subG))
+          | IdM _ ->
+            patternMacroingInSUMapMember _A _B _C _D (a, b) (r @ [t]) l acc subG
+          | SUMapKItem (_, _) ->
+            patternMacroingInSUMapMember _A _B _C _D (a, b) (r @ [t]) l acc
+              subG)
+and patternMacroingInAllSUMapMember _A _B _C _D
+  x0 s acc subG = match x0, s, acc, subG with
+    [], s, acc, subG -> Some [(acc, s)]
+    | a :: l, s, acc, subG ->
+        (match patternMacroingInSUMapMember _A _B _C _D a [] s acc subG
+          with [] -> None
+          | r :: rl ->
+            patternMacroingInAllSUMapMemberAux _A _B _C _D l (r :: rl) subG)
+and patternMacroingInSUMap _A _B _C _D
+  (MapPat (l, n)) s acc subG =
+    (match patternMacroingInAllSUMapMember _A _B _C _D l s acc subG
+      with None -> None
+      | Some rl -> patternMacroingInSUMapAux _C _A _B _D rl n subG)
+and patternMacroingInAllSUMapMemberAux _A _B _C _D
+  p x1 subG = match p, x1, subG with p, [], subG -> None
+    | p, (acc, remain) :: l, subG ->
+        (match patternMacroingInAllSUMapMember _A _B _C _D p remain acc subG
+          with None -> patternMacroingInAllSUMapMemberAux _A _B _C _D p l subG
+          | Some la ->
+            (match patternMacroingInAllSUMapMemberAux _A _B _C _D p l subG
+              with None -> Some la | Some laa -> Some (la @ laa)))
+and patternMacroingInSUBigKWithBag _A _B _C _D
+  x0 s acc subG = match x0, s, acc, subG with
+    IRK t, s, acc, subG ->
+      (match s with SUK r -> patternMacroingInSUK _A _B _C _D t r acc subG
+        | SUList _ -> None | SUSet _ -> None | SUMap _ -> None
+        | SUBag _ -> None)
+    | IRBag t, s, acc, subG ->
+        (match s with SUK _ -> None | SUList _ -> None | SUSet _ -> None
+          | SUMap _ -> None
+          | SUBag r -> patternMacroingInSUBag _A _B _C _D t r acc subG)
+    | IRList t, s, acc, subG ->
+        (match s with SUK _ -> None
+          | SUList r -> patternMacroingInSUList _A _B _C _D t r acc subG
+          | SUSet _ -> None | SUMap _ -> None | SUBag _ -> None)
+    | IRSet t, s, acc, subG ->
+        (match s with SUK _ -> None | SUList _ -> None
+          | SUSet r -> patternMacroingInSUSet _A _B _C _D t r acc subG
+          | SUMap _ -> None | SUBag _ -> None)
+    | IRMap t, s, acc, subG ->
+        (match s with SUK _ -> None | SUList _ -> None | SUSet _ -> None
+          | SUMap r -> patternMacroingInSUMap _A _B _C _D t r acc subG
+          | SUBag _ -> None)
+and patternMacroingInSUBagMember _A _B _C _D
+  a r x2 acc subG = match a, r, x2, acc, subG with a, r, [], acc, subG -> []
+    | (a, (b, c)), r, t :: l, acc, subG ->
+        (match t
+          with ItemB (x, _, z) ->
+            (if equal_var _A a x
+              then (match
+                     patternMacroingInSUBigKWithBag _B _A _C _D c z acc subG
+                     with None ->
+                       patternMacroingInSUBagMember _A _B _C _D (a, (b, c))
+                         (r @ [t]) l acc subG
+                     | Some acca ->
+                       (acca, r @ l) ::
+                         patternMacroingInSUBagMember _A _B _C _D (a, (b, c))
+                           (r @ [t]) l acc subG)
+              else patternMacroingInSUBagMember _A _B _C _D (a, (b, c))
+                     (r @ [t]) l acc subG)
+          | IdB _ ->
+            patternMacroingInSUBagMember _A _B _C _D (a, (b, c)) (r @ [t]) l acc
+              subG)
+and patternMacroingInAllSUBagMember _A _B _C _D
+  x0 s acc subG = match x0, s, acc, subG with
+    [], s, acc, subG -> Some [(acc, s)]
+    | a :: l, s, acc, subG ->
+        (match patternMacroingInSUBagMember _A _B _C _D a [] s acc subG
+          with [] -> None
+          | r :: rl ->
+            patternMacroingInAllSUBagMemberAux _A _B _C _D l (r :: rl) subG)
+and patternMacroingInSUBag _A _B _C _D
+  (BagPat (l, n)) s acc subG =
+    (match patternMacroingInAllSUBagMember _B _A _C _D l s acc subG
+      with None -> None
+      | Some rl -> patternMacroingInSUBagAux _C _A _B _D rl n subG)
+and patternMacroingInAllSUBagMemberAux _A _B _C _D
+  p x1 subG = match p, x1, subG with p, [], subG -> None
+    | p, (acc, remain) :: l, subG ->
+        (match patternMacroingInAllSUBagMember _A _B _C _D p remain acc subG
+          with None -> patternMacroingInAllSUBagMemberAux _A _B _C _D p l subG
+          | Some la ->
+            (match patternMacroingInAllSUBagMemberAux _A _B _C _D p l subG
+              with None -> Some la | Some laa -> Some (la @ laa)))
+and patternMacroingInSUBigKWithLabel _A _B _C _D
+  x0 s acc subG = match x0, s, acc, subG with
+    IRBigBag t, s, acc, subG ->
+      (match s
+        with SUBigBag ta ->
+          patternMacroingInSUBigKWithBag _A _B _C _D t ta acc subG
+        | SUBigLabel _ -> None)
+    | IRBigLabel t, s, acc, subG ->
+        (match s with SUBigBag _ -> None
+          | SUBigLabel ta ->
+            patternMacroingInSUKLabel _A _C _B _D t ta acc subG)
+and patternMacroingInSUKList _A _B _C _D
   x0 s acc subG = match x0, s, acc, subG with
     KListPatNoVar l, s, acc, subG ->
       (match l with [] -> (match s with [] -> Some acc | _ :: _ -> None)
@@ -4000,7 +4390,7 @@ let rec patternMacroingInSUKList _A _B _C _D
           with [] ->
             (match rev r
               with [] ->
-                updateMatchingMapMacro (equal_metaVar _C) _A _B _D n
+                updateMatchingMapMacros (equal_metaVar _C) _A _B _D n
                   (KListSubs s) acc subG
               | ra :: rl ->
                 (match rev s with [] -> None
@@ -4047,253 +4437,380 @@ and patternMacroingInSUKItem _A _B _C _D
         (match b
           with SUKItem (l, r, ty) ->
             (if subsortList (equal_sort _A) ty ba subG
-              then updateMatchingMapMacro (equal_metaVar _C) _A _B _D a
+              then updateMatchingMapMacros (equal_metaVar _C) _A _B _D a
                      (KItemSubs (SUKItem (l, r, ty))) acc subG
               else None)
           | SUIdKItem (aa, bb) ->
             (if subsortList (equal_sort _A) bb ba subG
-              then updateMatchingMapMacro (equal_metaVar _C) _A _B _D a
+              then updateMatchingMapMacros (equal_metaVar _C) _A _B _D a
                      (KItemSubs (SUIdKItem (aa, bb))) acc subG
               else None)
-          | SUHOLE _ -> None)
-and patternMacroingInSUK _A _B _C _D
-  (KPat (l, n)) s acc subG =
-    (match l
-      with [] ->
-        (match n with None -> (match s with [] -> Some acc | _ :: _ -> None)
-          | Some v ->
-            updateMatchingMapMacro (equal_metaVar _C) _A _B _D v (KSubs s) acc
-              subG)
-      | la :: ll ->
-        (match s with [] -> None
-          | ItemFactor x :: sul ->
-            (match patternMacroingInSUKItem _A _B _C _D la x acc subG
-              with None -> None
-              | Some acca ->
-                patternMacroingInSUK _A _B _C _D (KPat (ll, n)) sul acca subG)
-          | IdFactor x :: sul ->
-            (match la with IRKItem (_, _, _) -> None
-              | IRIdKItem (xa, ty) ->
-                (if equal_lista (equal_sort _A) ty [K]
-                  then (match
-                         updateMatchingMapMacro (equal_metaVar _C) _A _B _D xa
-                           (KSubs [IdFactor x]) acc subG
-                         with None -> None
-                         | Some acca ->
-                           patternMacroingInSUK _A _B _C _D (KPat (ll, n)) sul
-                             acca subG)
-                  else None)
-              | IRHOLE _ -> None)
-          | SUKKItem (x, y, ty) :: sul ->
-            (match la with IRKItem (_, _, _) -> None
-              | IRIdKItem (xa, _) ->
-                (if equal_lista (equal_sort _A) ty [K]
-                  then (match
-                         updateMatchingMapMacro (equal_metaVar _C) _A _B _D xa
-                           (KSubs [SUKKItem (x, y, ty)]) acc subG
-                         with None -> None
-                         | Some acca ->
-                           patternMacroingInSUK _A _B _C _D (KPat (ll, n)) sul
-                             acca subG)
-                  else None)
-              | IRHOLE _ -> None)))
-and patternMacroingInSUList _A _B _C _D
-  x0 s acc subG = match x0, s, acc, subG with
-    ListPatNoVar l, s, acc, subG ->
-      (match l with [] -> (match s with [] -> Some acc | _ :: _ -> None)
-        | la :: ll ->
-          (match s with [] -> None
-            | ItemL x :: sul ->
-              (match patternMacroingInSUK _A _B _C _D la x acc subG
-                with None -> None
-                | Some acca ->
-                  patternMacroingInSUList _A _B _C _D (ListPatNoVar ll) sul acca
-                    subG)
-            | IdL _ :: _ -> None | SUListKItem (_, _) :: _ -> None))
-    | ListPat (l, n, r), s, acc, subG ->
-        (match l
-          with [] ->
-            (match rev r
-              with [] ->
-                updateMatchingMapMacro (equal_metaVar _C) _A _B _D n
-                  (ListSubs s) acc subG
-              | ra :: rl ->
-                (match rev s with [] -> None
-                  | ItemL x :: sul ->
-                    (match patternMacroingInSUK _A _B _C _D ra x acc subG
-                      with None -> None
-                      | Some acca ->
-                        patternMacroingInSUList _A _B _C _D
-                          (ListPat (l, n, rev rl)) (rev sul) acca subG)
-                  | IdL _ :: _ -> None | SUListKItem (_, _) :: _ -> None))
-          | la :: ll ->
-            (match s with [] -> None
-              | ItemL x :: sul ->
-                (match patternMacroingInSUK _A _B _C _D la x acc subG
-                  with None -> None
-                  | Some acca ->
-                    patternMacroingInSUList _A _B _C _D (ListPat (ll, n, r)) sul
-                      acca subG)
-              | IdL _ :: _ -> None | SUListKItem (_, _) :: _ -> None))
-and patternMacroingInSUMember _A _B _C _D
-  a x1 acc subG = match a, x1, acc, subG with a, [], acc, subG -> (a, [])
-    | a, t :: l, acc, subG ->
-        (match t
+          | SUHOLE _ -> None);;
+
+let rec evalEqualK _A _B _C _D
+  a b database subG =
+    (match suToIRInK _A a database with None -> None
+      | Some aa ->
+        (let NormalPat ab = aa in
+         let KMatching ac = ab in
+          (match patternMacroingInSUK _A _B _C _D ac b [] subG
+            with None -> Some false | Some _ -> Some true)));;
+
+let rec flattenMapVar = function None -> []
+                        | Some v -> [MapPat ([], Some v)];;
+
+let rec flattenMapAux = function [] -> []
+                        | x :: xl -> MapPat ([x], None) :: flattenMapAux xl;;
+
+let rec flattenMap
+  = function [] -> Some []
+    | x :: xl ->
+        (match flattenMap xl with None -> None
+          | Some xla ->
+            (match x with IRBigBag (IRK _) -> None | IRBigBag (IRList _) -> None
+              | IRBigBag (IRSet _) -> None
+              | IRBigBag (IRMap (MapPat (sl, sv))) ->
+                Some (flattenMapAux sl @ flattenMapVar sv @ xla)
+              | IRBigBag (IRBag _) -> None | IRBigLabel _ -> None));;
+
+let rec flattenSetVar = function None -> []
+                        | Some v -> [SetPat ([], Some v)];;
+
+let rec flattenSetAux = function [] -> []
+                        | x :: xl -> SetPat ([x], None) :: flattenSetAux xl;;
+
+let rec flattenSet
+  = function [] -> Some []
+    | x :: xl ->
+        (match flattenSet xl with None -> None
+          | Some xla ->
+            (match x with IRBigBag (IRK _) -> None | IRBigBag (IRList _) -> None
+              | IRBigBag (IRSet (SetPat (sl, sv))) ->
+                Some (flattenSetAux sl @ flattenSetVar sv @ xla)
+              | IRBigBag (IRMap _) -> None | IRBigBag (IRBag _) -> None
+              | IRBigLabel _ -> None));;
+
+let rec getRidOfLabel
+  = function [] -> Some []
+    | (KLabelFunPat (s, kl), (b, c)) :: l ->
+        (match getRidOfLabel l with None -> None
+          | Some la -> Some ((kl, (b, c)) :: la))
+    | (KFunPat (s, kl), (b, c)) :: l ->
+        (match getRidOfLabel l with None -> None
+          | Some la -> Some ((kl, (b, c)) :: la))
+    | (KItemFunPat (s, kl), (b, c)) :: l ->
+        (match getRidOfLabel l with None -> None
+          | Some la -> Some ((kl, (b, c)) :: la))
+    | (ListFunPat (s, kl), (b, c)) :: l ->
+        (match getRidOfLabel l with None -> None
+          | Some la -> Some ((kl, (b, c)) :: la))
+    | (SetFunPat (s, kl), (b, c)) :: l ->
+        (match getRidOfLabel l with None -> None
+          | Some la -> Some ((kl, (b, c)) :: la))
+    | (MapFunPat (s, kl), (b, c)) :: l ->
+        (match getRidOfLabel l with None -> None
+          | Some la -> Some ((kl, (b, c)) :: la))
+    | (NormalPat a, (b, c)) :: l -> None;;
+
+let rec getFunRule _A
+  s x1 = match s, x1 with s, [] -> None
+    | sa, FunPat (s, fl, f) :: l ->
+        (if equal_labela _A sa s
+          then (match f with None -> getRidOfLabel fl
+                 | Some fa -> getRidOfLabel (fl @ [fa]))
+          else getFunRule _A sa l)
+    | s, MacroPat (v, va, vb) :: l -> getFunRule _A s l
+    | s, AnywherePat (v, va, vb, vc) :: l -> getFunRule _A s l
+    | s, KRulePat (v, va, vb, vc) :: l -> getFunRule _A s l
+    | s, BagRulePat (v, va, vb, vc) :: l -> getFunRule _A s l;;
+
+let rec updateBeta _A _B
+  a b x2 subG = match a, b, x2, subG with a, b, [], subG -> Some []
+    | a, b, x :: l, subG ->
+        (let (aa, ba) = x in
+          (if eq _A a aa
+            then (match meet _B b ba subG with [] -> None
+                   | ty :: tyl -> Some ((a, ty :: tyl) :: l))
+            else (match updateBeta _A _B a b l subG with None -> None
+                   | Some la -> Some (x :: la))));;
+
+let rec is_empty (Seq f) = nulla (f ())
+and nulla = function Empty -> true
+            | Insert (x, p) -> false
+            | Join (p, xq) -> is_empty p && nulla xq;;
+
+let rec singleton _A
+  default (Seq f) =
+    (match f () with Empty -> default ()
+      | Insert (x, p) ->
+        (if is_empty p then x
+          else (let y = singleton _A default p in
+                 (if eq _A x y then x else default ())))
+      | Join (p, xq) ->
+        (if is_empty p then the_only _A default xq
+          else (if nulla xq then singleton _A default p
+                 else (let x = singleton _A default p in
+                       let y = the_only _A default xq in
+                        (if eq _A x y then x else default ())))))
+and the_only _A
+  default x1 = match default, x1 with default, Empty -> default ()
+    | default, Insert (x, p) ->
+        (if is_empty p then x
+          else (let y = singleton _A default p in
+                 (if eq _A x y then x else default ())))
+    | default, Join (p, xq) ->
+        (if is_empty p then the_only _A default xq
+          else (if nulla xq then singleton _A default p
+                 else (let x = singleton _A default p in
+                       let y = the_only _A default xq in
+                        (if eq _A x y then x else default ()))));;
+
+let rec the _A
+  a = singleton _A (fun _ -> failwith "not_unique" (fun _ -> the _A a)) a;;
+
+let rec sup_pred
+  (Seq f) (Seq g) =
+    Seq (fun _ ->
+          (match f () with Empty -> g ()
+            | Insert (x, p) -> Insert (x, sup_pred p (Seq g))
+            | Join (p, xq) -> adjunct (Seq g) (Join (p, xq))))
+and adjunct p x1 = match p, x1 with p, Empty -> Join (p, Empty)
+              | p, Insert (x, q) -> Insert (x, sup_pred q p)
+              | p, Join (q, xq) -> Join (q, adjunct p xq);;
+
+let rec getValueInMatchingMap _A
+  a x1 = match a, x1 with a, [] -> None
+    | a, b :: l ->
+        (let (x, y) = b in
+          (if eq _A a x then Some y else getValueInMatchingMap _A a l));;
+
+let rec substitutionInSUKLabel _C
+  x0 acc = match x0, acc with SUKLabel a, acc -> Some (SUKLabel a)
+    | SUIdKLabel a, acc ->
+        (match getValueInMatchingMap (equal_metaVar _C) a acc with None -> None
+          | Some aa ->
+            (match aa with KLabelSubs ab -> Some ab | KItemSubs _ -> None
+              | KListSubs _ -> None | KSubs _ -> None | ListSubs _ -> None
+              | SetSubs _ -> None | MapSubs _ -> None | BagSubs _ -> None))
+    | SUKLabelFun (a, b), acc ->
+        (match (substitutionInSUKLabel _C a acc, substitutionInSUKList _C b acc)
+          with (None, _) -> None | (Some _, None) -> None
+          | (Some x, Some y) -> Some (SUKLabelFun (x, y)))
+and substitutionInSUBigKWithLabel _C
+  x0 acc = match x0, acc with
+    SUBigBag a, acc ->
+      (match substitutionInSUBigKWithBag _C a acc with None -> None
+        | Some aa -> Some (SUBigBag aa))
+    | SUBigLabel a, acc ->
+        (match substitutionInSUKLabel _C a acc with None -> None
+          | Some aa -> Some (SUBigLabel aa))
+and substitutionInSUKList _C
+  x0 acc = match x0, acc with [], acc -> Some []
+    | b :: l, acc ->
+        (match b
+          with ItemKl x ->
+            (match substitutionInSUBigKWithLabel _C x acc with None -> None
+              | Some xa ->
+                (match substitutionInSUKList _C l acc with None -> None
+                  | Some la -> Some (ItemKl xa :: la)))
+          | IdKl x ->
+            (match getValueInMatchingMap (equal_metaVar _C) x acc
+              with None -> None | Some (KLabelSubs _) -> None
+              | Some (KItemSubs _) -> None
+              | Some (KListSubs xa) ->
+                (match substitutionInSUKList _C l acc with None -> None
+                  | Some la -> Some (xa @ la))
+              | Some (KSubs _) -> None | Some (ListSubs _) -> None
+              | Some (SetSubs _) -> None | Some (MapSubs _) -> None
+              | Some (BagSubs _) -> None))
+and substitutionInSUKItem _C
+  x0 acc = match x0, acc with
+    SUKItem (l, r, ty), acc ->
+      (match (substitutionInSUKLabel _C l acc, substitutionInSUKList _C r acc)
+        with (None, _) -> None | (Some _, None) -> None
+        | (Some x, Some y) -> Some (SUKItem (x, y, ty)))
+    | SUHOLE a, acc -> Some (SUHOLE a)
+    | SUIdKItem (a, b), acc ->
+        (match getValueInMatchingMap (equal_metaVar _C) a acc with None -> None
+          | Some aa ->
+            (match aa with KLabelSubs _ -> None | KItemSubs ab -> Some ab
+              | KListSubs _ -> None | KSubs _ -> None | ListSubs _ -> None
+              | SetSubs _ -> None | MapSubs _ -> None | BagSubs _ -> None))
+and substitutionInSUK _C
+  x0 acc = match x0, acc with [], acc -> Some []
+    | b :: l, acc ->
+        (match b
+          with ItemFactor x ->
+            (match substitutionInSUKItem _C x acc with None -> None
+              | Some xa ->
+                (match substitutionInSUK _C l acc with None -> None
+                  | Some la -> Some (ItemFactor xa :: la)))
+          | IdFactor x ->
+            (match getValueInMatchingMap (equal_metaVar _C) x acc
+              with None -> None | Some (KLabelSubs _) -> None
+              | Some (KItemSubs _) -> None | Some (KListSubs _) -> None
+              | Some (KSubs xa) ->
+                (match substitutionInSUK _C l acc with None -> None
+                  | Some la -> Some (xa @ la))
+              | Some (ListSubs _) -> None | Some (SetSubs _) -> None
+              | Some (MapSubs _) -> None | Some (BagSubs _) -> None)
+          | SUKKItem (x, y, ty) ->
+            (match
+              (substitutionInSUKLabel _C x acc,
+                (substitutionInSUKList _C y acc, substitutionInSUK _C l acc))
+              with (None, _) -> None | (Some _, (None, _)) -> None
+              | (Some _, (Some _, None)) -> None
+              | (Some xa, (Some ya, Some la)) ->
+                Some (SUKKItem (xa, ya, ty) :: la)))
+and substitutionInSUMap _C
+  x0 acc = match x0, acc with [], acc -> Some []
+    | b :: l, acc ->
+        (match b
+          with ItemM (x, y) ->
+            (match
+              (substitutionInSUK _C x acc,
+                (substitutionInSUK _C y acc, substitutionInSUMap _C l acc))
+              with (None, _) -> None | (Some _, (None, _)) -> None
+              | (Some _, (Some _, None)) -> None
+              | (Some xa, (Some ya, Some la)) -> Some (ItemM (xa, ya) :: la))
+          | IdM x ->
+            (match getValueInMatchingMap (equal_metaVar _C) x acc
+              with None -> None | Some (KLabelSubs _) -> None
+              | Some (KItemSubs _) -> None | Some (KListSubs _) -> None
+              | Some (KSubs _) -> None | Some (ListSubs _) -> None
+              | Some (SetSubs _) -> None
+              | Some (MapSubs xa) ->
+                (match substitutionInSUMap _C l acc with None -> None
+                  | Some la -> Some (xa @ la))
+              | Some (BagSubs _) -> None)
+          | SUMapKItem (x, y) ->
+            (match
+              (substitutionInSUKLabel _C x acc,
+                (substitutionInSUKList _C y acc, substitutionInSUMap _C l acc))
+              with (None, _) -> None | (Some _, (None, _)) -> None
+              | (Some _, (Some _, None)) -> None
+              | (Some xa, (Some ya, Some la)) ->
+                Some (SUMapKItem (xa, ya) :: la)))
+and substitutionInSUSet _C
+  x0 acc = match x0, acc with [], acc -> Some []
+    | b :: l, acc ->
+        (match b
           with ItemS x ->
-            (match patternMacroingInSUK _A _B _C _D a x acc subG
-              with None -> patternMacroingInSUMember _A _B _C _D a l acc subG
-              | Some acca ->
-                (let (u, v) = patternMacroingInSUMember _A _B _C _D a l acc subG
-                   in
-                  (u, (t, acca) :: v)))
-          | IdS _ -> patternMacroingInSUMember _A _B _C _D a l acc subG
-          | SUSetKItem (_, _) ->
-            patternMacroingInSUMember _A _B _C _D a l acc subG)
-and patternMacroingInSUSetAux _A _B _C _D
-  x0 s acc subG = match x0, s, acc, subG with [], s, acc, subG -> []
-    | a :: l, s, acc, subG ->
-        patternMacroingInSUMember _A _B _C _D a s acc subG ::
-          patternMacroingInSUSetAux _A _B _C _D l s acc subG
-and patternMacroingInSUSet _A _B _C _D
-  (SetPat (l, n)) s acc subG =
-    (match
-      findBijection (equal_suS _A _B _D)
-        (patternMacroingInSUSetAux _A _B _C _D l s acc subG)
-      with None -> None
-      | Some (ones, remains) ->
-        (match n
-          with None ->
-            (if null (searchAllNonTermsInSUSet s) && null remains
-              then mergeMapWithOnes (equal_metaVar _C) _A _B _D ones acc subG
-              else None)
-          | Some var ->
+            (match substitutionInSUK _C x acc with None -> None
+              | Some xa ->
+                (match substitutionInSUSet _C l acc with None -> None
+                  | Some la -> Some (ItemS xa :: la)))
+          | IdS x ->
+            (match getValueInMatchingMap (equal_metaVar _C) x acc
+              with None -> None | Some (KLabelSubs _) -> None
+              | Some (KItemSubs _) -> None | Some (KListSubs _) -> None
+              | Some (KSubs _) -> None | Some (ListSubs _) -> None
+              | Some (SetSubs xa) ->
+                (match substitutionInSUSet _C l acc with None -> None
+                  | Some la -> Some (xa @ la))
+              | Some (MapSubs _) -> None | Some (BagSubs _) -> None)
+          | SUSetKItem (x, y) ->
             (match
-              updateMatchingMapMacro (equal_metaVar _C) _A _B _D var
-                (SetSubs (searchAllNonTermsInSUSet s @ keys remains)) acc subG
-              with None -> None
-              | Some acca ->
-                mergeMapWithOnes (equal_metaVar _C) _A _B _D ones acca subG)))
-and patternMacroingInSUMapMember _A _B _C _D
-  a x1 acc subG = match a, x1, acc, subG with a, [], acc, subG -> (a, [])
-    | a, t :: l, acc, subG ->
-        (let (b, c) = a in
-          (match t
-            with ItemM (x, y) ->
-              (match patternMacroingInSUK _A _B _C _D b x acc subG
-                with None ->
-                  patternMacroingInSUMapMember _A _B _C _D a l acc subG
-                | Some acca ->
-                  (match patternMacroingInSUK _A _B _C _D c y acca subG
-                    with None ->
-                      patternMacroingInSUMapMember _A _B _C _D a l acc subG
-                    | Some accaa ->
-                      (let (u, v) =
-                         patternMacroingInSUMapMember _A _B _C _D a l acc subG
-                         in
-                        (u, (t, accaa) :: v))))
-            | IdM _ -> patternMacroingInSUMapMember _A _B _C _D a l acc subG
-            | SUMapKItem (_, _) ->
-              patternMacroingInSUMapMember _A _B _C _D a l acc subG))
-and patternMacroingInSUMapAux _A _B _C _D
-  x0 s acc subG = match x0, s, acc, subG with [], s, acc, subG -> []
-    | a :: l, s, acc, subG ->
-        patternMacroingInSUMapMember _A _B _C _D a s acc subG ::
-          patternMacroingInSUMapAux _A _B _C _D l s acc subG
-and patternMacroingInSUMap _A _B _C _D
-  (MapPat (l, n)) s acc subG =
-    (match
-      findBijection (equal_suM _A _B _D)
-        (patternMacroingInSUMapAux _A _B _C _D l s acc subG)
-      with None -> None
-      | Some (ones, remains) ->
-        (match n
-          with None ->
-            (if null (searchAllNonTermsInSUMap s) && null remains
-              then mergeMapWithOnes (equal_metaVar _C) _A _B _D ones acc subG
-              else None)
-          | Some var ->
+              (substitutionInSUKLabel _C x acc,
+                (substitutionInSUKList _C y acc, substitutionInSUSet _C l acc))
+              with (None, _) -> None | (Some _, (None, _)) -> None
+              | (Some _, (Some _, None)) -> None
+              | (Some xa, (Some ya, Some la)) ->
+                Some (SUSetKItem (xa, ya) :: la)))
+and substitutionInSUList _C
+  x0 acc = match x0, acc with [], acc -> Some []
+    | b :: l, acc ->
+        (match b
+          with ItemL x ->
+            (match substitutionInSUK _C x acc with None -> None
+              | Some xa ->
+                (match substitutionInSUList _C l acc with None -> None
+                  | Some la -> Some (ItemL xa :: la)))
+          | IdL x ->
+            (match getValueInMatchingMap (equal_metaVar _C) x acc
+              with None -> None | Some (KLabelSubs _) -> None
+              | Some (KItemSubs _) -> None | Some (KListSubs _) -> None
+              | Some (KSubs _) -> None
+              | Some (ListSubs xa) ->
+                (match substitutionInSUList _C l acc with None -> None
+                  | Some la -> Some (xa @ la))
+              | Some (SetSubs _) -> None | Some (MapSubs _) -> None
+              | Some (BagSubs _) -> None)
+          | SUListKItem (x, y) ->
             (match
-              updateMatchingMapMacro (equal_metaVar _C) _A _B _D var
-                (MapSubs (searchAllNonTermsInSUMap s @ keys remains)) acc subG
-              with None -> None
-              | Some acca ->
-                mergeMapWithOnes (equal_metaVar _C) _A _B _D ones acca subG)))
-and patternMacroingInSUBigKWithBag _A _B _C _D
-  x0 s acc subG = match x0, s, acc, subG with
-    IRK t, s, acc, subG ->
-      (match s with SUK r -> patternMacroingInSUK _A _B _C _D t r acc subG
-        | SUList _ -> None | SUSet _ -> None | SUMap _ -> None
-        | SUBag _ -> None)
-    | IRBag t, s, acc, subG ->
-        (match s with SUK _ -> None | SUList _ -> None | SUSet _ -> None
-          | SUMap _ -> None
-          | SUBag r -> patternMacroingInSUBag _A _B _C _D t r acc subG)
-    | IRList t, s, acc, subG ->
-        (match s with SUK _ -> None
-          | SUList r -> patternMacroingInSUList _A _B _C _D t r acc subG
-          | SUSet _ -> None | SUMap _ -> None | SUBag _ -> None)
-    | IRSet t, s, acc, subG ->
-        (match s with SUK _ -> None | SUList _ -> None
-          | SUSet r -> patternMacroingInSUSet _A _B _C _D t r acc subG
-          | SUMap _ -> None | SUBag _ -> None)
-    | IRMap t, s, acc, subG ->
-        (match s with SUK _ -> None | SUList _ -> None | SUSet _ -> None
-          | SUMap r -> patternMacroingInSUMap _A _B _C _D t r acc subG
-          | SUBag _ -> None)
-and patternMacroingInSUBagMember _A _B _C _D
-  a x1 acc subG = match a, x1, acc, subG with a, [], acc, subG -> (a, [])
-    | a, t :: l, acc, subG ->
-        (let (b, (_, d)) = a in
-          (match t
-            with ItemB (x, _, z) ->
-              (if equal_var _A b x
-                then (match
-                       patternMacroingInSUBigKWithBag _B _A _C _D d z acc subG
-                       with None ->
-                         patternMacroingInSUBagMember _A _B _C _D a l acc subG
-                       | Some acca ->
-                         (let (u, v) =
-                            patternMacroingInSUBagMember _A _B _C _D a l acc
-                              subG
-                            in
-                           (u, (t, acca) :: v)))
-                else patternMacroingInSUBagMember _A _B _C _D a l acc subG)
-            | IdB _ -> patternMacroingInSUBagMember _A _B _C _D a l acc subG))
-and patternMacroingInSUBagAux _A _B _C _D
-  x0 s acc subG = match x0, s, acc, subG with [], s, acc, subG -> []
-    | a :: l, s, acc, subG ->
-        patternMacroingInSUBagMember _A _B _C _D a s acc subG ::
-          patternMacroingInSUBagAux _A _B _C _D l s acc subG
-and patternMacroingInSUBag _A _B _C _D
-  (BagPat (l, n)) s acc subG =
-    (match
-      findBijection (equal_suB _A _B _D)
-        (patternMacroingInSUBagAux _B _A _C _D l s acc subG)
-      with None -> None
-      | Some (ones, remains) ->
-        (match n
-          with None ->
-            (if null (searchAllNonTermsInSUBag s) && null remains
-              then mergeMapWithOnes (equal_metaVar _C) _A _B _D ones acc subG
-              else None)
-          | Some var ->
-            (match
-              updateMatchingMapMacro (equal_metaVar _C) _A _B _D var
-                (BagSubs (searchAllNonTermsInSUBag s @ keys remains)) acc subG
-              with None -> None
-              | Some acca ->
-                mergeMapWithOnes (equal_metaVar _C) _A _B _D ones acca subG)))
-and patternMacroingInSUBigKWithLabel _A _B _C _D
-  x0 s acc subG = match x0, s, acc, subG with
-    IRBigBag t, s, acc, subG ->
-      (match s
-        with SUBigBag ta ->
-          patternMacroingInSUBigKWithBag _A _B _C _D t ta acc subG
-        | SUBigLabel _ -> None)
-    | IRBigLabel t, s, acc, subG ->
-        (match s with SUBigBag _ -> None
-          | SUBigLabel ta ->
-            patternMacroingInSUKLabel _A _C _B _D t ta acc subG);;
+              (substitutionInSUKLabel _C x acc,
+                (substitutionInSUKList _C y acc, substitutionInSUList _C l acc))
+              with (None, _) -> None | (Some _, (None, _)) -> None
+              | (Some _, (Some _, None)) -> None
+              | (Some xa, (Some ya, Some la)) ->
+                Some (SUListKItem (xa, ya) :: la)))
+and substitutionInSUBigKWithBag _C
+  x0 acc = match x0, acc with
+    SUK a, acc ->
+      (match substitutionInSUK _C a acc with None -> None
+        | Some aa -> Some (SUK aa))
+    | SUList a, acc ->
+        (match substitutionInSUList _C a acc with None -> None
+          | Some aa -> Some (SUList aa))
+    | SUSet a, acc ->
+        (match substitutionInSUSet _C a acc with None -> None
+          | Some aa -> Some (SUSet aa))
+    | SUMap a, acc ->
+        (match substitutionInSUMap _C a acc with None -> None
+          | Some aa -> Some (SUMap aa))
+    | SUBag a, acc ->
+        (match substitutionInSUBag _C a acc with None -> None
+          | Some aa -> Some (SUBag aa))
+and substitutionInSUBag _C
+  x0 acc = match x0, acc with [], acc -> Some []
+    | b :: l, acc ->
+        (match b
+          with ItemB (x, y, z) ->
+            (match substitutionInSUBigKWithBag _C z acc with None -> None
+              | Some za ->
+                (match substitutionInSUBag _C l acc with None -> None
+                  | Some la -> Some (ItemB (x, y, za) :: la)))
+          | IdB x ->
+            (match getValueInMatchingMap (equal_metaVar _C) x acc
+              with None -> None | Some (KLabelSubs _) -> None
+              | Some (KItemSubs _) -> None | Some (KListSubs _) -> None
+              | Some (KSubs _) -> None | Some (ListSubs _) -> None
+              | Some (SetSubs _) -> None | Some (MapSubs _) -> None
+              | Some (BagSubs xa) ->
+                (match substitutionInSUBag _C l acc with None -> None
+                  | Some la -> Some (xa @ la))));;
+
+let rec substitutionInSubsFactor _C
+  x0 acc = match x0, acc with
+    KLabelSubs a, acc ->
+      (match substitutionInSUKLabel _C a acc with None -> None
+        | Some aa -> Some (KLabelSubs aa))
+    | KItemSubs a, acc ->
+        (match substitutionInSUKItem _C a acc with None -> None
+          | Some aa -> Some (KItemSubs aa))
+    | KListSubs a, acc ->
+        (match substitutionInSUKList _C a acc with None -> None
+          | Some aa -> Some (KListSubs aa))
+    | KSubs a, acc ->
+        (match substitutionInSUK _C a acc with None -> None
+          | Some aa -> Some (KSubs aa))
+    | ListSubs a, acc ->
+        (match substitutionInSUList _C a acc with None -> None
+          | Some aa -> Some (ListSubs aa))
+    | SetSubs a, acc ->
+        (match substitutionInSUSet _C a acc with None -> None
+          | Some aa -> Some (SetSubs aa))
+    | MapSubs a, acc ->
+        (match substitutionInSUMap _C a acc with None -> None
+          | Some aa -> Some (MapSubs aa))
+    | BagSubs a, acc ->
+        (match substitutionInSUBag _C a acc with None -> None
+          | Some aa -> Some (BagSubs aa));;
+
+let rec patternMatchingInSUKList _A _B _C _D
+  a b subG =
+    (match patternMacroingInSUKList _A _B _C _D a b [[]] subG with None -> None
+      | Some aa -> (match aa with [] -> None | ab :: _ -> Some ab));;
 
 let rec isGroundTermInSUKItem
   = function
@@ -4814,7 +5331,7 @@ and checkTermsInSUBigKWithBag _A _C
                            Some (acca, (betaa, SUK ac))))
         | Some tya ->
           (if subsortList (equal_sort _A) tya [K] subG
-            then (match checkTermsInSUK _A _C a [K] acc beta database subG
+            then (match checkTermsInSUK _A _C a tya acc beta database subG
                    with None -> None
                    | Some aa ->
                      (let (acca, ab) = aa in
@@ -4849,7 +5366,7 @@ and checkTermsInSUBigKWithBag _A _C
                  let (betaa, ac) = ab in
                   Some (acca, (betaa, SUSet ac))))
           | Some tya ->
-            (if equal_lista (equal_sort _A) tya [Seta]
+            (if equal_lista (equal_sort _A) tya [Set]
               then (match checkTermsInSUSet _A _C a acc beta database subG
                      with None -> None
                      | Some aa ->
@@ -5156,8 +5673,7 @@ and checkTermsInSUSet _A _C
                   | Some (accaa, (betaaa, la)) ->
                     Some (accaa, (betaaa, ItemS xa :: la))))
           | IdS x ->
-            (match
-              updateMap (equal_metaVar _C) (equal_sort _A) x [Seta] acc subG
+            (match updateMap (equal_metaVar _C) (equal_sort _A) x [Set] acc subG
               with None -> None
               | Some acca ->
                 (match checkTermsInSUSet _A _C l acca beta database subG
@@ -5184,7 +5700,7 @@ and checkTermsInSUSet _A _C
                               | Some xx ->
                                 (match
                                   updateMap (equal_metaVar _C) (equal_sort _A)
-                                    xx [Seta] betab subG
+                                    xx [Set] betab subG
                                   with None -> None
                                   | Some betac ->
                                     Some (accb,
@@ -5196,7 +5712,7 @@ and checkTermsInSUSet _A _C
                            getArgSort (equal_label _A) s database)
                          with (None, _) -> None | (Some _, None) -> None
                          | (Some ty, Some tyl) ->
-                           (if subsortList (equal_sort _A) ty [Seta] subG
+                           (if subsortList (equal_sort _A) ty [Set] subG
                              then (match
                                     checkTermsInSUKList _A _C y tyl acc beta
                                       database subG
@@ -5474,7 +5990,7 @@ and localteFunTermInSUSet _A
                         (match getSUKLabelMeaning x with None -> None
                           | Some s ->
                             (if isFunctionItem (equal_label _A) s database
-                              then Some (s, (y, ([Seta], IdS FunHole :: l)))
+                              then Some (s, (y, ([Set], IdS FunHole :: l)))
                               else None))
                       | Some (la, (funa, (ty, r))) ->
                         Some (la, (funa, (ty, a :: r))))
@@ -5629,22 +6145,6 @@ and hasFunLabelInSUList _A
 
 let rec if_pred b = (if b then single () else bot_pred);;
 
-let rec times_num
-  m n = match m, n with
-    Bit1 m, Bit1 n -> Bit1 (plus_num (plus_num m n) (Bit0 (times_num m n)))
-    | Bit1 m, Bit0 n -> Bit0 (times_num (Bit1 m) n)
-    | Bit0 m, Bit1 n -> Bit0 (times_num m (Bit1 n))
-    | Bit0 m, Bit0 n -> Bit0 (Bit0 (times_num m n))
-    | One, n -> n
-    | m, One -> m;;
-
-let rec times_int k l = match k, l with Neg m, Neg n -> Pos (times_num m n)
-                    | Neg m, Pos n -> Neg (times_num m n)
-                    | Pos m, Neg n -> Neg (times_num m n)
-                    | Pos m, Pos n -> Pos (times_num m n)
-                    | Zero_int, l -> Zero_int
-                    | k, Zero_int -> Zero_int;;
-
 let rec evalMapUpdate _A _B _C
   x0 a b = match x0, a, b with [], a, b -> [ItemM (a, b)]
     | x :: xl, a, b ->
@@ -5654,27 +6154,76 @@ let rec evalMapUpdate _A _B _C
               then ItemM (a, b) :: xl else x :: evalMapUpdate _A _B _C xl a b)
           | IdM _ -> x :: xl | SUMapKItem (_, _) -> x :: xl);;
 
-let rec list_all p x1 = match p, x1 with p, [] -> true
-                   | p, x :: xs -> p x && list_all p xs;;
+let rec evalEqualSet _A _B _C _D
+  a b database subG =
+    (match suToIRInSet _A a database with None -> None
+      | Some aa ->
+        (let NormalPat ab = aa in
+         let SetMatching ac = ab in
+          (match patternMacroingInSUSet _A _B _C _D ac b [] subG
+            with None -> Some false | Some _ -> Some true)));;
 
-let rec less_eq_set _A
-  a b = match a, b with Coset [], Set [] -> false
-    | a, Coset ys -> list_all (fun y -> not (member _A y a)) ys
-    | Set xs, b -> list_all (fun x -> member _A x b) xs;;
+let rec evalEqualMap _A _B _C _D
+  a b database subG =
+    (match suToIRInMap _A a database with None -> None
+      | Some aa ->
+        (let NormalPat ab = aa in
+         let MapMatching ac = ab in
+          (match patternMacroingInSUMap _A _B _C _D ac b [] subG
+            with None -> Some false | Some _ -> Some true)));;
 
-let rec equal_set _A a b = less_eq_set _A a b && less_eq_set _A b a;;
+let rec numeral _A
+  = function
+    Bit1 n ->
+      (let m = numeral _A n in
+        plus _A.semigroup_add_numeral.plus_semigroup_add
+          (plus _A.semigroup_add_numeral.plus_semigroup_add m m)
+          (one _A.one_numeral))
+    | Bit0 n ->
+        (let m = numeral _A n in
+          plus _A.semigroup_add_numeral.plus_semigroup_add m m)
+    | One -> one _A.one_numeral;;
 
-let rec evalEqualSet _A _B _C
-  a b = equal_set (equal_list (equal_suKFactor _A _B _C)) (turnSet _A _B _C a)
-          (turnSet _A _B _C b);;
+let rec digitToString (_A1, _A2, _A3)
+  a = (if eq _A2 a (zero _A1) then [Char (Bit0 (Bit0 (Bit0 (Bit0 (Bit1 One)))))]
+        else (if eq _A2 a (one _A3.one_numeral)
+               then [Char (Bit1 (Bit0 (Bit0 (Bit0 (Bit1 One)))))]
+               else (if eq _A2 a (numeral _A3 (Bit0 One))
+                      then [Char (Bit0 (Bit1 (Bit0 (Bit0 (Bit1 One)))))]
+                      else (if eq _A2 a (numeral _A3 (Bit1 One))
+                             then [Char (Bit1 (Bit1 (Bit0 (Bit0 (Bit1 One)))))]
+                             else (if eq _A2 a (numeral _A3 (Bit0 (Bit0 One)))
+                                    then [Char
+    (Bit0 (Bit0 (Bit1 (Bit0 (Bit1 One)))))]
+                                    else (if eq _A2 a
+       (numeral _A3 (Bit1 (Bit0 One)))
+   then [Char (Bit1 (Bit0 (Bit1 (Bit0 (Bit1 One)))))]
+   else (if eq _A2 a (numeral _A3 (Bit0 (Bit1 One)))
+          then [Char (Bit0 (Bit1 (Bit1 (Bit0 (Bit1 One)))))]
+          else (if eq _A2 a (numeral _A3 (Bit1 (Bit1 One)))
+                 then [Char (Bit1 (Bit1 (Bit1 (Bit0 (Bit1 One)))))]
+                 else (if eq _A2 a (numeral _A3 (Bit0 (Bit0 (Bit0 One))))
+                        then [Char (Bit0 (Bit0 (Bit0 (Bit1 (Bit1 One)))))]
+                        else (if eq _A2 a (numeral _A3 (Bit1 (Bit0 (Bit0 One))))
+                               then [Char (Bit1
+    (Bit0 (Bit0 (Bit1 (Bit1 One)))))]
+                               else []))))))))));;
 
-let rec evalEqualMap _A _B _C
-  a b = equal_set
-          (equal_prod (equal_list (equal_suKFactor _A _B _C))
-            (equal_list (equal_suKFactor _A _B _C)))
-          (turnMap _A _B _C a) (turnMap _A _B _C b);;
+let rec numToString (_A1, _A2, _A3, _A4, _A5, _A6)
+  a = (if less _A5 a (zero _A2)
+        then [Char (Bit1 (Bit0 (Bit1 (Bit1 (Bit0 One)))))] @
+               numToString (_A1, _A2, _A3, _A4, _A5, _A6)
+                 (abs (_A1, _A2, _A5) a)
+        else (if less _A5 a (numeral _A4 (Bit0 (Bit1 (Bit0 One)))) &&
+                   less_eq _A5 (zero _A2) a
+               then digitToString (_A2, _A3, _A4) a
+               else digitToString (_A2, _A3, _A4)
+                      (modulo _A6 a (numeral _A4 (Bit0 (Bit1 (Bit0 One))))) @
+                      numToString (_A1, _A2, _A3, _A4, _A5, _A6)
+                        (divide _A6.divide_modulo a
+                          (numeral _A4 (Bit0 (Bit1 (Bit0 One)))))));;
 
-let rec evalBuiltinFun _B _C _D _E
+let rec evalBuiltinFun _B _C _D
   x0 kl database subG = match x0, kl, database, subG with
     GetKLabel, kl, database, subG ->
       (match kl with [] -> None | ItemKl (SUBigBag (SUK [])) :: _ -> None
@@ -5700,7 +6249,7 @@ let rec evalBuiltinFun _B _C _D _E
           | [ItemKl (SUBigBag (SUK [ItemFactor (SUKItem (SUKLabel s, _, _))]))]
             -> (match getSort (equal_label _B) s database with None -> None
                  | Some t ->
-                   (if subsortList (equal_sort _E) t [KResult] subG
+                   (if subsortList (equal_sort _B) t [KResult] subG
                      then Some (KItemSubs
                                  (SUKItem
                                    (SUKLabel (ConstToLabel (BoolConst true)),
@@ -6021,7 +6570,7 @@ let rec evalBuiltinFun _B _C _D _E
                   (SUK (ItemFactor
                           (SUKItem
                             (SUKLabel (ConstToLabel (BoolConst _)), _,
-                              Seta :: _)) ::
+                              Set :: _)) ::
                          _))) ::
                 _
             -> None
@@ -6449,6 +6998,30 @@ let rec evalBuiltinFun _B _C _D _E
                             [Bool]))])) ::
               ItemKl
                 (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel StringCon, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (BoolConst _)), _,
+                            [Bool]))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel IntToString, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (BoolConst _)), _,
+                            [Bool]))])) ::
+              ItemKl
+                (SUBigBag
                   (SUK (ItemFactor (SUKItem (SUIdKLabel _, _, _)) :: _))) ::
                 _
             -> None
@@ -6619,7 +7192,7 @@ let rec evalBuiltinFun _B _C _D _E
                 (SUK (ItemFactor
                         (SUKItem
                           (SUKLabel (ConstToLabel (BoolConst _)), _,
-                            Seta :: _)) ::
+                            Set :: _)) ::
                        _))) ::
               _
             -> None
@@ -6830,6 +7403,17 @@ let rec evalBuiltinFun _B _C _D _E
           | ItemKl
               (SUBigBag
                 (SUK (ItemFactor (SUKItem (SUKLabel EqualMap, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel StringCon, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel IntToString, _, _)) ::
+                       _))) ::
               _
             -> None
           | ItemKl
@@ -7136,7 +7720,7 @@ let rec evalBuiltinFun _B _C _D _E
                   (SUK (ItemFactor
                           (SUKItem
                             (SUKLabel (ConstToLabel (BoolConst _)), _,
-                              Seta :: _)) ::
+                              Set :: _)) ::
                          _))) ::
                 _
             -> None
@@ -7564,6 +8148,30 @@ let rec evalBuiltinFun _B _C _D _E
                             [Bool]))])) ::
               ItemKl
                 (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel StringCon, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (BoolConst _)), _,
+                            [Bool]))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel IntToString, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (BoolConst _)), _,
+                            [Bool]))])) ::
+              ItemKl
+                (SUBigBag
                   (SUK (ItemFactor (SUKItem (SUIdKLabel _, _, _)) :: _))) ::
                 _
             -> None
@@ -7734,7 +8342,7 @@ let rec evalBuiltinFun _B _C _D _E
                 (SUK (ItemFactor
                         (SUKItem
                           (SUKLabel (ConstToLabel (BoolConst _)), _,
-                            Seta :: _)) ::
+                            Set :: _)) ::
                        _))) ::
               _
             -> None
@@ -7945,6 +8553,17 @@ let rec evalBuiltinFun _B _C _D _E
           | ItemKl
               (SUBigBag
                 (SUK (ItemFactor (SUKItem (SUKLabel EqualMap, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel StringCon, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel IntToString, _, _)) ::
+                       _))) ::
               _
             -> None
           | ItemKl
@@ -8100,7 +8719,7 @@ let rec evalBuiltinFun _B _C _D _E
                 (SUK (ItemFactor
                         (SUKItem
                           (SUKLabel (ConstToLabel (BoolConst _)), _,
-                            Seta :: _)) ::
+                            Set :: _)) ::
                        _))) ::
               _
             -> None
@@ -8315,6 +8934,17 @@ let rec evalBuiltinFun _B _C _D _E
             -> None
           | ItemKl
               (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel StringCon, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel IntToString, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
                 (SUK (ItemFactor (SUKItem (SUIdKLabel _, _, _)) :: _))) ::
               _
             -> None
@@ -8390,10 +9020,12 @@ let rec evalBuiltinFun _B _C _D _E
                               | SUSet bb ->
                                 (match listaa
                                   with [] ->
-                                    Some (KItemSubs
-   (SUKItem
-     (SUKLabel (ConstToLabel (BoolConst (evalEqualSet _B _C _D ab bb))), [],
-       [Bool])))
+                                    (match
+                                      evalEqualSet _B _C _D _D ab bb database
+subG
+                                      with None -> None
+                                      | Some bv ->
+Some (KItemSubs (SUKItem (SUKLabel (ConstToLabel (BoolConst bv)), [], [Bool]))))
                                   | _ :: _ -> None)
                               | SUMap _ -> None | SUBag _ -> None)
                           | SUBigLabel _ -> None)
@@ -8418,10 +9050,12 @@ let rec evalBuiltinFun _B _C _D _E
                               | SUMap bb ->
                                 (match listaa
                                   with [] ->
-                                    Some (KItemSubs
-   (SUKItem
-     (SUKLabel (ConstToLabel (BoolConst (evalEqualMap _B _C _D ab bb))), [],
-       [Bool])))
+                                    (match
+                                      evalEqualMap _B _C _D _D ab bb database
+subG
+                                      with None -> None
+                                      | Some bv ->
+Some (KItemSubs (SUKItem (SUKLabel (ConstToLabel (BoolConst bv)), [], [Bool]))))
                                   | _ :: _ -> None)
                               | SUBag _ -> None)
                           | SUBigLabel _ -> None)
@@ -8444,12 +9078,11 @@ let rec evalBuiltinFun _B _C _D _E
                               with SUK bb ->
                                 (match listaa
                                   with [] ->
-                                    Some (KItemSubs
-   (SUKItem
-     (SUKLabel
-        (ConstToLabel
-          (BoolConst (equal_lista (equal_suKFactor _B _C _D) ab bb))),
-       [], [Bool])))
+                                    (match
+                                      evalEqualK _B _C _D _D ab bb database subG
+                                      with None -> None
+                                      | Some bv ->
+Some (KItemSubs (SUKItem (SUKLabel (ConstToLabel (BoolConst bv)), [], [Bool]))))
                                   | _ :: _ -> None)
                               | SUList _ -> None | SUSet _ -> None
                               | SUMap _ -> None | SUBag _ -> None)
@@ -8474,12 +9107,12 @@ let rec evalBuiltinFun _B _C _D _E
                               with SUK bb ->
                                 (match listaa
                                   with [] ->
-                                    Some (KItemSubs
-   (SUKItem
-     (SUKLabel
-        (ConstToLabel
-          (BoolConst (not (equal_lista (equal_suKFactor _B _C _D) ab bb)))),
-       [], [Bool])))
+                                    (match
+                                      evalEqualK _B _C _D _D ab bb database subG
+                                      with None -> None
+                                      | Some bv ->
+Some (KItemSubs
+       (SUKItem (SUKLabel (ConstToLabel (BoolConst (not bv))), [], [Bool]))))
                                   | _ :: _ -> None)
                               | SUList _ -> None | SUSet _ -> None
                               | SUMap _ -> None | SUBag _ -> None)
@@ -8582,7 +9215,7 @@ let rec evalBuiltinFun _B _C _D _E
                             (SUKLabel (ConstToLabel (IntConst b2)), _, _))]))]
             -> Some (KItemSubs
                       (SUKItem
-                        (SUKLabel (ConstToLabel (IntConst (plus_int b1 b2))),
+                        (SUKLabel (ConstToLabel (IntConst (plus_inta b1 b2))),
                           [], [Int])))
           | ItemKl
               (SUBigBag
@@ -8926,6 +9559,28 @@ let rec evalBuiltinFun _B _C _D _E
                           (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
               ItemKl
                 (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel StringCon, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel IntToString, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
                   (SUK (ItemFactor (SUKItem (SUIdKLabel _, _, _)) :: _))) ::
                 _
             -> None
@@ -9177,6 +9832,17 @@ let rec evalBuiltinFun _B _C _D _E
           | ItemKl
               (SUBigBag
                 (SUK (ItemFactor (SUKItem (SUKLabel EqualMap, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel StringCon, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel IntToString, _, _)) ::
+                       _))) ::
               _
             -> None
           | ItemKl
@@ -9587,6 +10253,28 @@ let rec evalBuiltinFun _B _C _D _E
                           (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
               ItemKl
                 (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel StringCon, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel IntToString, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
                   (SUK (ItemFactor (SUKItem (SUIdKLabel _, _, _)) :: _))) ::
                 _
             -> None
@@ -9842,6 +10530,17 @@ let rec evalBuiltinFun _B _C _D _E
             -> None
           | ItemKl
               (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel StringCon, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel IntToString, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
                 (SUK (ItemFactor (SUKItem (SUIdKLabel _, _, _)) :: _))) ::
               _
             -> None
@@ -9904,7 +10603,7 @@ let rec evalBuiltinFun _B _C _D _E
                             (SUKLabel (ConstToLabel (IntConst b2)), _, _))]))]
             -> Some (KItemSubs
                       (SUKItem
-                        (SUKLabel (ConstToLabel (IntConst (times_int b1 b2))),
+                        (SUKLabel (ConstToLabel (IntConst (times_inta b1 b2))),
                           [], [Int])))
           | ItemKl
               (SUBigBag
@@ -10248,6 +10947,28 @@ let rec evalBuiltinFun _B _C _D _E
                           (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
               ItemKl
                 (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel StringCon, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel IntToString, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
                   (SUK (ItemFactor (SUKItem (SUIdKLabel _, _, _)) :: _))) ::
                 _
             -> None
@@ -10503,6 +11224,943 @@ let rec evalBuiltinFun _B _C _D _E
             -> None
           | ItemKl
               (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel StringCon, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel IntToString, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUIdKLabel _, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabelFun (_, _), _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl (SUBigBag (SUK (ItemFactor (SUIdKItem (_, _)) :: _))) :: _ ->
+            None
+          | ItemKl (SUBigBag (SUK (ItemFactor (SUHOLE _) :: _))) :: _ -> None
+          | ItemKl (SUBigBag (SUK (IdFactor _ :: _))) :: _ -> None
+          | ItemKl (SUBigBag (SUK (SUKKItem (_, _, _) :: _))) :: _ -> None
+          | ItemKl (SUBigBag (SUList _)) :: _ -> None
+          | ItemKl (SUBigBag (SUSet _)) :: _ -> None
+          | ItemKl (SUBigBag (SUMap _)) :: _ -> None
+          | ItemKl (SUBigBag (SUBag _)) :: _ -> None
+          | ItemKl (SUBigLabel _) :: _ -> None | IdKl _ :: _ -> None)
+    | StringCon, kl, database, subG ->
+        (match kl with [] -> None | ItemKl (SUBigBag (SUK [])) :: _ -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel (UnitLabel _), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | [ItemKl
+               (SUBigBag
+                 (SUK [ItemFactor
+                         (SUKItem
+                           (SUKLabel (ConstToLabel (StringConst _)), _, _))]))]
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK [])) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel (UnitLabel _), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (IntConst _)), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (FloatConst _)), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | [ItemKl
+               (SUBigBag
+                 (SUK [ItemFactor
+                         (SUKItem
+                           (SUKLabel (ConstToLabel (StringConst b1)), _, _))]));
+              ItemKl
+                (SUBigBag
+                  (SUK [ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (StringConst b2)), _,
+                              _))]))]
+            -> Some (KItemSubs
+                      (SUKItem
+                        (SUKLabel (ConstToLabel (StringConst (b1 @ b2))), [],
+                          [String])))
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK [ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (StringConst _)), _,
+                              _))])) ::
+                _ :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (StringConst _)), _, _)) ::
+                         _ :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (BoolConst _)), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (IdConst _)), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel Sort, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GetKLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel IsKResult, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel AndBool, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel NotBool, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel OrBool, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel SetConLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel SetItemLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel ListConLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel ListItemLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MapConLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MapItemLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MapUpdate, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualK, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel NotEqualK, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualKLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel NotEqualKLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel (OtherLabel _), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel (TokenLabel _), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel PlusInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MinusInt, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel TimesInt, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualSet, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualMap, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel StringCon, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel IntToString, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUIdKLabel _, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabelFun (_, _), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK (ItemFactor (SUIdKItem (_, _)) :: _))) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK (ItemFactor (SUHOLE _) :: _))) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK (IdFactor _ :: _))) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK (SUKKItem (_, _, _) :: _))) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUList _)) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUSet _)) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUMap _)) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUBag _)) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _))])) ::
+              ItemKl (SUBigLabel _) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _))])) ::
+              IdKl _ :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _)) ::
+                       _ :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (BoolConst _)), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem (SUKLabel (ConstToLabel (IdConst _)), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel Sort, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GetKLabel, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel IsKResult, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel AndBool, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel NotBool, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel OrBool, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel SetConLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel SetItemLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel ListConLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel ListItemLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MapConLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MapItemLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MapUpdate, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualK, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel NotEqualK, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualKLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel NotEqualKLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel (OtherLabel _), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel (TokenLabel _), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel PlusInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MinusInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel TimesInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualSet, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualMap, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel StringCon, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel IntToString, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUIdKLabel _, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabelFun (_, _), _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl (SUBigBag (SUK (ItemFactor (SUIdKItem (_, _)) :: _))) :: _ ->
+            None
+          | ItemKl (SUBigBag (SUK (ItemFactor (SUHOLE _) :: _))) :: _ -> None
+          | ItemKl (SUBigBag (SUK (IdFactor _ :: _))) :: _ -> None
+          | ItemKl (SUBigBag (SUK (SUKKItem (_, _, _) :: _))) :: _ -> None
+          | ItemKl (SUBigBag (SUList _)) :: _ -> None
+          | ItemKl (SUBigBag (SUSet _)) :: _ -> None
+          | ItemKl (SUBigBag (SUMap _)) :: _ -> None
+          | ItemKl (SUBigBag (SUBag _)) :: _ -> None
+          | ItemKl (SUBigLabel _) :: _ -> None | IdKl _ :: _ -> None)
+    | IntToString, kl, database, subG ->
+        (match kl with [] -> None | ItemKl (SUBigBag (SUK [])) :: _ -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel (UnitLabel _), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | [ItemKl
+               (SUBigBag
+                 (SUK [ItemFactor
+                         (SUKItem
+                           (SUKLabel (ConstToLabel (IntConst b1)), _, _))]))]
+            -> Some (KItemSubs
+                      (SUKItem
+                        (SUKLabel
+                           (ConstToLabel
+                             (StringConst
+                               (numToString
+                                 (uminus_int, zero_int, equal_int, numeral_int,
+                                   ord_int, modulo_int)
+                                 b1))),
+                          [], [String])))
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              _ :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _)) ::
+                       _ :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (BoolConst _)), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem (SUKLabel (ConstToLabel (IdConst _)), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel Sort, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GetKLabel, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel IsKResult, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel AndBool, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel NotBool, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel OrBool, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel SetConLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel SetItemLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel ListConLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel ListItemLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MapConLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MapItemLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MapUpdate, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualK, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel NotEqualK, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualKLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel NotEqualKLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel (OtherLabel _), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel (TokenLabel _), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel PlusInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MinusInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel TimesInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualSet, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualMap, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel StringCon, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel IntToString, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
                 (SUK (ItemFactor (SUKItem (SUIdKLabel _, _, _)) :: _))) ::
               _
             -> None
@@ -10535,8 +12193,8 @@ let rec evalBuiltinFun _B _C _D _E
 
 let builtinLabels : 'a label list
   = [GetKLabel; IsKResult; AndBool; NotBool; OrBool; Sort; MapUpdate; EqualK;
-      NotEqualK; EqualSet; EqualMap; EqualKLabel; NotEqualKLabel; PlusInt;
-      MinusInt; TimesInt];;
+      NotEqualK; EqualSet; EqualMap; IntToString; EqualKLabel; NotEqualKLabel;
+      PlusInt; MinusInt; TimesInt; StringCon];;
 
 let rec funEvaluationBool_i_i_i_i_o _A _B _C
   x xa xb xc =
@@ -10561,11 +12219,11 @@ let rec funEvaluationBool_i_i_i_i_o _A _B _C
                         (match aa with None -> bot_pred
                           | Some (l, (funa, (_, cr))) ->
                             bind (if_pred
-                                   (membera (equal_label _A) builtinLabels l))
+                                   (member (equal_label _A) builtinLabels l))
                               (fun () ->
                                 bind (eq_i_o
-                                       (evalBuiltinFun _A _B _C _A l funa
- database subG))
+                                       (evalBuiltinFun _A _B _C l funa database
+ subG))
                                   (fun ab ->
                                     (match ab with None -> bot_pred
                                       | Some r ->
@@ -10591,7 +12249,7 @@ bind (eq_i_o (substitutionInSUKItem _C cr [(FunHole, r)]))
                         (match aa with None -> bot_pred
                           | Some (l, (funa, (_, cr))) ->
                             bind (if_pred
-                                   (not (membera (equal_label _A) builtinLabels
+                                   (not (member (equal_label _A) builtinLabels
   l)))
                               (fun () ->
                                 bind (eq_i_o (getFunRule _A l allRules))
@@ -10631,7 +12289,7 @@ and funEvaluationBoolAux_i_i_i_i_i_i_o _A _B _C
                             (equal_list
                               (equal_prod (equal_metaVar _C)
                                 (equal_subsFactor _A _B _C))))
-                          (patternMacroingInSUKList _A _B _C _C p funa [] subG)
+                          (patternMatchingInSUKList _A _B _C _C p funa subG)
                           None)
                      (fun () ->
                        bind (funEvaluationBoolAux_i_i_i_i_i_i_o _A _B _C
@@ -10646,45 +12304,9 @@ and funEvaluationBoolAux_i_i_i_i_i_i_o _A _B _C
             (fun a ->
               (match a with (_, (_, (_, ([], _)))) -> bot_pred
                 | (allRules,
-                    (database,
-                      (subG, ((p, (_, c)) :: fl, (funa, Continue cr)))))
-                  -> bind (funEvaluationBoolAux_i_i_i_i_i_i_o _A _B _C allRules
-                            database subG fl funa (Continue cr))
-                       (fun aa ->
-                         (match aa with Continue _ -> bot_pred
-                           | Stop ca ->
-                             bind (eq_i_o
-                                    (patternMacroingInSUKList _A _B _C _C p funa
-                                      [] subG))
-                               (fun ab ->
-                                 (match ab with None -> bot_pred
-                                   | Some acc ->
-                                     bind (eq_i_o
-    (substitutionInSUKItem _C c acc))
-                                       (fun ac ->
- (match ac with None -> bot_pred
-   | Some value ->
-     bind (funEvaluationBool_i_i_i_i_o _A _B _C allRules database subG
-            (Continue value))
-       (fun ad ->
-         (match ad with Continue _ -> bot_pred
-           | Stop valuea ->
-             bind (eq_i_i (equal_option (equal_label _A))
-                    (getKLabelInSUKItem valuea)
-                    (Some (ConstToLabel (BoolConst false))))
-               (fun () -> single (Stop ca))
-           | Div _ -> bot_pred))))))
-                           | Div _ -> bot_pred))
-                | (_, (_, (_, ((_, (_, _)) :: _, (_, Stop _))))) -> bot_pred
-                | (_, (_, (_, ((_, (_, _)) :: _, (_, Div _))))) -> bot_pred)))
-          (bind (single (x, (xa, (xb, (xc, (xd, xe))))))
-            (fun a ->
-              (match a with (_, (_, (_, ([], _)))) -> bot_pred
-                | (allRules,
                     (database, (subG, ((p, (r, c)) :: _, (funa, Continue cr)))))
                   -> bind (eq_i_o
-                            (patternMacroingInSUKList _A _B _C _C p funa []
-                              subG))
+                            (patternMatchingInSUKList _A _B _C _C p funa subG))
                        (fun aa ->
                          (match aa with None -> bot_pred
                            | Some acc ->
@@ -10714,6 +12336,41 @@ and funEvaluationBoolAux_i_i_i_i_i_i_o _A _B _C
                              (match af with None -> bot_pred
                                | Some cb -> single (Stop cb))))))))
    | Div _ -> bot_pred))))))
+                | (_, (_, (_, ((_, (_, _)) :: _, (_, Stop _))))) -> bot_pred
+                | (_, (_, (_, ((_, (_, _)) :: _, (_, Div _))))) -> bot_pred)))
+          (bind (single (x, (xa, (xb, (xc, (xd, xe))))))
+            (fun a ->
+              (match a with (_, (_, (_, ([], _)))) -> bot_pred
+                | (allRules,
+                    (database,
+                      (subG, ((p, (_, c)) :: fl, (funa, Continue cr)))))
+                  -> bind (funEvaluationBoolAux_i_i_i_i_i_i_o _A _B _C allRules
+                            database subG fl funa (Continue cr))
+                       (fun aa ->
+                         (match aa with Continue _ -> bot_pred
+                           | Stop ca ->
+                             bind (eq_i_o
+                                    (patternMatchingInSUKList _A _B _C _C p funa
+                                      subG))
+                               (fun ab ->
+                                 (match ab with None -> bot_pred
+                                   | Some acc ->
+                                     bind (eq_i_o
+    (substitutionInSUKItem _C c acc))
+                                       (fun ac ->
+ (match ac with None -> bot_pred
+   | Some value ->
+     bind (funEvaluationBool_i_i_i_i_o _A _B _C allRules database subG
+            (Continue value))
+       (fun ad ->
+         (match ad with Continue _ -> bot_pred
+           | Stop valuea ->
+             bind (eq_i_i (equal_option (equal_label _A))
+                    (getKLabelInSUKItem valuea)
+                    (Some (ConstToLabel (BoolConst false))))
+               (fun () -> single (Stop ca))
+           | Div _ -> bot_pred))))))
+                           | Div _ -> bot_pred))
                 | (_, (_, (_, ((_, (_, _)) :: _, (_, Stop _))))) -> bot_pred
                 | (_, (_, (_, ((_, (_, _)) :: _, (_, Div _))))) ->
                   bot_pred)))));;
@@ -10836,7 +12493,7 @@ let rec simpleKToIR _A
         | KResult -> Some (NormalPat (KItemMatching (IRIdKItem (x, [y]))))
         | KList -> Some (NormalPat (KListMatching (KListPat ([], x, []))))
         | List -> Some (NormalPat (ListMatching (ListPat ([], x, []))))
-        | Seta -> Some (NormalPat (SetMatching (SetPat ([], Some x))))
+        | Set -> Some (NormalPat (SetMatching (SetPat ([], Some x))))
         | Map -> Some (NormalPat (MapMatching (MapPat ([], Some x))))
         | Bag -> Some (NormalPat (BagMatching (BagPat ([], Some x))))
         | OtherSort _ -> Some (NormalPat (KItemMatching (IRIdKItem (x, [y]))))
@@ -10866,7 +12523,7 @@ let rec simpleKToIR _A
                      (IRKItem (IRKLabel (UnitLabel y), KListPatNoVar [], [y]))))
           | KList -> Some (NormalPat (KListMatching (KListPatNoVar [])))
           | List -> Some (NormalPat (ListMatching (ListPatNoVar [])))
-          | Seta -> Some (NormalPat (SetMatching (SetPat ([], None))))
+          | Set -> Some (NormalPat (SetMatching (SetPat ([], None))))
           | Map -> Some (NormalPat (MapMatching (MapPat ([], None))))
           | Bag -> Some (NormalPat (BagMatching (BagPat ([], None))))
           | OtherSort _ ->
@@ -10965,7 +12622,7 @@ let rec simpleKToIR _A
                                 else (if equal_lista (equal_sort _A) t [List]
                                        then Some (ListFunPat (l, kla))
                                        else (if equal_lista (equal_sort _A) t
-          [Seta]
+          [Set]
       then Some (SetFunPat (l, kla))
       else (if equal_lista (equal_sort _A) t [Map]
              then Some (MapFunPat (l, kla))
@@ -11188,6 +12845,20 @@ let rec simpleKToIR _A
                          | Some t ->
                            Some (NormalPat
                                   (KItemMatching
+                                    (IRKItem (IRKLabel l, kla, t)))))
+                     | StringCon ->
+                       (match getSort (equal_label _A) l database
+                         with None -> None
+                         | Some t ->
+                           Some (NormalPat
+                                  (KItemMatching
+                                    (IRKItem (IRKLabel l, kla, t)))))
+                     | IntToString ->
+                       (match getSort (equal_label _A) l database
+                         with None -> None
+                         | Some t ->
+                           Some (NormalPat
+                                  (KItemMatching
                                     (IRKItem (IRKLabel l, kla, t))))))))
 and simpleKToIRKList _A
   x0 database = match x0, database with [], database -> Some (KListPatNoVar [])
@@ -11291,7 +12962,7 @@ let rec simpleKToSU _A
         | KLabel -> Some (KLabelSubs (SUIdKLabel x))
         | KResult -> Some (KItemSubs (SUIdKItem (x, [y])))
         | KList -> Some (KListSubs [IdKl x]) | List -> Some (ListSubs [IdL x])
-        | Seta -> Some (SetSubs [IdS x]) | Map -> Some (MapSubs [IdM x])
+        | Set -> Some (SetSubs [IdS x]) | Map -> Some (MapSubs [IdM x])
         | Bag -> Some (BagSubs [IdB x])
         | OtherSort _ -> Some (KItemSubs (SUIdKItem (x, [y])))
         | Top -> Some (KItemSubs (SUIdKItem (x, [y])))
@@ -11311,7 +12982,7 @@ let rec simpleKToSU _A
           | KResult ->
             Some (KItemSubs (SUKItem (SUKLabel (UnitLabel y), [], [y])))
           | KList -> Some (KListSubs []) | List -> Some (ListSubs [])
-          | Seta -> Some (SetSubs []) | Map -> Some (MapSubs [])
+          | Set -> Some (SetSubs []) | Map -> Some (MapSubs [])
           | Bag -> Some (BagSubs [])
           | OtherSort _ ->
             Some (KItemSubs (SUKItem (SUKLabel (UnitLabel y), [], [y])))
@@ -11362,7 +13033,7 @@ let rec simpleKToSU _A
                                        then Some (ListSubs
            [SUListKItem (SUKLabel l, kla)])
                                        else (if equal_lista (equal_sort _A) t
-          [Seta]
+          [Set]
       then Some (SetSubs [SUSetKItem (SUKLabel l, kla)])
       else (if equal_lista (equal_sort _A) t [Map]
              then Some (MapSubs [SUMapKItem (SUKLabel l, kla)])
@@ -11529,6 +13200,16 @@ let rec simpleKToSU _A
                        (match getSort (equal_label _A) l database
                          with None -> None
                          | Some t ->
+                           Some (KItemSubs (SUKItem (SUKLabel l, kla, t))))
+                     | StringCon ->
+                       (match getSort (equal_label _A) l database
+                         with None -> None
+                         | Some t ->
+                           Some (KItemSubs (SUKItem (SUKLabel l, kla, t))))
+                     | IntToString ->
+                       (match getSort (equal_label _A) l database
+                         with None -> None
+                         | Some t ->
                            Some (KItemSubs (SUKItem (SUKLabel l, kla, t)))))))
 and simpleKToSUKList _A
   x0 database = match x0, database with [], database -> Some []
@@ -11573,6 +13254,177 @@ let rec mergeFunRules _A
           | BagRulePat (_, _, _, _) ->
             (match mergeFunRules _A l a b xl with None -> None
               | Some xla -> Some (x :: xla)));;
+
+let rec getAllMetaVarsInSUKLabel
+  = function SUKLabel a -> []
+    | SUKLabelFun (a, b) -> getAllMetaVarsInSUKList b
+    | SUIdKLabel n -> [n]
+and getAllMetaVarsInSUBigKWithLabel
+  = function SUBigBag t -> getAllMetaVarsInSUBigKWithBag t
+    | SUBigLabel t -> getAllMetaVarsInSUKLabel t
+and getAllMetaVarsInSUKList
+  = function [] -> []
+    | b :: l ->
+        (match b with ItemKl a -> getAllMetaVarsInSUBigKWithLabel a
+          | IdKl a -> [a])
+and getAllMetaVarsInSUKItem
+  = function
+    SUKItem (l, r, ty) -> getAllMetaVarsInSUKLabel l @ getAllMetaVarsInSUKList r
+    | SUIdKItem (a, b) -> [a]
+    | SUHOLE a -> []
+and getAllMetaVarsInSUK
+  = function [] -> []
+    | b :: l ->
+        (match b with ItemFactor a -> getAllMetaVarsInSUKItem a
+          | IdFactor x -> [x]
+          | SUKKItem (la, r, _) ->
+            getAllMetaVarsInSUKLabel la @ getAllMetaVarsInSUKList r)
+and getAllMetaVarsInSUMap
+  = function [] -> []
+    | b :: l ->
+        (match b
+          with ItemM (x, y) -> getAllMetaVarsInSUK x @ getAllMetaVarsInSUK y
+          | IdM x -> [x]
+          | SUMapKItem (la, r) ->
+            getAllMetaVarsInSUKLabel la @ getAllMetaVarsInSUKList r)
+and getAllMetaVarsInSUSet
+  = function [] -> []
+    | b :: l ->
+        (match b with ItemS a -> getAllMetaVarsInSUK a | IdS x -> [x]
+          | SUSetKItem (la, r) ->
+            getAllMetaVarsInSUKLabel la @ getAllMetaVarsInSUKList r)
+and getAllMetaVarsInSUList
+  = function [] -> []
+    | b :: l ->
+        (match b with ItemL a -> getAllMetaVarsInSUK a | IdL x -> [x]
+          | SUListKItem (la, r) ->
+            getAllMetaVarsInSUKLabel la @ getAllMetaVarsInSUKList r)
+and getAllMetaVarsInSUBigKWithBag = function SUBag b -> getAllMetaVarsInSUBag b
+                                    | SUK t -> getAllMetaVarsInSUK t
+                                    | SUList t -> getAllMetaVarsInSUList t
+                                    | SUSet t -> getAllMetaVarsInSUSet t
+                                    | SUMap t -> getAllMetaVarsInSUMap t
+and getAllMetaVarsInSUBag
+  = function [] -> []
+    | b :: l ->
+        (match b with ItemB (_, _, a) -> getAllMetaVarsInSUBigKWithBag a
+          | IdB x -> [x]);;
+
+let rec getAllMetaVarsInSubsFactor
+  = function KLabelSubs a -> getAllMetaVarsInSUKLabel a
+    | KItemSubs a -> getAllMetaVarsInSUKItem a
+    | KListSubs a -> getAllMetaVarsInSUKList a
+    | KSubs a -> getAllMetaVarsInSUK a
+    | ListSubs a -> getAllMetaVarsInSUList a
+    | SetSubs a -> getAllMetaVarsInSUSet a
+    | MapSubs a -> getAllMetaVarsInSUMap a
+    | BagSubs a -> getAllMetaVarsInSUBag a;;
+
+let rec getAllMetaVarsInIRKLabel = function IRKLabel a -> []
+                                   | IRIdKLabel n -> [n];;
+
+let rec getAllMetaVarsInIRKList
+  = function
+    KListPatNoVar a ->
+      foldl (fun acc y -> getAllMetaVarsInIRBigKWithLabel y @ acc) [] a
+    | KListPat (a, b, c) ->
+        b :: foldl (fun acc y -> getAllMetaVarsInIRBigKWithLabel y @ acc) []
+               (a @ c)
+and getAllMetaVarsInIRKItem
+  = function
+    IRKItem (l, r, ty) -> getAllMetaVarsInIRKLabel l @ getAllMetaVarsInIRKList r
+    | IRIdKItem (a, b) -> [a]
+    | IRHOLE a -> []
+and getAllMetaVarsInIRK
+  (KPat (a, b)) =
+    (match b
+      with None -> foldl (fun acc y -> getAllMetaVarsInIRKItem y @ acc) [] a
+      | Some x ->
+        x :: foldl (fun acc y -> getAllMetaVarsInIRKItem y @ acc) [] a)
+and getAllMetaVarsInIRMap
+  (MapPat (a, b)) =
+    (match b
+      with None ->
+        foldl (fun acc (x, y) ->
+                getAllMetaVarsInIRK x @ getAllMetaVarsInIRK y @ acc)
+          [] a
+      | Some x ->
+        x :: foldl (fun acc (xa, y) ->
+                     getAllMetaVarsInIRK xa @ getAllMetaVarsInIRK y @ acc)
+               [] a)
+and getAllMetaVarsInIRSet
+  (SetPat (a, b)) =
+    (match b with None -> foldl (fun acc y -> getAllMetaVarsInIRK y @ acc) [] a
+      | Some x -> x :: foldl (fun acc y -> getAllMetaVarsInIRK y @ acc) [] a)
+and getAllMetaVarsInIRList
+  = function
+    ListPatNoVar a -> foldl (fun acc y -> getAllMetaVarsInIRK y @ acc) [] a
+    | ListPat (a, b, c) ->
+        b :: foldl (fun acc y -> getAllMetaVarsInIRK y @ acc) [] (a @ c)
+and getAllMetaVarsInIRBigKWithBag = function IRBag b -> getAllMetaVarsInIRBag b
+                                    | IRK t -> getAllMetaVarsInIRK t
+                                    | IRList t -> getAllMetaVarsInIRList t
+                                    | IRSet t -> getAllMetaVarsInIRSet t
+                                    | IRMap t -> getAllMetaVarsInIRMap t
+and getAllMetaVarsInIRBag
+  (BagPat (a, b)) =
+    (match b
+      with None ->
+        foldl (fun acc (_, (_, z)) -> getAllMetaVarsInIRBigKWithBag z @ acc) []
+          a
+      | Some x ->
+        x :: foldl (fun acc (_, (_, z)) ->
+                     getAllMetaVarsInIRBigKWithBag z @ acc)
+               [] a)
+and getAllMetaVarsInIRBigKWithLabel
+  = function IRBigBag t -> getAllMetaVarsInIRBigKWithBag t
+    | IRBigLabel t -> getAllMetaVarsInIRKLabel t;;
+
+let rec getAllMetaVarsInMatchFactor
+  = function KLabelMatching a -> getAllMetaVarsInIRKLabel a
+    | KItemMatching a -> getAllMetaVarsInIRKItem a
+    | KListMatching a -> getAllMetaVarsInIRKList a
+    | KMatching a -> getAllMetaVarsInIRK a
+    | ListMatching a -> getAllMetaVarsInIRList a
+    | SetMatching a -> getAllMetaVarsInIRSet a
+    | MapMatching a -> getAllMetaVarsInIRMap a
+    | BagMatching a -> getAllMetaVarsInIRBag a;;
+
+let rec getAllMetaVarsInPat
+  = function KLabelFunPat (a, b) -> getAllMetaVarsInIRKList b
+    | KFunPat (a, b) -> getAllMetaVarsInIRKList b
+    | KItemFunPat (a, b) -> getAllMetaVarsInIRKList b
+    | ListFunPat (a, b) -> getAllMetaVarsInIRKList b
+    | SetFunPat (a, b) -> getAllMetaVarsInIRKList b
+    | MapFunPat (a, b) -> getAllMetaVarsInIRKList b
+    | NormalPat a -> getAllMetaVarsInMatchFactor a;;
+
+let rec wellFormRules _C
+  = function [] -> true
+    | FunPat (s, rl, a) :: l ->
+        foldl (fun b (x, (y, z)) ->
+                b && list_all
+                       (member (equal_metaVar _C) (getAllMetaVarsInPat x))
+                       (getAllMetaVarsInSubsFactor y @
+                         getAllMetaVarsInSUKItem z))
+          true (match a with None -> rl | Some aa -> aa :: rl) &&
+          wellFormRules _C l
+    | MacroPat (s, a, b) :: l ->
+        list_all (member (equal_metaVar _C) (getAllMetaVarsInIRKList a))
+          (getAllMetaVarsInSUK b) &&
+          wellFormRules _C l
+    | AnywherePat (ss, a, b, c) :: l ->
+        list_all (member (equal_metaVar _C) (getAllMetaVarsInIRKList a))
+          (getAllMetaVarsInSUK b @ getAllMetaVarsInSUKItem c) &&
+          wellFormRules _C l
+    | KRulePat (a, b, c, tb) :: l ->
+        list_all (member (equal_metaVar _C) (getAllMetaVarsInIRK a))
+          (getAllMetaVarsInSUK b @ getAllMetaVarsInSUKItem c) &&
+          wellFormRules _C l
+    | BagRulePat (a, b, c, tb) :: l ->
+        list_all (member (equal_metaVar _C) (getAllMetaVarsInIRBag a))
+          (getAllMetaVarsInSUBag b @ getAllMetaVarsInSUKItem c) &&
+          wellFormRules _C l;;
 
 let rec getAllSubsortOnItem _A
   x0 a = match x0, a with [], a -> []
@@ -11627,20 +13479,20 @@ let rec funEvaluationAux_i_i_i_i_i_i_o _A _B _C
           (fun a ->
             (match a with (_, (_, (_, ([], _)))) -> bot_pred
               | (allRules,
-                  (database, (subG, ((p, (_, _)) :: fl, (funa, Continue br)))))
+                  (database, (subG, ((p, (_, _)) :: fl, (funa, Continue cr)))))
                 -> bind (eq_i_i
                           (equal_option
                             (equal_list
                               (equal_prod (equal_metaVar _C)
                                 (equal_subsFactor _A _B _C))))
-                          (patternMacroingInSUKList _A _B _C _C p funa [] subG)
+                          (patternMatchingInSUKList _A _B _C _C p funa subG)
                           None)
                      (fun () ->
                        bind (funEvaluationAux_i_i_i_i_i_i_o _A _B _C allRules
-                              database subG fl funa (Continue br))
+                              database subG fl funa (Continue cr))
                          (fun aa ->
                            (match aa with Continue _ -> bot_pred
-                             | Stop b -> single (Stop b) | Div _ -> bot_pred)))
+                             | Stop c -> single (Stop c) | Div _ -> bot_pred)))
               | (_, (_, (_, ((_, (_, _)) :: _, (_, Stop _))))) -> bot_pred
               | (_, (_, (_, ((_, (_, _)) :: _, (_, Div _))))) -> bot_pred)))
         (sup_pred
@@ -11648,45 +13500,9 @@ let rec funEvaluationAux_i_i_i_i_i_i_o _A _B _C
             (fun a ->
               (match a with (_, (_, (_, ([], _)))) -> bot_pred
                 | (allRules,
-                    (database,
-                      (subG, ((p, (_, c)) :: fl, (funa, Continue br)))))
-                  -> bind (funEvaluationAux_i_i_i_i_i_i_o _A _B _C allRules
-                            database subG fl funa (Continue br))
-                       (fun aa ->
-                         (match aa with Continue _ -> bot_pred
-                           | Stop b ->
-                             bind (eq_i_o
-                                    (patternMacroingInSUKList _A _B _C _C p funa
-                                      [] subG))
-                               (fun ab ->
-                                 (match ab with None -> bot_pred
-                                   | Some acc ->
-                                     bind (eq_i_o
-    (substitutionInSUKItem _C c acc))
-                                       (fun ac ->
- (match ac with None -> bot_pred
-   | Some value ->
-     bind (funEvaluationBool_i_i_i_i_o _A _B _C allRules database subG
-            (Continue value))
-       (fun ad ->
-         (match ad with Continue _ -> bot_pred
-           | Stop valuea ->
-             bind (eq_i_i (equal_option (equal_label _A))
-                    (getKLabelInSUKItem valuea)
-                    (Some (ConstToLabel (BoolConst false))))
-               (fun () -> single (Stop b))
-           | Div _ -> bot_pred))))))
-                           | Div _ -> bot_pred))
-                | (_, (_, (_, ((_, (_, _)) :: _, (_, Stop _))))) -> bot_pred
-                | (_, (_, (_, ((_, (_, _)) :: _, (_, Div _))))) -> bot_pred)))
-          (bind (single (x, (xa, (xb, (xc, (xd, xe))))))
-            (fun a ->
-              (match a with (_, (_, (_, ([], _)))) -> bot_pred
-                | (allRules,
-                    (database, (subG, ((p, (r, c)) :: _, (funa, Continue br)))))
+                    (database, (subG, ((p, (r, c)) :: _, (funa, Continue cr)))))
                   -> bind (eq_i_o
-                            (patternMacroingInSUKList _A _B _C _C p funa []
-                              subG))
+                            (patternMatchingInSUKList _A _B _C _C p funa subG))
                        (fun aa ->
                          (match aa with None -> bot_pred
                            | Some acc ->
@@ -11706,17 +13522,52 @@ let rec funEvaluationAux_i_i_i_i_i_i_o _A _B _C
            (fun ad ->
              (match ad with None -> bot_pred
                | Some ra ->
-                 bind (eq_i_o (substitutionInSUBag _C br [(FunHole, ra)]))
+                 bind (eq_i_o (substitutionInSUBag _C cr [(FunHole, ra)]))
                    (fun ae ->
                      (match ae with None -> bot_pred
-                       | Some b ->
+                       | Some ca ->
                          bind (eq_i_o
-                                (typeCheckProgramState _A _B _C b database
+                                (typeCheckProgramState _A _B _C ca database
                                   subG))
                            (fun af ->
                              (match af with None -> bot_pred
-                               | Some ba -> single (Stop ba))))))))
+                               | Some cb -> single (Stop cb))))))))
    | Div _ -> bot_pred))))))
+                | (_, (_, (_, ((_, (_, _)) :: _, (_, Stop _))))) -> bot_pred
+                | (_, (_, (_, ((_, (_, _)) :: _, (_, Div _))))) -> bot_pred)))
+          (bind (single (x, (xa, (xb, (xc, (xd, xe))))))
+            (fun a ->
+              (match a with (_, (_, (_, ([], _)))) -> bot_pred
+                | (allRules,
+                    (database,
+                      (subG, ((p, (_, c)) :: fl, (funa, Continue cr)))))
+                  -> bind (funEvaluationAux_i_i_i_i_i_i_o _A _B _C allRules
+                            database subG fl funa (Continue cr))
+                       (fun aa ->
+                         (match aa with Continue _ -> bot_pred
+                           | Stop ca ->
+                             bind (eq_i_o
+                                    (patternMatchingInSUKList _A _B _C _C p funa
+                                      subG))
+                               (fun ab ->
+                                 (match ab with None -> bot_pred
+                                   | Some acc ->
+                                     bind (eq_i_o
+    (substitutionInSUKItem _C c acc))
+                                       (fun ac ->
+ (match ac with None -> bot_pred
+   | Some value ->
+     bind (funEvaluationBool_i_i_i_i_o _A _B _C allRules database subG
+            (Continue value))
+       (fun ad ->
+         (match ad with Continue _ -> bot_pred
+           | Stop valuea ->
+             bind (eq_i_i (equal_option (equal_label _A))
+                    (getKLabelInSUKItem valuea)
+                    (Some (ConstToLabel (BoolConst false))))
+               (fun () -> single (Stop ca))
+           | Div _ -> bot_pred))))))
+                           | Div _ -> bot_pred))
                 | (_, (_, (_, ((_, (_, _)) :: _, (_, Stop _))))) -> bot_pred
                 | (_, (_, (_, ((_, (_, _)) :: _, (_, Div _))))) ->
                   bot_pred)))));;
@@ -11744,11 +13595,11 @@ let rec funEvaluation_i_i_i_i_o _A _B _C
                         (match aa with None -> bot_pred
                           | Some (l, (funa, (_, cr))) ->
                             bind (if_pred
-                                   (membera (equal_label _A) builtinLabels l))
+                                   (member (equal_label _A) builtinLabels l))
                               (fun () ->
                                 bind (eq_i_o
-                                       (evalBuiltinFun _A _B _C _A l funa
- database subG))
+                                       (evalBuiltinFun _A _B _C l funa database
+ subG))
                                   (fun ab ->
                                     (match ab with None -> bot_pred
                                       | Some r ->
@@ -11774,7 +13625,7 @@ bind (eq_i_o (substitutionInSUBag _C cr [(FunHole, r)]))
                         (match aa with None -> bot_pred
                           | Some (l, (funa, (_, br))) ->
                             bind (if_pred
-                                   (not (membera (equal_label _A) builtinLabels
+                                   (not (member (equal_label _A) builtinLabels
   l)))
                               (fun () ->
                                 bind (eq_i_o (getFunRule _A l allRules))
@@ -11800,6 +13651,54 @@ let rec funRuleEvalFun _A _B _C
     the (equal_state (equal_list (equal_suB _A _B _C)))
       (funEvaluation_i_i_i_i_o _A _B _C allRules database subG (Continue c));;
 
+let rec getDomainInIRK
+  = function KPat ([], b) -> []
+    | KPat (x :: l, b) -> getDomainInIRKItem x @ getDomainInIRK (KPat (l, b))
+and getDomainInIRMap
+  = function MapPat ([], b) -> []
+    | MapPat ((x, y) :: l, b) ->
+        getDomainInIRK x @ getDomainInIRK y @ getDomainInIRMap (MapPat (l, b))
+and getDomainInIRSet
+  = function SetPat ([], b) -> []
+    | SetPat (x :: l, b) -> getDomainInIRK x @ getDomainInIRSet (SetPat (l, b))
+and getDomainInIRList
+  = function ListPatNoVar [] -> []
+    | ListPatNoVar (x :: l) ->
+        getDomainInIRK x @ getDomainInIRList (ListPatNoVar l)
+    | ListPat ([], b, []) -> []
+    | ListPat ([], b, x :: l) ->
+        getDomainInIRK x @ getDomainInIRList (ListPat ([], b, l))
+    | ListPat (x :: l, b, s) ->
+        getDomainInIRK x @ getDomainInIRList (ListPat (l, b, s))
+and getDomainInIRBigKWithBag = function IRK a -> getDomainInIRK a
+                               | IRList a -> getDomainInIRList a
+                               | IRSet a -> getDomainInIRSet a
+                               | IRMap a -> getDomainInIRMap a
+                               | IRBag a -> getDomainInIRBag a
+and getDomainInIRBag
+  = function BagPat ([], b) -> []
+    | BagPat ((x, (y, z)) :: l, b) ->
+        getDomainInIRBigKWithBag z @ getDomainInIRBag (BagPat (l, b))
+and getDomainInIRBigKWithLabel
+  = function IRBigBag a -> getDomainInIRBigKWithBag a
+    | IRBigLabel a -> []
+and getDomainInIRKList
+  = function KListPatNoVar [] -> []
+    | KListPatNoVar (x :: l) ->
+        getDomainInIRBigKWithLabel x @ getDomainInIRKList (KListPatNoVar l)
+    | KListPat ([], b, []) -> []
+    | KListPat ([], b, x :: l) ->
+        getDomainInIRBigKWithLabel x @ getDomainInIRKList (KListPat ([], b, l))
+    | KListPat (x :: l, b, s) ->
+        getDomainInIRBigKWithLabel x @ getDomainInIRKList (KListPat (l, b, s))
+and getDomainInIRKItem
+  = function
+    IRKItem (a, b, ty) ->
+      (match a with IRKLabel _ -> getDomainInIRKList b
+        | IRIdKLabel x -> x :: getDomainInIRKList b)
+    | IRIdKItem (a, ty) -> []
+    | IRHOLE ty -> [];;
+
 let rec removeSubsorts
   = function [] -> []
     | x :: xl ->
@@ -11810,7 +13709,7 @@ let rec removeSubsorts
 
 let rec tupleToRulePat _A _D _E
   (x, (y, (z, u))) database =
-    (if membera (equal_ruleAttrib _D _E) u Macro
+    (if member (equal_ruleAttrib _D _E) u Macro
       then (match simpleKToIR _A x database with None -> None
              | Some (KLabelFunPat (_, _)) -> None
              | Some (KFunPat (_, _)) -> None | Some (KItemFunPat (_, _)) -> None
@@ -11846,7 +13745,8 @@ let rec tupleToRulePat _A _D _E
                          | Some (OtherLabel _) -> None
                          | Some (TokenLabel _) -> None | Some PlusInt -> None
                          | Some MinusInt -> None | Some TimesInt -> None
-                         | Some EqualSet -> None | Some EqualMap -> None)
+                         | Some EqualSet -> None | Some EqualMap -> None
+                         | Some StringCon -> None | Some IntToString -> None)
                      | Some (KListSubs _) -> None | Some (KSubs _) -> None
                      | Some (ListSubs _) -> None | Some (SetSubs _) -> None
                      | Some (MapSubs _) -> None | Some (BagSubs _) -> None)
@@ -11877,7 +13777,8 @@ let rec tupleToRulePat _A _D _E
                          | Some (OtherLabel _) -> None
                          | Some (TokenLabel _) -> None | Some PlusInt -> None
                          | Some MinusInt -> None | Some TimesInt -> None
-                         | Some EqualSet -> None | Some EqualMap -> None)
+                         | Some EqualSet -> None | Some EqualMap -> None
+                         | Some StringCon -> None | Some IntToString -> None)
                      | Some (KListSubs _) -> None | Some (KSubs _) -> None
                      | Some (ListSubs _) -> None | Some (SetSubs _) -> None
                      | Some (MapSubs _) -> None | Some (BagSubs _) -> None)
@@ -11921,7 +13822,8 @@ let rec tupleToRulePat _A _D _E
                             | Some (OtherLabel _) -> None
                             | Some (TokenLabel _) -> None | Some PlusInt -> None
                             | Some MinusInt -> None | Some TimesInt -> None
-                            | Some EqualSet -> None | Some EqualMap -> None)
+                            | Some EqualSet -> None | Some EqualMap -> None
+                            | Some StringCon -> None | Some IntToString -> None)
                         | Some (KListSubs _) -> None | Some (KSubs _) -> None
                         | Some (ListSubs _) -> None | Some (SetSubs _) -> None
                         | Some (MapSubs _) -> None | Some (BagSubs _) -> None)
@@ -11954,7 +13856,8 @@ let rec tupleToRulePat _A _D _E
                             | Some (OtherLabel _) -> None
                             | Some (TokenLabel _) -> None | Some PlusInt -> None
                             | Some MinusInt -> None | Some TimesInt -> None
-                            | Some EqualSet -> None | Some EqualMap -> None)
+                            | Some EqualSet -> None | Some EqualMap -> None
+                            | Some StringCon -> None | Some IntToString -> None)
                         | Some (KListSubs _) -> None | Some (KSubs _) -> None
                         | Some (ListSubs _) -> None | Some (SetSubs _) -> None
                         | Some (MapSubs _) -> None | Some (BagSubs _) -> None)
@@ -11977,7 +13880,7 @@ let rec tupleToRulePat _A _D _E
              | Some (NormalPat (SetMatching _)) -> None
              | Some (NormalPat (MapMatching _)) -> None
              | Some (NormalPat (BagMatching _)) -> None)
-      else (if membera (equal_ruleAttrib _D _E) u Anywhere
+      else (if member (equal_ruleAttrib _D _E) u Anywhere
              then (match simpleKToIR _A x database with None -> None
                     | Some (KLabelFunPat (_, _)) -> None
                     | Some (KFunPat (_, _)) -> None
@@ -12084,7 +13987,7 @@ let rec tupleToRulePat _A _D _E
                           (match simpleKToSU _A z database with None -> None
                             | Some (KLabelSubs _) -> None
                             | Some (KItemSubs za) ->
-                              (if not (membera (equal_ruleAttrib _D _E) u Owise)
+                              (if not (member (equal_ruleAttrib _D _E) u Owise)
                                 then Some (FunPat
     (l, [(KLabelFunPat (l, kl), (KLabelSubs ya, za))], None))
                                 else Some (FunPat
@@ -12105,7 +14008,7 @@ let rec tupleToRulePat _A _D _E
                           (match simpleKToSU _A z database with None -> None
                             | Some (KLabelSubs _) -> None
                             | Some (KItemSubs za) ->
-                              (if not (membera (equal_ruleAttrib _D _E) u Owise)
+                              (if not (member (equal_ruleAttrib _D _E) u Owise)
                                 then Some (FunPat
     (l, [(KFunPat (l, kl), (KSubs [ItemFactor ya], za))], None))
                                 else Some (FunPat
@@ -12120,7 +14023,7 @@ let rec tupleToRulePat _A _D _E
                           (match simpleKToSU _A z database with None -> None
                             | Some (KLabelSubs _) -> None
                             | Some (KItemSubs za) ->
-                              (if not (membera (equal_ruleAttrib _D _E) u Owise)
+                              (if not (member (equal_ruleAttrib _D _E) u Owise)
                                 then Some (FunPat
     (l, [(KFunPat (l, kl), (KSubs ya, za))], None))
                                 else Some (FunPat
@@ -12139,7 +14042,7 @@ let rec tupleToRulePat _A _D _E
                           (match simpleKToSU _A z database with None -> None
                             | Some (KLabelSubs _) -> None
                             | Some (KItemSubs za) ->
-                              (if not (membera (equal_ruleAttrib _D _E) u Owise)
+                              (if not (member (equal_ruleAttrib _D _E) u Owise)
                                 then Some (FunPat
     (l, [(KItemFunPat (l, kl), (KItemSubs ya, za))], None))
                                 else Some (FunPat
@@ -12154,7 +14057,7 @@ let rec tupleToRulePat _A _D _E
                           (match simpleKToSU _A z database with None -> None
                             | Some (KLabelSubs _) -> None
                             | Some (KItemSubs za) ->
-                              (if not (membera (equal_ruleAttrib _D _E) u Owise)
+                              (if not (member (equal_ruleAttrib _D _E) u Owise)
                                 then Some (FunPat
     (l, [(KItemFunPat (l, kl), (KItemSubs ya, za))], None))
                                 else Some (FunPat
@@ -12178,7 +14081,7 @@ let rec tupleToRulePat _A _D _E
                           (match simpleKToSU _A z database with None -> None
                             | Some (KLabelSubs _) -> None
                             | Some (KItemSubs za) ->
-                              (if not (membera (equal_ruleAttrib _D _E) u Owise)
+                              (if not (member (equal_ruleAttrib _D _E) u Owise)
                                 then Some (FunPat
     (l, [(ListFunPat (l, kl), (ListSubs ya, za))], None))
                                 else Some (FunPat
@@ -12200,7 +14103,7 @@ let rec tupleToRulePat _A _D _E
                           (match simpleKToSU _A z database with None -> None
                             | Some (KLabelSubs _) -> None
                             | Some (KItemSubs za) ->
-                              (if not (membera (equal_ruleAttrib _D _E) u Owise)
+                              (if not (member (equal_ruleAttrib _D _E) u Owise)
                                 then Some (FunPat
     (l, [(SetFunPat (l, kl), (SetSubs ya, za))], None))
                                 else Some (FunPat
@@ -12221,7 +14124,7 @@ let rec tupleToRulePat _A _D _E
                           (match simpleKToSU _A z database with None -> None
                             | Some (KLabelSubs _) -> None
                             | Some (KItemSubs za) ->
-                              (if not (membera (equal_ruleAttrib _D _E) u Owise)
+                              (if not (member (equal_ruleAttrib _D _E) u Owise)
                                 then Some (FunPat
     (l, [(MapFunPat (l, kl), (MapSubs ya, za))], None))
                                 else Some (FunPat
@@ -12241,7 +14144,7 @@ let rec tupleToRulePat _A _D _E
                             | Some (KItemSubs za) ->
                               Some (KRulePat
                                      (KPat ([xa], None), [ItemFactor ya], za,
-                                       (if membera (equal_ruleAttrib _D _E) u
+                                       (if member (equal_ruleAttrib _D _E) u
      Transition
  then true else false)))
                             | Some (KListSubs _) -> None
@@ -12256,7 +14159,7 @@ let rec tupleToRulePat _A _D _E
                             | Some (KItemSubs za) ->
                               Some (KRulePat
                                      (KPat ([xa], None), ya, za,
-                                       (if membera (equal_ruleAttrib _D _E) u
+                                       (if member (equal_ruleAttrib _D _E) u
      Transition
  then true else false)))
                             | Some (KListSubs _) -> None
@@ -12275,7 +14178,7 @@ let rec tupleToRulePat _A _D _E
                             | Some (KItemSubs za) ->
                               Some (KRulePat
                                      (xa, [ItemFactor ya], za,
-                                       (if membera (equal_ruleAttrib _D _E) u
+                                       (if member (equal_ruleAttrib _D _E) u
      Transition
  then true else false)))
                             | Some (KListSubs _) -> None
@@ -12290,7 +14193,7 @@ let rec tupleToRulePat _A _D _E
                             | Some (KItemSubs za) ->
                               Some (KRulePat
                                      (xa, ya, za,
-                                       (if membera (equal_ruleAttrib _D _E) u
+                                       (if member (equal_ruleAttrib _D _E) u
      Transition
  then true else false)))
                             | Some (KListSubs _) -> None
@@ -12313,7 +14216,7 @@ let rec tupleToRulePat _A _D _E
                             | Some (KItemSubs za) ->
                               Some (BagRulePat
                                      (xa, ya, za,
-                                       (if membera (equal_ruleAttrib _D _E) u
+                                       (if member (equal_ruleAttrib _D _E) u
      Transition
  then true else false)))
                             | Some (KListSubs _) -> None
@@ -12321,6 +14224,217 @@ let rec tupleToRulePat _A _D _E
                             | Some (SetSubs _) -> None
                             | Some (MapSubs _) -> None
                             | Some (BagSubs _) -> None)))));;
+
+let rec constructSortMap = function [] -> []
+                           | a :: l -> (a, [Top]) :: constructSortMap l;;
+
+let rec checkTypesInFunPats _A _C
+  s x1 database subG = match s, x1, database, subG with
+    s, [], database, subG -> true
+    | s, b :: l, database, subG ->
+        (match b
+          with (KLabelFunPat (ss, kl), (y, z)) ->
+            (if equal_labela _A ss s
+              then (match y
+                     with KLabelSubs sl ->
+                       (match
+                         (getSort (equal_label _A) s database,
+                           getArgSort (equal_label _A) s database)
+                         with (None, _) -> false | (Some _, None) -> false
+                         | (Some ty, Some tyl) ->
+                           (if equal_lista (equal_sort _A) ty [KLabel]
+                             then (match
+                                    checkTermsInSUKList _A _C
+                                      (irToSUInKList _A kl) tyl []
+                                      (constructSortMap (getDomainInIRKList kl))
+                                      database subG
+                                    with None -> false
+                                    | Some (acckl, (betakl, _)) ->
+                                      (match
+checkTermsInSUKLabel _A _C sl acckl betakl database subG with None -> false
+| Some (accsl, (betasl, _)) ->
+  (match checkTermsInSUKItem _A _C z [KItem] accsl betasl database subG
+    with None -> false
+    | Some (accz, (betaz, _)) ->
+      (if hasNoTop _A accz && hasNoTop _A betaz
+        then checkTypesInFunPats _A _C s l database subG else false))))
+                             else false))
+                     | KItemSubs _ -> false | KListSubs _ -> false
+                     | KSubs _ -> false | ListSubs _ -> false
+                     | SetSubs _ -> false | MapSubs _ -> false
+                     | BagSubs _ -> false)
+              else false)
+          | (KFunPat (ss, kl), (y, z)) ->
+            (if equal_labela _A ss s
+              then (match y with KLabelSubs _ -> false | KItemSubs _ -> false
+                     | KListSubs _ -> false
+                     | KSubs sl ->
+                       (match
+                         (getSort (equal_label _A) s database,
+                           getArgSort (equal_label _A) s database)
+                         with (None, _) -> false | (Some _, None) -> false
+                         | (Some ty, Some tyl) ->
+                           (if subsortList (equal_sort _A) ty [K] subG
+                             then (match
+                                    checkTermsInSUKList _A _C
+                                      (irToSUInKList _A kl) tyl []
+                                      (constructSortMap (getDomainInIRKList kl))
+                                      database subG
+                                    with None -> false
+                                    | Some (acckl, (betakl, _)) ->
+                                      (match
+checkTermsInSUK _A _C sl ty acckl betakl database subG with None -> false
+| Some (accsl, (betasl, _)) ->
+  (match checkTermsInSUKItem _A _C z [KItem] accsl betasl database subG
+    with None -> false
+    | Some (accz, (betaz, _)) ->
+      (if hasNoTop _A accz && hasNoTop _A betaz
+        then checkTypesInFunPats _A _C s l database subG else false))))
+                             else false))
+                     | ListSubs _ -> false | SetSubs _ -> false
+                     | MapSubs _ -> false | BagSubs _ -> false)
+              else false)
+          | (KItemFunPat (ss, kl), (y, z)) ->
+            (if equal_labela _A ss s
+              then (match y with KLabelSubs _ -> false
+                     | KItemSubs sl ->
+                       (match
+                         (getSort (equal_label _A) s database,
+                           getArgSort (equal_label _A) s database)
+                         with (None, _) -> false | (Some _, None) -> false
+                         | (Some ty, Some tyl) ->
+                           (if subsortList (equal_sort _A) ty [KItem] subG
+                             then (match
+                                    checkTermsInSUKList _A _C
+                                      (irToSUInKList _A kl) tyl []
+                                      (constructSortMap (getDomainInIRKList kl))
+                                      database subG
+                                    with None -> false
+                                    | Some (acckl, (betakl, _)) ->
+                                      (match
+checkTermsInSUKItem _A _C sl ty acckl betakl database subG with None -> false
+| Some (accsl, (betasl, _)) ->
+  (match checkTermsInSUKItem _A _C z [KItem] accsl betasl database subG
+    with None -> false
+    | Some (accz, (betaz, _)) ->
+      (if hasNoTop _A accz && hasNoTop _A betaz
+        then checkTypesInFunPats _A _C s l database subG else false))))
+                             else false))
+                     | KListSubs _ -> false | KSubs _ -> false
+                     | ListSubs _ -> false | SetSubs _ -> false
+                     | MapSubs _ -> false | BagSubs _ -> false)
+              else false)
+          | (ListFunPat (ss, kl), (y, z)) ->
+            (if equal_labela _A ss s
+              then (match y with KLabelSubs _ -> false | KItemSubs _ -> false
+                     | KListSubs _ -> false | KSubs _ -> false
+                     | ListSubs sl ->
+                       (match
+                         (getSort (equal_label _A) s database,
+                           getArgSort (equal_label _A) s database)
+                         with (None, _) -> false | (Some _, None) -> false
+                         | (Some ty, Some tyl) ->
+                           (if subsortList (equal_sort _A) ty [List] subG
+                             then (match
+                                    checkTermsInSUKList _A _C
+                                      (irToSUInKList _A kl) tyl []
+                                      (constructSortMap (getDomainInIRKList kl))
+                                      database subG
+                                    with None -> false
+                                    | Some (acckl, (betakl, _)) ->
+                                      (match
+checkTermsInSUList _A _C sl acckl betakl database subG with None -> false
+| Some (accsl, (betasl, _)) ->
+  (match checkTermsInSUKItem _A _C z [KItem] accsl betasl database subG
+    with None -> false
+    | Some (accz, (betaz, _)) ->
+      (if hasNoTop _A accz && hasNoTop _A betaz
+        then checkTypesInFunPats _A _C s l database subG else false))))
+                             else false))
+                     | SetSubs _ -> false | MapSubs _ -> false
+                     | BagSubs _ -> false)
+              else false)
+          | (SetFunPat (ss, kl), (y, z)) ->
+            (if equal_labela _A ss s
+              then (match y with KLabelSubs _ -> false | KItemSubs _ -> false
+                     | KListSubs _ -> false | KSubs _ -> false
+                     | ListSubs _ -> false
+                     | SetSubs sl ->
+                       (match
+                         (getSort (equal_label _A) s database,
+                           getArgSort (equal_label _A) s database)
+                         with (None, _) -> false | (Some _, None) -> false
+                         | (Some ty, Some tyl) ->
+                           (if subsortList (equal_sort _A) ty [Set] subG
+                             then (match
+                                    checkTermsInSUKList _A _C
+                                      (irToSUInKList _A kl) tyl []
+                                      (constructSortMap (getDomainInIRKList kl))
+                                      database subG
+                                    with None -> false
+                                    | Some (acckl, (betakl, _)) ->
+                                      (match
+checkTermsInSUSet _A _C sl acckl betakl database subG with None -> false
+| Some (accsl, (betasl, _)) ->
+  (match checkTermsInSUKItem _A _C z [KItem] accsl betasl database subG
+    with None -> false
+    | Some (accz, (betaz, _)) ->
+      (if hasNoTop _A accz && hasNoTop _A betaz
+        then checkTypesInFunPats _A _C s l database subG else false))))
+                             else false))
+                     | MapSubs _ -> false | BagSubs _ -> false)
+              else false)
+          | (MapFunPat (ss, kl), (y, z)) ->
+            (if equal_labela _A ss s
+              then (match y with KLabelSubs _ -> false | KItemSubs _ -> false
+                     | KListSubs _ -> false | KSubs _ -> false
+                     | ListSubs _ -> false | SetSubs _ -> false
+                     | MapSubs sl ->
+                       (match
+                         (getSort (equal_label _A) s database,
+                           getArgSort (equal_label _A) s database)
+                         with (None, _) -> false | (Some _, None) -> false
+                         | (Some ty, Some tyl) ->
+                           (if subsortList (equal_sort _A) ty [Map] subG
+                             then (match
+                                    checkTermsInSUKList _A _C
+                                      (irToSUInKList _A kl) tyl []
+                                      (constructSortMap (getDomainInIRKList kl))
+                                      database subG
+                                    with None -> false
+                                    | Some (acckl, (betakl, _)) ->
+                                      (match
+checkTermsInSUMap _A _C sl acckl betakl database subG with None -> false
+| Some (accsl, (betasl, _)) ->
+  (match checkTermsInSUKItem _A _C z [KItem] accsl betasl database subG
+    with None -> false
+    | Some (accz, (betaz, _)) ->
+      (if hasNoTop _A accz && hasNoTop _A betaz
+        then checkTypesInFunPats _A _C s l database subG else false))))
+                             else false))
+                     | BagSubs _ -> false)
+              else false)
+          | (NormalPat _, (_, _)) -> false);;
+
+let rec checkTypesInRules _A _C
+  x0 database subG = match x0, database, subG with [], database, subG -> true
+    | FunPat (s, kl, ow) :: l, database, subG ->
+        (match ow
+          with None ->
+            (if checkTypesInFunPats _A _C s kl database subG
+              then checkTypesInRules _A _C l database subG else false)
+          | Some (x, (y, z)) ->
+            (if checkTypesInFunPats _A _C s [(x, (y, z))] database subG
+              then checkTypesInRules _A _C l database subG else false))
+    | MacroPat (v, va, vb) :: l, database, subG -> false
+    | AnywherePat (v, va, vb, vc) :: l, database, subG -> false
+    | KRulePat (v, va, vb, vc) :: l, database, subG -> false
+    | BagRulePat (v, va, vb, vc) :: l, database, subG -> false;;
+
+let rec typeCheckRules _A _C
+  allRules database subG =
+    wellFormRules _C allRules &&
+      checkTypesInRules _A _C allRules database subG;;
 
 let rec bagContainsCell _A
   x xa1 = match x, xa1 with x, [] -> false
@@ -12445,7 +14559,7 @@ let rec syntaxToKItem
       (if isBracket c then None
         else (match getKLabelName c
                with None ->
-                 (if membera equal_synAttrib c Function
+                 (if member equal_synAttrib c Function
                    then Some [([a], (getArgSortsInSyntax b,
                                       (SingleTon (symbolsToKLabel b),
 (getRidStrictAttrs c, true))))]
@@ -12456,7 +14570,7 @@ let rec syntaxToKItem
                           else Some [([a], (getArgSortsInSyntax b,
      (SingleTon (symbolsToKLabel b), (c, false))))]))
                | Some t ->
-                 (if membera equal_synAttrib c Function
+                 (if member equal_synAttrib c Function
                    then Some [([a], (getArgSortsInSyntax b,
                                       (SingleTon t,
 (getRidStrictAttrs c, true))))]
@@ -12483,9 +14597,10 @@ let rec syntaxToKItem
                                 | TokenLabel ab -> regMatch s ab
                                 | PlusInt -> false | MinusInt -> false
                                 | TimesInt -> false | EqualSet -> false
-                                | EqualMap -> false)),
+                                | EqualMap -> false | StringCon -> false
+                                | IntToString -> false)),
                            (getRidStrictAttrs c,
-                             membera equal_synAttrib c Function))))]
+                             member equal_synAttrib c Function))))]
     | Subsort (a, b) -> None
     | ListSyntax (a, b, s, c) ->
         (match getKLabelName c
@@ -12529,14 +14644,17 @@ let builtinSymbolTables :
       ([Bool], ([[K]; [K]], (SingleTon EqualK, ([Function], true))));
       ([Bool], ([[K]; [K]], (SingleTon NotEqualK, ([Function], true))));
       ([Bool], ([[Map]; [Map]], (SingleTon EqualMap, ([Function], true))));
-      ([Bool], ([[Seta]; [Seta]], (SingleTon EqualSet, ([Function], true))));
+      ([Bool], ([[Set]; [Set]], (SingleTon EqualSet, ([Function], true))));
       ([Bool],
         ([[KLabel]; [KLabel]], (SingleTon EqualKLabel, ([Function], true))));
       ([Bool],
         ([[KLabel]; [KLabel]], (SingleTon NotEqualKLabel, ([Function], true))));
       ([Int], ([[Int]; [Int]], (SingleTon PlusInt, ([Function], true))));
       ([Int], ([[Int]; [Int]], (SingleTon MinusInt, ([Function], true))));
-      ([Int], ([[Int]; [Int]], (SingleTon TimesInt, ([Function], true))))];;
+      ([Int], ([[Int]; [Int]], (SingleTon TimesInt, ([Function], true))));
+      ([String],
+        ([[String]; [String]], (SingleTon StringCon, ([Function], true))));
+      ([String], ([[Int]], (SingleTon IntToString, ([Function], true))))];;
 
 let rec isStringConst = function ConstToLabel (StringConst n) -> true
                         | UnitLabel v -> false
@@ -12567,7 +14685,9 @@ let rec isStringConst = function ConstToLabel (StringConst n) -> true
                         | MinusInt -> false
                         | TimesInt -> false
                         | EqualSet -> false
-                        | EqualMap -> false;;
+                        | EqualMap -> false
+                        | StringCon -> false
+                        | IntToString -> false;;
 
 let rec isFloatConst = function ConstToLabel (FloatConst n) -> true
                        | UnitLabel v -> false
@@ -12598,7 +14718,9 @@ let rec isFloatConst = function ConstToLabel (FloatConst n) -> true
                        | MinusInt -> false
                        | TimesInt -> false
                        | EqualSet -> false
-                       | EqualMap -> false;;
+                       | EqualMap -> false
+                       | StringCon -> false
+                       | IntToString -> false;;
 
 let rec isBoolConst = function ConstToLabel (BoolConst n) -> true
                       | UnitLabel v -> false
@@ -12629,7 +14751,9 @@ let rec isBoolConst = function ConstToLabel (BoolConst n) -> true
                       | MinusInt -> false
                       | TimesInt -> false
                       | EqualSet -> false
-                      | EqualMap -> false;;
+                      | EqualMap -> false
+                      | StringCon -> false
+                      | IntToString -> false;;
 
 let rec isIntConst = function ConstToLabel (IntConst n) -> true
                      | UnitLabel v -> false
@@ -12660,7 +14784,9 @@ let rec isIntConst = function ConstToLabel (IntConst n) -> true
                      | MinusInt -> false
                      | TimesInt -> false
                      | EqualSet -> false
-                     | EqualMap -> false;;
+                     | EqualMap -> false
+                     | StringCon -> false
+                     | IntToString -> false;;
 
 let rec isIdConst = function ConstToLabel (IdConst n) -> true
                     | UnitLabel v -> false
@@ -12691,7 +14817,9 @@ let rec isIdConst = function ConstToLabel (IdConst n) -> true
                     | MinusInt -> false
                     | TimesInt -> false
                     | EqualSet -> false
-                    | EqualMap -> false;;
+                    | EqualMap -> false
+                    | StringCon -> false
+                    | IntToString -> false;;
 
 let builtinConstTable :
   ('a sort list * ('b list * ('c label kItemSyntax * ('d list * bool)))) list
@@ -12719,8 +14847,8 @@ let rec createInitState _B
     | b :: l ->
         (match b
           with ItemB (x, y, z) ->
-            (if membera equal_feature y (Multiplicity Star) ||
-                  membera equal_feature y (Multiplicity Question)
+            (if member equal_feature y (Multiplicity Star) ||
+                  member equal_feature y (Multiplicity Question)
               then (if bagContainsCellAux _B LittleK z
                      then (match createInitStateAux _B z with None -> None
                             | Some za ->
@@ -12780,8 +14908,8 @@ and replaceProgramInK
   x0 p = match x0, p with [], p -> []
     | x :: xl, p -> replaceProgramInKFactor x p :: replaceProgramInK xl p;;
 
-let rec genProgramState _A _B
-  b database =
+let rec genProgramState _A _B _C
+  b database subG =
     (match b with Parsed (None, _, _, _) -> None
       | Parsed (Some _, _, _, None) -> None
       | Parsed (Some c, _, _, Some p) ->
@@ -12794,10 +14922,16 @@ let rec genProgramState _A _B
             (match simpleKToSU _A p database with None -> None
               | Some (KLabelSubs _) -> None
               | Some (KItemSubs x) ->
-                createInitState _B (replaceProgramInBag ba x)
+                (match createInitState _B (replaceProgramInBag ba x)
+                  with None -> None
+                  | Some newB ->
+                    typeCheckProgramState _A _B _C newB database subG)
               | Some (KListSubs _) -> None | Some (KSubs []) -> None
               | Some (KSubs [ItemFactor x]) ->
-                createInitState _B (replaceProgramInBag ba x)
+                (match createInitState _B (replaceProgramInBag ba x)
+                  with None -> None
+                  | Some newB ->
+                    typeCheckProgramState _A _B _C newB database subG)
               | Some (KSubs (ItemFactor _ :: _ :: _)) -> None
               | Some (KSubs (IdFactor _ :: _)) -> None
               | Some (KSubs (SUKKItem (_, _, _) :: _)) -> None
@@ -12832,7 +14966,7 @@ let rec tupleToRulePats _A _D _E
 let rec getAllSubsortInList _A
   = function [] -> []
     | Subsort (a, b) :: l ->
-        inserta (equal_prod (equal_sort _A) (equal_sort _A)) (a, b)
+        insert (equal_prod (equal_sort _A) (equal_sort _A)) (a, b)
           (getAllSubsortInList _A l)
     | Syntax (v, va, vb) :: l -> getAllSubsortInList _A l
     | Token (v, va, vb) :: l -> getAllSubsortInList _A l
@@ -12852,31 +14986,31 @@ let rec getAllSubsortInKFile _A
 let rec addImplicitSubsorts _A
   x s xa2 = match x, s, xa2 with x, s, [] -> []
     | x, s, a :: l ->
-        (if membera _A s a then addImplicitSubsorts _A x s l
-          else (x, a) :: addImplicitSubsorts _A x s l);;
+        (if member _A s a then addImplicitSubsorts _A x s l
+          else (a, x) :: addImplicitSubsorts _A x s l);;
 
 let builtinSorts : 'a sort list
-  = [KItem; K; KList; List; Seta; Bag; Map; KResult; KLabel];;
+  = [KItem; K; KList; List; Set; Bag; Map; KResult; KLabel];;
 
 let rec getKResultSubsorts _A
   x0 subG = match x0, subG with [], subG -> []
     | a :: l, subG ->
-        (if membera (equal_sort _A) builtinSorts a
+        (if member (equal_sort _A) builtinSorts a
           then getKResultSubsorts _A l subG
           else (if subsortAux (equal_sort _A) KResult a subG
                  then getKResultSubsorts _A l subG
                  else (KResult, a) :: getKResultSubsorts _A l subG));;
 
 let topSubsort : ('a sort * 'b sort) list
-  = [(K, Top); (KList, Top); (List, Top); (Seta, Top); (Bag, Top); (Map, Top);
+  = [(K, Top); (KList, Top); (List, Top); (Set, Top); (Bag, Top); (Map, Top);
       (KLabel, Top)];;
 
 let rec getAllSorts _A
   = function [] -> []
-    | Syntax (x, pros, l) :: xs -> inserta (equal_sort _A) x (getAllSorts _A xs)
+    | Syntax (x, pros, l) :: xs -> insert (equal_sort _A) x (getAllSorts _A xs)
     | ListSyntax (a, b, pros, l) :: xs ->
-        inserta (equal_sort _A) a (getAllSorts _A xs)
-    | Token (a, s, l) :: xs -> inserta (equal_sort _A) a (getAllSorts _A xs)
+        insert (equal_sort _A) a (getAllSorts _A xs)
+    | Token (a, s, l) :: xs -> insert (equal_sort _A) a (getAllSorts _A xs)
     | Subsort (v, va) :: xs -> getAllSorts _A xs;;
 
 let rec preAllSubsorts _A
@@ -12884,10 +15018,10 @@ let rec preAllSubsorts _A
     getAllSubsortInKFile _A (Parsed (c, a, b, p)) @
       addImplicitSubsorts (equal_sort _A) KItem builtinSorts
         (getAllSorts _A (mergeTuples a)) @
-        [(KResult, KItem); (KItem, K)] @ topSubsort;;
+        [(Bool, KResult); (KResult, KItem); (KItem, K)] @ topSubsort;;
 
 let rec insertAll _A a x1 = match a, x1 with a, [] -> a
-                       | a, b :: l -> insertAll _A (inserta _A b a) l;;
+                       | a, b :: l -> insertAll _A (insert _A b a) l;;
 
 let rec preSubsortGraph _A
   (Parsed (c, a, b, p)) =
@@ -12905,7 +15039,8 @@ let rec allSubsorts _A
     getAllSubsortInKFile _A (Parsed (c, a, b, p)) @
       addImplicitSubsorts (equal_sort _A) KItem builtinSorts
         (getAllSorts _A (mergeTuples a)) @
-        [(KResult, KItem); (KItem, K)] @
+        [(Bool, KItem); (KResult, KItem); (KItem, K); (Int, KItem);
+          (Float, KItem); (Id, KItem); (String, KItem)] @
           topSubsort @ kResultSubsorts _A (Parsed (c, a, b, p));;
 
 let rec collectSortInRule _A _C

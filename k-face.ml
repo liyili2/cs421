@@ -1,67 +1,15 @@
-open K;;
-open K;;
-open Lexer;;
-open Parser;;
-
-let save file string =
-     let channel = open_out_gen [Open_wronly; Open_append; Open_creat; Open_text] 0o666 file in
-     output_string channel string;
-     close_out channel;;
-
-let read_file filename = 
-let lines = ref [] in
-let chan = open_in filename in
-try
-  while true; do
-    lines := input_line chan :: !lines
-  done; []
-with End_of_file ->
-  close_in chan;
-  List.rev !lines ;;
-
-let rec tokenToList s
-     = match s with Connect (a,b) -> 
-          (tokenToList a) @ (tokenToList b)
-          | _ -> [s];;
-
-let get_all_tokens_fun lexbuf = let rec g () =
-    match Lexer.token lexbuf with EOF -> []
-      | t -> (tokenToList t) @ g () in
-      g ();;
-
-let deflate = 
-  let q = Queue.create () in
-  fun lexbuf -> 
-    if not (Queue.is_empty q) then Queue.pop q else   
-      match Lexer.token lexbuf with 
-        | EOF -> EOF 
-        | tok -> (match tokenToList tok with [] -> EOF
-              | [a] -> a
-              | hd::t ->  List.iter (fun tok -> Queue.add tok q) t ; hd);;
+#use "start.ml";;
 
 
+let lexsee () = (get_all_tokens (combineString (read_file "eval.k")));;
 
-let rec combineString lst = match lst with [] -> ""
-                                     | x::xs -> x^"\n"^combineString xs;;
-
-  let get_all_tokens s =
-      let b = Lexing.from_string (s^"\n") in
-      let rec g () =
-      match token b with EOF -> []
-      | t -> t :: g () in
-      g ();;
-
-let lexsee () = (get_all_tokens (combineString (read_file "unif.k")));;
-
-let interpreta () = (Parser.main Lexer.token (Lexing.from_string (combineString (read_file "unif.k"))));;
+let interpreta () = (Parser.main Lexer.token (Lexing.from_string (combineString (read_file "eval.k"))));;
 
 let allEqual = {equal = (=)};;
 
 let theGraph = subsortGraph {equal = (=)} (interpreta ());;
 
-(* a function to assign every variable in a rule to a sort*)
-
-let typecorrects p = match p with Parsed (c, a,b) -> assignSortInRules {equal = (=)} {equal = (=)} b;;
+let typecorrects p = match p with Parsed (c, a,b,d) -> assignSortInRules {equal = (=)} {equal = (=)} b;;
 
 let parsed = interpreta();;
 
@@ -69,17 +17,43 @@ let typedTerm = match typecorrects (interpreta()) with None -> [] | Some a -> a;
 
 let database = match collectDatabase (interpreta()) with None -> [] | Some a -> a;;
 
+let allRules = match (tupleToRuleInParsed allEqual allEqual allEqual (interpreta())) with None -> []
+                    | Some a -> a;;
+
+let programState = match genProgramState allEqual allEqual allEqual (interpreta()) database (subsortGraph allEqual (interpreta())) with None -> []
+                   | Some a -> a;;
+
+typeCheckRules allEqual allEqual allRules database theGraph;;
+
+let funs = match localteFunTermInSUBag allEqual programState database
+   with Some (l, (funs, (ty, cr))) -> funs;;
+
+let l = match localteFunTermInSUBag allEqual programState database
+   with Some (l, (funs, (ty, cr))) -> l;;
+
+let firstRule = match getFunRule allEqual l allRules with Some (a::al) -> a;;
+
+let firstPattern = match firstRule with (p,(r,c)) -> p;;
+
+let firstResult = match patternResultFirst with Some l -> charsToStringInSubstListList l;;
+
 tupleToRuleInParsed allEqual allEqual allEqual (interpreta());;
 
-genProgramState allEqual allEqual (interpreta()) database;;
+genProgramState allEqual allEqual allEqual (interpreta()) database (subsortGraph allEqual (interpreta()));;
 
 subsortGraph allEqual (interpreta());;
+
+charsToStringInState (funRuleEvalFun allEqual allEqual allEqual allRules database theGraph programState);;
+
+checkTermsInSUBag allEqual allEqual programState [] [] database theGraph;;
 
 let rule = match parsed with Parsed (c,a,b) -> b;;
 
 let left = match typedTerm with ((a,(b,(c,d)))::l) -> simpleKToIR allEqual a database;;
 
 let right = match typedTerm with ((a,(b,(c,d)))::l) -> simpleKToSU allEqual b database;;
+
+let result = match (interpreta()) with Parsed (c,a,b,p) -> addImplicitSubsorts allEqual K.KItem builtinSorts (getAllSorts allEqual (mergeTuples a));;
 
 (*
 

@@ -120,7 +120,7 @@ fun PreAllSubsorts where
 "PreAllSubsorts (Parsed c a b p) = (getAllSubsortInKFile (Parsed c a b p))
                      @ (addImplicitSubsorts KItem BuiltinSorts
                           (getAllSorts (mergeTuples a)))
-                     @ [(KResult, KItem), (KItem, K)]@topSubsort"
+                     @ [(Bool, KResult), (KResult, KItem), (KItem, K)]@topSubsort"
 
 definition preSubsortTerms where
 "preSubsortTerms Theory database 
@@ -160,7 +160,9 @@ fun AllSubsorts where
 "AllSubsorts (Parsed c a b p) = (getAllSubsortInKFile (Parsed c a b p))
                      @ (addImplicitSubsorts KItem BuiltinSorts
                           (getAllSorts (mergeTuples a)))
-                     @ [(KResult, KItem), (KItem, K)]@topSubsort@(kResultSubsorts (Parsed c a b p))"
+                     @ [(Bool, KItem),(KResult, KItem), (KItem, K),
+                        (kSyntax.Int, KItem), (Float, KItem), (Id, KItem), (String, KItem)]
+                     @topSubsort@(kResultSubsorts (Parsed c a b p))"
 
 fun subsortGraph where
 "subsortGraph (Parsed c a b p) = formGraph (insertAll (getAllSorts

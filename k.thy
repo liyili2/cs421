@@ -685,7 +685,7 @@ function checkTermsInSUKLabel
     \<Rightarrow> (case checkTermsInSUK a [K] acc beta database subG of None \<Rightarrow> None
                    | Some (acc',beta', a') \<Rightarrow> Some (acc',beta', SUK a'))
               | Some ty' \<Rightarrow> (if subsortList ty' [K] subG then 
-          (case checkTermsInSUK a [K] acc beta database subG of None \<Rightarrow> None
+          (case checkTermsInSUK a ty' acc beta database subG of None \<Rightarrow> None
                    | Some (acc',beta', a') \<Rightarrow> Some (acc',beta', SUK a')) else None))"
 | "checkTermsInSUBigKWithBag (SUList a) ty acc beta database subG = (case ty of None
     \<Rightarrow> (case checkTermsInSUList a acc beta database subG of None \<Rightarrow> None
@@ -1621,14 +1621,251 @@ fun divideMacroRules where
 | "divideMacroRules (x#l) subG = (case divideMacroRules l subG of None \<Rightarrow> None
        | Some (l', S)  \<Rightarrow> Some (l', x#S))"
 
-(* type check all rules 
-definition typeCheckRules where
-"typeCheckRules Theory database subG =
-    (case normalizeRules (getAllRules Theory) Theory database subG of None \<Rightarrow> None
-       | Some l \<Rightarrow> if wellFormRules l then
-         inferTypesInRules l Theory database subG else None)"
+(*type check all rules *)
+primrec constructSortMap where
+"constructSortMap [] = []"
+| "constructSortMap (a#l) = (a,[Top])#(constructSortMap l)"
 
-(* check uniqueness of KLabel in a spec *)
+fun hasNoTop where
+"hasNoTop [] = True"
+| "hasNoTop ((a,b)#l) = (if Top \<in> set b then False else hasNoTop l)"
+
+(* get domain of beta for configuration *)
+fun getDomainInSUKLabel
+  and getDomainInSUKItem
+  and getDomainInSUBigKWithBag
+  and getDomainInSUBigKWithLabel
+  and getDomainInSUK
+  and getDomainInSUKList
+  and getDomainInSUList
+  and getDomainInSUSet
+  and getDomainInSUMap
+  and getDomainInSUBag where
+"getDomainInSUKLabel (SUKLabel a) = []"
+| "getDomainInSUKLabel (SUIdKLabel x) = []"
+| "getDomainInSUKLabel (SUKLabelFun x y) = (case x of (SUIdKLabel x') \<Rightarrow> x'#(getDomainInSUKList y)
+           | _ \<Rightarrow> getDomainInSUKList y)"
+| "getDomainInSUKItem (SUKItem a b ty) = (case a of (SUIdKLabel x) \<Rightarrow> x#(getDomainInSUKList b)
+          | _ \<Rightarrow> getDomainInSUKList b)"
+| "getDomainInSUKItem (SUIdKItem a ty) = []"
+| "getDomainInSUKItem (SUHOLE ty) = []"
+| "getDomainInSUBigKWithBag (SUK a) = getDomainInSUK a"
+| "getDomainInSUBigKWithBag (SUList a) = getDomainInSUList a"
+| "getDomainInSUBigKWithBag (SUSet a) = getDomainInSUSet a"
+| "getDomainInSUBigKWithBag (SUMap a) = getDomainInSUMap a"
+| "getDomainInSUBigKWithBag (SUBag a) = getDomainInSUBag a"
+| "getDomainInSUBigKWithLabel (SUBigBag a) = getDomainInSUBigKWithBag a"
+| "getDomainInSUBigKWithLabel (SUBigLabel a) = []"
+| "getDomainInSUK [] = []"
+| "getDomainInSUK (x#l) = (case x of (ItemFactor x') \<Rightarrow> (getDomainInSUKItem x')@(getDomainInSUK l)
+          | IdFactor x' \<Rightarrow> getDomainInSUK l
+         | SUKKItem a b c \<Rightarrow> (case a of (SUIdKLabel x') \<Rightarrow> x'#(getDomainInSUK l)
+           | _ \<Rightarrow> getDomainInSUK l))"
+| "getDomainInSUKList [] = []"
+| "getDomainInSUKList (x#l) =
+      (case x of (ItemKl x') \<Rightarrow> (getDomainInSUBigKWithLabel x')@(getDomainInSUKList l)
+          | IdKl x' \<Rightarrow> getDomainInSUKList l)"
+| "getDomainInSUList [] = []"
+| "getDomainInSUList (x#l) = (case x of (ItemL x') \<Rightarrow> (getDomainInSUK x')@(getDomainInSUList l)
+          | IdL x' \<Rightarrow> getDomainInSUList l
+         | SUListKItem a b \<Rightarrow> (case a of (SUIdKLabel x') \<Rightarrow> x'#(getDomainInSUList l)
+           | _ \<Rightarrow> getDomainInSUList l))"
+| "getDomainInSUSet [] = []"
+| "getDomainInSUSet (x#l) = (case x of (ItemS x') \<Rightarrow> (getDomainInSUK x')@(getDomainInSUSet l)
+          | IdS x' \<Rightarrow> getDomainInSUSet l
+         | SUSetKItem a b \<Rightarrow> (case a of (SUIdKLabel x') \<Rightarrow> x'#(getDomainInSUSet l)
+           | _ \<Rightarrow> getDomainInSUSet l))"
+| "getDomainInSUMap [] = []"
+| "getDomainInSUMap (x#l) = (case x of (ItemM x' y')
+      \<Rightarrow> (getDomainInSUK x')@((getDomainInSUK y')@(getDomainInSUMap l))
+          | IdM x' \<Rightarrow> getDomainInSUMap l
+         | SUMapKItem a b \<Rightarrow> (case a of (SUIdKLabel x') \<Rightarrow> x'#(getDomainInSUMap l)
+           | _ \<Rightarrow> getDomainInSUMap l))"
+| "getDomainInSUBag [] = []"
+| "getDomainInSUBag (x#l) =
+    (case x of (ItemB x' y' z') \<Rightarrow> (getDomainInSUBigKWithBag z')@(getDomainInSUBag l)
+          | IdB x' \<Rightarrow> getDomainInSUBag l)"
+
+fun getDomainInIRKItem
+  and getDomainInIRBigKWithBag
+  and getDomainInIRBigKWithLabel
+  and getDomainInIRK
+  and getDomainInIRKList
+  and getDomainInIRList
+  and getDomainInIRSet
+  and getDomainInIRMap
+  and getDomainInIRBag where
+"getDomainInIRKItem (IRKItem a b ty) = (case a of (IRIdKLabel x) \<Rightarrow> x#(getDomainInIRKList b)
+          | _ \<Rightarrow> getDomainInIRKList b)"
+| "getDomainInIRKItem (IRIdKItem a ty) = []"
+| "getDomainInIRKItem (IRHOLE ty) = []"
+| "getDomainInIRBigKWithBag (IRK a) = getDomainInIRK a"
+| "getDomainInIRBigKWithBag (IRList a) = getDomainInIRList a"
+| "getDomainInIRBigKWithBag (IRSet a) = getDomainInIRSet a"
+| "getDomainInIRBigKWithBag (IRMap a) = getDomainInIRMap a"
+| "getDomainInIRBigKWithBag (IRBag a) = getDomainInIRBag a"
+| "getDomainInIRBigKWithLabel (IRBigBag a) = getDomainInIRBigKWithBag a"
+| "getDomainInIRBigKWithLabel (IRBigLabel a) = []"
+| "getDomainInIRK (KPat [] b) = []"
+| "getDomainInIRK (KPat (x#l) b) = (getDomainInIRKItem x)@(getDomainInIRK (KPat l b))"
+| "getDomainInIRKList (KListPatNoVar []) = []"
+| "getDomainInIRKList (KListPatNoVar (x#l)) = (getDomainInIRBigKWithLabel x)@
+                                   (getDomainInIRKList (KListPatNoVar l))"
+| "getDomainInIRKList (KListPat [] b []) = []"
+| "getDomainInIRKList (KListPat [] b (x#l)) = (getDomainInIRBigKWithLabel x)@
+                                   (getDomainInIRKList (KListPat [] b l))"
+| "getDomainInIRKList (KListPat (x#l) b S) = (getDomainInIRBigKWithLabel x)@
+                                   (getDomainInIRKList (KListPat l b S))"
+| "getDomainInIRList (ListPatNoVar []) = []"
+| "getDomainInIRList (ListPatNoVar (x#l)) = (getDomainInIRK x)@
+                                   (getDomainInIRList (ListPatNoVar l))"
+| "getDomainInIRList (ListPat [] b []) = []"
+| "getDomainInIRList (ListPat [] b (x#l)) = (getDomainInIRK x)@
+                                   (getDomainInIRList (ListPat [] b l))"
+| "getDomainInIRList (ListPat (x#l) b S) = (getDomainInIRK x)@
+                                   (getDomainInIRList (ListPat l b S))"
+| "getDomainInIRSet (SetPat [] b) = []"
+| "getDomainInIRSet (SetPat (x#l) b) = (getDomainInIRK x)@
+                                   (getDomainInIRSet (SetPat l b))"
+| "getDomainInIRMap (MapPat [] b) = []"
+| "getDomainInIRMap (MapPat ((x,y)#l) b) = (getDomainInIRK x)@(getDomainInIRK y)@
+                                   (getDomainInIRMap (MapPat l b))"
+| "getDomainInIRBag (BagPat [] b) = []"
+| "getDomainInIRBag (BagPat ((x,y,z)#l) b) = (getDomainInIRBigKWithBag z)@
+                                   (getDomainInIRBag (BagPat l b))"
+
+primrec getDomainInMatchFactor where
+"getDomainInMatchFactor (KLabelMatching a) = []"
+| "getDomainInMatchFactor (KItemMatching a) = getDomainInIRKItem a"
+| "getDomainInMatchFactor (KListMatching a) = getDomainInIRKList a"
+| "getDomainInMatchFactor (KMatching a) = getDomainInIRK a"
+| "getDomainInMatchFactor (ListMatching a) = getDomainInIRList a"
+| "getDomainInMatchFactor (SetMatching a) = getDomainInIRSet a"
+| "getDomainInMatchFactor (MapMatching a) = getDomainInIRMap a"
+| "getDomainInMatchFactor (BagMatching a) = getDomainInIRBag a"
+
+primrec getDomainInPat where
+"getDomainInPat (KLabelFunPat a b) = getDomainInIRKList b"
+| "getDomainInPat (KFunPat a b) = getDomainInIRKList b"
+| "getDomainInPat (KItemFunPat a b) = getDomainInIRKList b"
+| "getDomainInPat (ListFunPat a b) = getDomainInIRKList b"
+| "getDomainInPat (SetFunPat a b) = getDomainInIRKList b"
+| "getDomainInPat (MapFunPat a b) = getDomainInIRKList b"
+| "getDomainInPat (NormalPat a) = getDomainInMatchFactor a"
+
+fun wellFormRules :: "('upVar, 'var, 'metaVar) rulePat list \<Rightarrow> bool" where
+"wellFormRules [] = True"
+| "wellFormRules ((FunPat s rl a)#l) = ((foldl (\<lambda> b (x,y,z) . b \<and>
+       (set (getAllMetaVarsInSubsFactor y @ getAllMetaVarsInSUKItem z)
+           \<subseteq> set (getAllMetaVarsInPat x))) True
+                (case a of None \<Rightarrow> rl | Some a' \<Rightarrow> (a'#rl)))
+             \<and> wellFormRules l)"
+| "wellFormRules ((MacroPat s a b)#l) =
+  ((set (getAllMetaVarsInSUK b) \<subseteq> set (getAllMetaVarsInIRKList a))
+          \<and> wellFormRules l)"
+| "wellFormRules ((AnywherePat ss a b c)#l) =
+         ((set (getAllMetaVarsInSUK b @ getAllMetaVarsInSUKItem c)
+                    \<subseteq> set (getAllMetaVarsInIRKList a)) \<and> wellFormRules l)"
+| "wellFormRules ((KRulePat a b c tb)#l) =
+         ((set (getAllMetaVarsInSUK b @ getAllMetaVarsInSUKItem c)
+                \<subseteq> set (getAllMetaVarsInIRK a)) \<and> wellFormRules l)"
+| "wellFormRules ((BagRulePat a b c tb)#l) =
+      ((set (getAllMetaVarsInSUBag b @ getAllMetaVarsInSUKItem c)
+             \<subseteq> set (getAllMetaVarsInIRBag a)) \<and> wellFormRules l)"
+
+(* type adjustment each rule *)
+primrec checkTypesInFunPats where
+"checkTypesInFunPats s [] database subG = True"
+| "checkTypesInFunPats s (b#l) database subG = (case b of (x,y,z) \<Rightarrow>
+    (case x of KLabelFunPat ss kl \<Rightarrow> if ss = s then
+     (case y of (KLabelSubs sl) \<Rightarrow> (case (getSort s database, getArgSort s database)
+       of (Some ty, Some tyl) \<Rightarrow> if ty = [KLabel] then
+   (case (checkTermsInSUKList (irToSUInKList kl) tyl []
+                      (constructSortMap (getDomainInIRKList kl)) database subG)
+      of None \<Rightarrow> False | Some (acckl, betakl, kl') \<Rightarrow>
+     (case checkTermsInSUKLabel sl acckl betakl database subG of None \<Rightarrow> False
+        | Some (accsl, betasl, sl') \<Rightarrow>
+      (case checkTermsInSUKItem z [KItem] accsl betasl database subG of None \<Rightarrow> False
+       | Some (accz, betaz, z') \<Rightarrow> if hasNoTop accz \<and> hasNoTop betaz then
+           checkTypesInFunPats s l database subG else False))) else False | _ \<Rightarrow> False)
+            | _ \<Rightarrow> False) else False
+    | KFunPat ss kl \<Rightarrow> if ss = s then
+     (case y of (KSubs sl) \<Rightarrow> (case (getSort s database, getArgSort s database)
+       of (Some ty, Some tyl) \<Rightarrow> if subsortList ty [K] subG then
+   (case (checkTermsInSUKList (irToSUInKList kl) tyl []
+                      (constructSortMap (getDomainInIRKList kl)) database subG)
+      of None \<Rightarrow> False | Some (acckl, betakl, kl') \<Rightarrow>
+     (case checkTermsInSUK sl ty acckl betakl database subG of None \<Rightarrow> False
+        | Some (accsl, betasl, sl') \<Rightarrow>
+      (case checkTermsInSUKItem z [KItem] accsl betasl database subG of None \<Rightarrow> False
+       | Some (accz, betaz, z') \<Rightarrow> if hasNoTop accz \<and> hasNoTop betaz then
+            checkTypesInFunPats s l database subG else False))) else False | _ \<Rightarrow> False)
+            | _ \<Rightarrow> False) else False
+    | KItemFunPat ss kl \<Rightarrow> if ss = s then
+     (case y of (KItemSubs sl) \<Rightarrow> (case (getSort s database, getArgSort s database)
+       of (Some ty, Some tyl) \<Rightarrow> if subsortList ty [KItem] subG then
+   (case (checkTermsInSUKList (irToSUInKList kl) tyl []
+                      (constructSortMap (getDomainInIRKList kl)) database subG)
+      of None \<Rightarrow> False | Some (acckl, betakl, kl') \<Rightarrow>
+     (case checkTermsInSUKItem sl ty acckl betakl database subG of None \<Rightarrow> False
+        | Some (accsl, betasl, sl') \<Rightarrow>
+      (case checkTermsInSUKItem z [KItem] accsl betasl database subG of None \<Rightarrow> False
+       | Some (accz, betaz, z') \<Rightarrow> if hasNoTop accz \<and> hasNoTop betaz then
+           checkTypesInFunPats s l database subG else False))) else False | _ \<Rightarrow> False)
+            | _ \<Rightarrow> False) else False
+    | ListFunPat ss kl \<Rightarrow> if ss = s then
+     (case y of (ListSubs sl) \<Rightarrow> (case (getSort s database, getArgSort s database)
+       of (Some ty, Some tyl) \<Rightarrow> if subsortList ty [List] subG then
+   (case (checkTermsInSUKList (irToSUInKList kl) tyl []
+                      (constructSortMap (getDomainInIRKList kl)) database subG)
+      of None \<Rightarrow> False | Some (acckl, betakl, kl') \<Rightarrow>
+     (case checkTermsInSUList sl acckl betakl database subG of None \<Rightarrow> False
+        | Some (accsl, betasl, sl') \<Rightarrow>
+      (case checkTermsInSUKItem z [KItem] accsl betasl database subG of None \<Rightarrow> False
+       | Some (accz, betaz, z') \<Rightarrow> if hasNoTop accz \<and> hasNoTop betaz then
+             checkTypesInFunPats s l database subG else False))) else False | _ \<Rightarrow> False)
+            | _ \<Rightarrow> False) else False
+    | SetFunPat ss kl \<Rightarrow> if ss = s then
+     (case y of (SetSubs sl) \<Rightarrow> (case (getSort s database, getArgSort s database)
+       of (Some ty, Some tyl) \<Rightarrow> if subsortList ty [Set] subG then
+   (case (checkTermsInSUKList (irToSUInKList kl) tyl []
+                      (constructSortMap (getDomainInIRKList kl)) database subG)
+      of None \<Rightarrow> False | Some (acckl, betakl, kl') \<Rightarrow>
+     (case checkTermsInSUSet sl acckl betakl database subG of None \<Rightarrow> False
+        | Some (accsl, betasl, sl') \<Rightarrow>
+      (case checkTermsInSUKItem z [KItem] accsl betasl database subG of None \<Rightarrow> False
+       | Some (accz, betaz, z') \<Rightarrow> if hasNoTop accz \<and> hasNoTop betaz then
+           checkTypesInFunPats s l database subG else False))) else False | _ \<Rightarrow> False)
+            | _ \<Rightarrow> False) else False
+    | MapFunPat ss kl \<Rightarrow> if ss = s then
+     (case y of (MapSubs sl) \<Rightarrow> (case (getSort s database, getArgSort s database)
+       of (Some ty, Some tyl) \<Rightarrow> if subsortList ty [Map] subG then
+   (case (checkTermsInSUKList (irToSUInKList kl) tyl []
+                      (constructSortMap (getDomainInIRKList kl)) database subG)
+      of None \<Rightarrow> False | Some (acckl, betakl, kl') \<Rightarrow>
+     (case checkTermsInSUMap sl acckl betakl database subG of None \<Rightarrow> False
+        | Some (accsl, betasl, sl') \<Rightarrow>
+      (case checkTermsInSUKItem z [KItem] accsl betasl database subG of None \<Rightarrow> False
+       | Some (accz, betaz, z') \<Rightarrow> if hasNoTop accz \<and> hasNoTop betaz then
+         checkTypesInFunPats s l database subG else False))) else False | _ \<Rightarrow> False)
+            | _ \<Rightarrow> False) else False
+     | _ \<Rightarrow> False))"
+
+fun checkTypesInRules where
+"checkTypesInRules [] database subG = True"
+| "checkTypesInRules ((FunPat s kl ow)#l) database subG = (case ow of None \<Rightarrow>
+     (if checkTypesInFunPats s kl database subG then checkTypesInRules l database subG
+         else False)
+  | Some (x,y,z) \<Rightarrow>
+       (if checkTypesInFunPats s [(x,y,z)] database subG then checkTypesInRules l database subG
+           else False))"
+| "checkTypesInRules (a#l) database subG = False"
+
+definition typeCheckRules where
+"typeCheckRules allRules database subG =
+    (wellFormRules allRules \<and> checkTypesInRules allRules database subG)"
+
+(* check uniqueness of KLabel in a spec 
 definition uniqueKLabelSyntax where
 "uniqueKLabelSyntax Theory = isUnitLabel (syntaxSetToKItemSet Theory)"
 *)
@@ -1698,11 +1935,14 @@ primrec replaceProgramInKItem
 | "replaceProgramInBagFactor (ItemB x y z) p = (ItemB x y (replaceProgramInSuBigKWithBag z p))"
 
 definition genProgramState where
-"genProgramState B database = (case B of (Parsed (Some c) x y (Some p))
+"genProgramState B database subG = (case B of (Parsed (Some c) x y (Some p))
         \<Rightarrow> (case simpleKToSU c database of 
       Some (BagSubs b) \<Rightarrow> (case simpleKToSU p database of Some (KItemSubs x) \<Rightarrow> 
-                  (createInitState (replaceProgramInBag b x))
-                 | Some (KSubs [ItemFactor x]) \<Rightarrow> (createInitState (replaceProgramInBag b x))
+       (case (createInitState (replaceProgramInBag b x)) of None \<Rightarrow> None
+           | Some newB \<Rightarrow> typeCheckProgramState newB database subG)
+                 | Some (KSubs [ItemFactor x]) \<Rightarrow>
+       (case (createInitState (replaceProgramInBag b x)) of None \<Rightarrow> None
+            | Some newB \<Rightarrow> typeCheckProgramState newB database subG)
                  | _ \<Rightarrow> None) | _ \<Rightarrow> None) | _ \<Rightarrow> None)"
 
 (* the pattern matching algorithm *)
@@ -1748,13 +1988,43 @@ fun updateMatchingMapMacro where
              else (case updateMatchingMapMacro x y l subG of None \<Rightarrow> None
                  | Some l' \<Rightarrow> Some ((a,b)#l')))"
 
+fun updateMatchingMapMacros where
+"updateMatchingMapMacros x y [] subG = None"
+| "updateMatchingMapMacros x y (a#l) subG = (case updateMatchingMapMacro x y a subG of None
+                              \<Rightarrow> updateMatchingMapMacros x y l subG
+          | Some a' \<Rightarrow> (case updateMatchingMapMacros x y l subG of None \<Rightarrow> Some [a']
+            | Some l' \<Rightarrow> Some (a'#l')))"
+
+fun matchingMapMember where
+"matchingMapMember (x,y) [] subG = False"
+| "matchingMapMember (x,y) ((a,b)#l) subG = (if x = a then
+          (case macroEquality y b subG of None \<Rightarrow> False
+               | Some y' \<Rightarrow> True) else matchingMapMember (x,y) l subG)"
+
+fun matchingMapSubset where
+"matchingMapSubset [] S subG = True"
+| "matchingMapSubset (a#l) S subG = (matchingMapMember a S subG \<and> matchingMapSubset l S subG)"
+
+definition matchingMapEqual where
+"matchingMapEqual L S subG = (set (keys L) \<subseteq> set (keys S) \<and> set (keys S) \<subseteq> set (keys L)
+                                   \<and> matchingMapSubset L S subG)"
+
+fun mergeSingleMatching where
+"mergeSingleMatching acc [] subG = [acc]"
+| "mergeSingleMatching acc (ax#l) subG = (if matchingMapEqual acc ax subG then (ax#l)
+                else (ax#(mergeSingleMatching acc l subG)))"
+
+fun mergeMatchingMaps where
+"mergeMatchingMaps [] S subG = S"
+| "mergeMatchingMaps (acc#l) S subG = mergeMatchingMaps l (mergeSingleMatching acc S subG) subG"
+
 primrec getValueInMatchingMap where
 "getValueInMatchingMap a [] = None"
 | "getValueInMatchingMap a (b#l) = (case b of (x',y') \<Rightarrow>
                if a = x' then Some y' else getValueInMatchingMap a l)"
 
 (* divide the map into two parts: one's values have zero list,
-          the other's value have more than zero element list*)
+          the other's value have more than zero element list
 fun searchZero where
 "searchZero [] = ([],[])"
 | "searchZero ((a,b)#l) = (case searchZero l of (have, noHave) \<Rightarrow>
@@ -1772,6 +2042,7 @@ fun eliminateEntryMap where
 "eliminateEntryMap [] S = Some S"
 | "eliminateEntryMap ((a,(b,c))#l) S = eliminateEntryMap l (eliminateEntryList b S)"
 
+
 fun searchOneAux where
 "searchOneAux [] = ([],[])"
 | "searchOneAux ((a,b)#l) = (case searchOneAux l of (have, noHave) \<Rightarrow>
@@ -1787,6 +2058,7 @@ function searchOne where
 by pat_completeness auto
 
 termination sorry
+
 
 (* a function to find a way to match each pattern to a expression one by one and on two *)
 function findBijection and findBijectionAux where
@@ -1830,6 +2102,7 @@ primrec searchAllNonTermsInSUBag where
 "searchAllNonTermsInSUBag [] = []"
 | "searchAllNonTermsInSUBag (a#l) = (case a of ItemB a' b c \<Rightarrow> searchAllNonTermsInSUBag l
                | _ \<Rightarrow> a#searchAllNonTermsInSUBag l)"
+*)
 
 (* a pattern matching algorithm that allowing non-linear commutativity equestional rewriting *)
 function patternMacroingInSUKLabel
@@ -1842,9 +2115,15 @@ function patternMacroingInSUKLabel
    and patternMacroingInSUSet
    and patternMacroingInSUSetAux
    and patternMacroingInSUMember
+   and patternMacroingInAllSUMember
+   and patternMacroingInAllSUMemberAux
    and patternMacroingInSUMapMember
+   and patternMacroingInAllSUMapMember
+   and patternMacroingInAllSUMapMemberAux
    and patternMacroingInSUMapAux
    and patternMacroingInSUBagMember
+   and patternMacroingInAllSUBagMember
+   and patternMacroingInAllSUBagMemberAux
    and patternMacroingInSUBagAux
    and patternMacroingInSUMap
    and patternMacroingInSUBag
@@ -1854,7 +2133,7 @@ function patternMacroingInSUKLabel
      if a = b then Some acc else None
        | _ \<Rightarrow> None)"
 | "patternMacroingInSUKLabel (IRIdKLabel a) S acc subG
-           = (updateMatchingMapMacro a (KLabelSubs S) acc subG)"
+           = (updateMatchingMapMacros a (KLabelSubs S) acc subG)"
 | "patternMacroingInSUKItem (IRKItem l r ty) S acc subG = (case S of (SUKItem l' r' ty') \<Rightarrow>
  (if subsortList ty' ty subG then
        (case patternMacroingInSUKLabel l l' acc subG of None \<Rightarrow> None
@@ -1866,10 +2145,10 @@ function patternMacroingInSUKLabel
       | _ \<Rightarrow> None)"
 | "patternMacroingInSUKItem (IRIdKItem a b) B acc subG = (case B of (SUIdKItem a' b')
          \<Rightarrow> (if subsortList b' b subG then
-                updateMatchingMapMacro a (KItemSubs (SUIdKItem a' b')) acc subG
+                updateMatchingMapMacros a (KItemSubs (SUIdKItem a' b')) acc subG
             else None)
        | (SUKItem l r ty) \<Rightarrow> (if subsortList ty b subG then
-       updateMatchingMapMacro a (KItemSubs (SUKItem l r ty)) acc subG else None)
+       updateMatchingMapMacros a (KItemSubs (SUKItem l r ty)) acc subG else None)
        | _ \<Rightarrow> None)"
 | "patternMacroingInSUKList (KListPatNoVar l) S acc subG =
     (case l of [] \<Rightarrow> (case S of [] \<Rightarrow> Some acc | (sua#sul) \<Rightarrow> None)
@@ -1879,7 +2158,7 @@ function patternMacroingInSUKLabel
          | Some acc' \<Rightarrow> (case patternMacroingInSUKList (KListPatNoVar ll) sul acc' subG
            of None \<Rightarrow> None | Some acca \<Rightarrow> Some acca)) | _ \<Rightarrow> None)))"
 | "patternMacroingInSUKList (KListPat l n r) S acc subG = (case l of [] \<Rightarrow>
-     (case rev r of [] \<Rightarrow> (updateMatchingMapMacro n (KListSubs S) acc subG)
+     (case rev r of [] \<Rightarrow> (updateMatchingMapMacros n (KListSubs S) acc subG)
        | (ra#rl) \<Rightarrow> (case rev S of [] \<Rightarrow> None
        | (sua#sul) \<Rightarrow> (case sua of ItemKl x \<Rightarrow>
          (case patternMacroingInSUBigKWithLabel ra x acc subG of None \<Rightarrow> None
@@ -1897,18 +2176,18 @@ function patternMacroingInSUKLabel
 | "patternMacroingInSUK (KPat l n) S acc subG = (case l of [] \<Rightarrow>
            (case n of None \<Rightarrow> (case S of [] \<Rightarrow> Some acc
              | (sua#sul) \<Rightarrow> None)
-               | Some v \<Rightarrow> updateMatchingMapMacro v (KSubs S) acc subG)
+               | Some v \<Rightarrow> updateMatchingMapMacros v (KSubs S) acc subG)
           | (la#ll) \<Rightarrow> (case S of [] \<Rightarrow> None
            | (sua#sul) \<Rightarrow> (case sua of ItemFactor x \<Rightarrow>
           (case patternMacroingInSUKItem la x acc subG of None \<Rightarrow> None
               | Some acc' \<Rightarrow> patternMacroingInSUK (KPat ll n) sul acc' subG)
           | IdFactor x \<Rightarrow> (case la of (IRIdKItem x' ty) \<Rightarrow> 
-            if ty = [K] then (case updateMatchingMapMacro x' (KSubs [(IdFactor x)]) acc subG
+            if ty = [K] then (case updateMatchingMapMacros x' (KSubs [(IdFactor x)]) acc subG
                  of None \<Rightarrow> None | Some acc'
                  \<Rightarrow> patternMacroingInSUK (KPat ll n) sul acc' subG) else None
             | _ \<Rightarrow> None)
           | SUKKItem x y ty \<Rightarrow> (case la of (IRIdKItem x' ty') \<Rightarrow>
-            if ty = [K] then (case updateMatchingMapMacro x' (KSubs [(SUKKItem x y ty)]) acc subG
+            if ty' = [K] then (case updateMatchingMapMacros x' (KSubs [(SUKKItem x y ty)]) acc subG
             of None \<Rightarrow> None | Some acc'
                 \<Rightarrow> patternMacroingInSUK (KPat ll n) sul acc' subG) else None
               |  _ \<Rightarrow> None))))"
@@ -1920,7 +2199,7 @@ function patternMacroingInSUKLabel
       | _ \<Rightarrow> None)))"
 | "patternMacroingInSUList (ListPat l n r) S acc subG = (case l of [] \<Rightarrow>
           (case rev r of [] \<Rightarrow>
-           (updateMatchingMapMacro n (ListSubs S) acc subG)
+           (updateMatchingMapMacros n (ListSubs S) acc subG)
             | (ra#rl) \<Rightarrow> (case rev S of [] \<Rightarrow> None
                 | (sua#sul) \<Rightarrow> (case sua of ItemL x \<Rightarrow>
           (case patternMacroingInSUK ra x acc subG of None \<Rightarrow> None
@@ -1932,70 +2211,102 @@ function patternMacroingInSUKLabel
           (case patternMacroingInSUK la x acc subG of None \<Rightarrow> None
               | Some acc' \<Rightarrow> patternMacroingInSUList (ListPat ll n r) sul acc' subG)
           | _ \<Rightarrow> None)))"
-| "patternMacroingInSUMember a [] acc subG = (a,[])"
-| "patternMacroingInSUMember a (t#l) acc subG = (case t of (ItemS x) \<Rightarrow>
+| "patternMacroingInSUMember a r [] acc subG = []"
+| "patternMacroingInSUMember a r (t#l) acc subG = (case t of (ItemS x) \<Rightarrow>
    (case patternMacroingInSUK a x acc subG of None
-      \<Rightarrow> patternMacroingInSUMember a l acc subG
-       | Some acc' \<Rightarrow> (case patternMacroingInSUMember a l acc subG
-          of (u,v) \<Rightarrow> (u,(t,acc')#v)))
-     | _ \<Rightarrow> patternMacroingInSUMember a l acc subG)"
-| "patternMacroingInSUSetAux [] S acc subG = []"
-| "patternMacroingInSUSetAux (a#l) S acc subG =
-          (patternMacroingInSUMember a S acc subG)#(patternMacroingInSUSetAux l S acc subG)"
+      \<Rightarrow> patternMacroingInSUMember a (r@[t]) l acc subG
+       | Some acc' \<Rightarrow> (case patternMacroingInSUMember a (r@[t]) l acc subG
+          of accl \<Rightarrow> ((acc',r@l)#accl)))
+     | _ \<Rightarrow> patternMacroingInSUMember a (r@[t]) l acc subG)"
+| "patternMacroingInAllSUMemberAux P [] subG = None"
+| "patternMacroingInAllSUMemberAux P ((acc,remain)#l) subG = 
+         (case patternMacroingInAllSUMember P remain acc subG of None
+               \<Rightarrow> patternMacroingInAllSUMemberAux P l subG
+           | Some l' \<Rightarrow> (case patternMacroingInAllSUMemberAux P l subG of None \<Rightarrow> Some l'
+                 | Some la \<Rightarrow> Some (l'@la)))"
+| "patternMacroingInAllSUMember [] S acc subG = Some [(acc, S)]"
+| "patternMacroingInAllSUMember (a#l) S acc subG =
+        (case patternMacroingInSUMember a [] S acc subG of [] \<Rightarrow> None
+           | (r#rl) \<Rightarrow> patternMacroingInAllSUMemberAux l (r#rl) subG)"
+| "patternMacroingInSUSetAux [] v subG = None"
+| "patternMacroingInSUSetAux ((acc,remain)#l) v subG =
+        (case v of None \<Rightarrow> if remain = [] then
+              (case patternMacroingInSUSetAux l v subG of None \<Rightarrow> Some acc
+                 | Some acc' \<Rightarrow> Some (mergeMatchingMaps acc acc' subG))
+                                        else patternMacroingInSUSetAux l v subG
+           | Some var \<Rightarrow>(case updateMatchingMapMacros var (SetSubs remain) acc subG of None
+                         \<Rightarrow> patternMacroingInSUSetAux l v subG
+                          | Some acc' \<Rightarrow> (case patternMacroingInSUSetAux l v subG of None
+                              \<Rightarrow> Some acc'
+                           | Some acca \<Rightarrow> Some (mergeMatchingMaps acc' acca subG))))"
 | "patternMacroingInSUSet (SetPat l n) S acc subG =
-      (case patternMacroingInSUSetAux l S acc subG of S' \<Rightarrow>
-       (case findBijection S' of None \<Rightarrow> None
-      | Some (ones, remains) \<Rightarrow>
-    (case searchAllNonTermsInSUSet S of rest \<Rightarrow>
-       (case n of None \<Rightarrow> if rest = [] \<and> remains = [] then 
-        mergeMapWithOnes ones acc subG else None
-         | Some var \<Rightarrow>
-   (case updateMatchingMapMacro var (SetSubs (rest@(keys remains))) acc subG of
-        None \<Rightarrow> None | Some acc' \<Rightarrow> mergeMapWithOnes ones acc' subG)))))"
-| "patternMacroingInSUMapMember a [] acc subG = (a,[])"
-| "patternMacroingInSUMapMember a (t#l) acc subG = (case a of (b,c) \<Rightarrow>
-      (case t of (ItemM x y) \<Rightarrow>
-   (case patternMacroingInSUK b x acc subG of None
-      \<Rightarrow> patternMacroingInSUMapMember a l acc subG
-       | Some acc' \<Rightarrow> (case patternMacroingInSUK c y acc' subG of None \<Rightarrow>
-        patternMacroingInSUMapMember a l acc subG | Some acca \<Rightarrow>
-     (case patternMacroingInSUMapMember a l acc subG
-          of (u,v) \<Rightarrow> (u,(t,acca)#v))))
-     | _ \<Rightarrow> patternMacroingInSUMapMember a l acc subG))"
-| "patternMacroingInSUMapAux [] S acc subG = []"
-| "patternMacroingInSUMapAux (a#l) S acc subG =
-          (patternMacroingInSUMapMember a S acc subG)#(patternMacroingInSUMapAux l S acc subG)"
+      (case patternMacroingInAllSUMember l S acc subG of None \<Rightarrow> None
+         | Some rl \<Rightarrow> patternMacroingInSUSetAux rl n subG)"
+| "patternMacroingInSUMapMember a r [] acc subG = []"
+| "patternMacroingInSUMapMember (a,b) r (t#l) acc subG = (case t of (ItemM x y) \<Rightarrow>
+   (case patternMacroingInSUK a x acc subG of None
+      \<Rightarrow> patternMacroingInSUMapMember (a,b) (r@[t]) l acc subG
+       | Some acc' \<Rightarrow> (case patternMacroingInSUK b y acc' subG of None
+         \<Rightarrow> patternMacroingInSUMapMember (a,b) (r@[t]) l acc subG
+       | Some acca \<Rightarrow> (case patternMacroingInSUMapMember (a,b) (r@[t]) l acc subG
+          of accl \<Rightarrow> ((acca,r@l)#accl))))
+     | _ \<Rightarrow> patternMacroingInSUMapMember (a,b) (r@[t]) l acc subG)"
+| "patternMacroingInAllSUMapMemberAux P [] subG = None"
+| "patternMacroingInAllSUMapMemberAux P ((acc,remain)#l) subG = 
+         (case patternMacroingInAllSUMapMember P remain acc subG of None
+               \<Rightarrow> patternMacroingInAllSUMapMemberAux P l subG
+           | Some l' \<Rightarrow> (case patternMacroingInAllSUMapMemberAux P l subG of None \<Rightarrow> Some l'
+                 | Some la \<Rightarrow> Some (l'@la)))"
+| "patternMacroingInAllSUMapMember [] S acc subG = Some [(acc,S)]"
+| "patternMacroingInAllSUMapMember (a#l) S acc subG =
+        (case patternMacroingInSUMapMember a [] S acc subG of [] \<Rightarrow> None
+           | (r#rl) \<Rightarrow> patternMacroingInAllSUMapMemberAux l (r#rl) subG)"
+| "patternMacroingInSUMapAux [] v subG = None"
+| "patternMacroingInSUMapAux ((acc,remain)#l) v subG =
+        (case v of None \<Rightarrow> if remain = [] then
+              (case patternMacroingInSUMapAux l v subG of None \<Rightarrow> Some acc
+                 | Some acc' \<Rightarrow> Some (mergeMatchingMaps acc acc' subG))
+                                        else patternMacroingInSUMapAux l v subG
+           | Some var \<Rightarrow>(case updateMatchingMapMacros var (MapSubs remain) acc subG of None
+                         \<Rightarrow> patternMacroingInSUMapAux l v subG
+                          | Some acc' \<Rightarrow> (case patternMacroingInSUMapAux l v subG of None
+                              \<Rightarrow> Some acc'
+                           | Some acca \<Rightarrow> Some (mergeMatchingMaps acc' acca subG))))"
 | "patternMacroingInSUMap (MapPat l n) S acc subG =
-   (case patternMacroingInSUMapAux l S acc subG of S' \<Rightarrow>
-       (case findBijection S' of None \<Rightarrow> None
-      | Some (ones, remains) \<Rightarrow>
-    (case searchAllNonTermsInSUMap S of rest \<Rightarrow>
-       (case n of None \<Rightarrow> if rest = [] \<and> remains = [] then 
-        mergeMapWithOnes ones acc subG else None
-         | Some var \<Rightarrow>
-   (case updateMatchingMapMacro var (MapSubs (rest@(keys remains))) acc subG of
-        None \<Rightarrow> None | Some acc' \<Rightarrow> mergeMapWithOnes ones acc' subG)))))"
-| "patternMacroingInSUBagMember a [] acc subG = (a,[])"
-| "patternMacroingInSUBagMember a (t#l) acc subG = (case a of (b,c,d) \<Rightarrow>
-      (case t of (ItemB x y z) \<Rightarrow> if b = x then
-   (case patternMacroingInSUBigKWithBag d z acc subG of None
-      \<Rightarrow> patternMacroingInSUBagMember a l acc subG
-       | Some acc' \<Rightarrow> (case patternMacroingInSUBagMember a l acc subG
-          of (u,v) \<Rightarrow> (u,(t,acc')#v))) else patternMacroingInSUBagMember a l acc subG
-     | _ \<Rightarrow> patternMacroingInSUBagMember a l acc subG))"
-| "patternMacroingInSUBagAux [] S acc subG = []"
-| "patternMacroingInSUBagAux (a#l) S acc subG =
-          (patternMacroingInSUBagMember a S acc subG)#(patternMacroingInSUBagAux l S acc subG)"
+      (case patternMacroingInAllSUMapMember l S acc subG of None \<Rightarrow> None
+         | Some rl \<Rightarrow> patternMacroingInSUMapAux rl n subG)"
+| "patternMacroingInSUBagMember a r [] acc subG = []"
+| "patternMacroingInSUBagMember (a,b,c) r (t#l) acc subG = (case t of (ItemB x y z) \<Rightarrow>
+   (if a = x then (case patternMacroingInSUBigKWithBag c z acc subG of None
+         \<Rightarrow> patternMacroingInSUBagMember (a,b,c) (r@[t]) l acc subG
+       | Some acc' \<Rightarrow> (case patternMacroingInSUBagMember (a,b,c) (r@[t]) l acc subG
+          of accl \<Rightarrow> ((acc',r@l)#accl)))
+    else patternMacroingInSUBagMember (a,b,c) (r@[t]) l acc subG)
+     | _ \<Rightarrow> patternMacroingInSUBagMember (a,b,c) (r@[t]) l acc subG)"
+| "patternMacroingInAllSUBagMemberAux P [] subG = None"
+| "patternMacroingInAllSUBagMemberAux P ((acc,remain)#l) subG = 
+         (case patternMacroingInAllSUBagMember P remain acc subG of None
+               \<Rightarrow> patternMacroingInAllSUBagMemberAux P l subG
+           | Some l' \<Rightarrow> (case patternMacroingInAllSUBagMemberAux P l subG of None \<Rightarrow> Some l'
+                 | Some la \<Rightarrow> Some (l'@la)))"
+| "patternMacroingInAllSUBagMember [] S acc subG = Some [(acc, S)]"
+| "patternMacroingInAllSUBagMember (a#l) S acc subG =
+        (case patternMacroingInSUBagMember a [] S acc subG of [] \<Rightarrow> None
+           | (r#rl) \<Rightarrow> patternMacroingInAllSUBagMemberAux l (r#rl) subG)"
+| "patternMacroingInSUBagAux [] v subG = None"
+| "patternMacroingInSUBagAux ((acc,remain)#l) v subG =
+        (case v of None \<Rightarrow> if remain = [] then
+              (case patternMacroingInSUBagAux l v subG of None \<Rightarrow> Some acc
+                 | Some acca \<Rightarrow> Some (mergeMatchingMaps acc acca subG))
+                                        else patternMacroingInSUBagAux l v subG
+           | Some var \<Rightarrow>(case updateMatchingMapMacros var (BagSubs remain) acc subG of None
+                         \<Rightarrow> patternMacroingInSUBagAux l v subG
+                          | Some acc' \<Rightarrow> (case patternMacroingInSUBagAux l v subG of None
+                              \<Rightarrow> Some acc'
+                           | Some acca \<Rightarrow> Some (mergeMatchingMaps acc' acca subG))))"
 | "patternMacroingInSUBag (BagPat l n) S acc subG =
-    (case patternMacroingInSUBagAux l S acc subG of S' \<Rightarrow>
-       (case findBijection S' of None \<Rightarrow> None
-      | Some (ones, remains) \<Rightarrow>
-    (case searchAllNonTermsInSUBag S of rest \<Rightarrow>
-       (case n of None \<Rightarrow> if rest = [] \<and> remains = [] then 
-        mergeMapWithOnes ones acc subG else None
-         | Some var \<Rightarrow>
-   (case updateMatchingMapMacro var (BagSubs (rest@(keys remains))) acc subG of
-        None \<Rightarrow> None | Some acc' \<Rightarrow> mergeMapWithOnes ones acc' subG)))))"
+      (case patternMacroingInAllSUBagMember l S acc subG of None \<Rightarrow> None
+         | Some rl \<Rightarrow> patternMacroingInSUBagAux rl n subG)"
 | "patternMacroingInSUBigKWithBag (IRK t) S acc subG =
         (case S of (SUK r) \<Rightarrow> patternMacroingInSUK t r acc subG
            | _ \<Rightarrow> None)"
@@ -2020,6 +2331,12 @@ function patternMacroingInSUKLabel
 by pat_completeness auto
 
 termination sorry
+
+definition patternMatchingInSUKList where
+"patternMatchingInSUKList a b subG =
+    (case patternMacroingInSUKList a b [[]] subG of None \<Rightarrow> None
+          | Some [] \<Rightarrow> None | Some (a#al) \<Rightarrow> Some a)"
+
 
 function substitutionInSUKLabel :: "('upVar, 'var, 'metaVar) suKLabel
          \<Rightarrow> ('metaVar metaVar * ('upVar, 'var, 'metaVar) subsFactor) list
@@ -2171,7 +2488,7 @@ fun substitutionInSubsFactor where
 | "substitutionInSubsFactor (BagSubs a) acc = (case substitutionInSUBag a acc
       of None \<Rightarrow> None | Some a' \<Rightarrow> Some (BagSubs a'))"
 
-(* dealing with macro rules *)
+(* dealing with macro rules 
 function applyMacroRuleInSUKLabel
     and applyMacroRuleInSUKItem
     and applyMacroRuleInSUKList
@@ -2388,6 +2705,7 @@ fun applyAllMacroRulesInList where
                (case applyMacroRules x y z [MacroPat a b c] database subG of 
            Some [MacroPat a' b' c'] \<Rightarrow> Some (a',b',c') | _ \<Rightarrow> None))) l)
         (applyMacroRules x y z L' database subG) confi' database subG) | _ \<Rightarrow> None)"
+*)
 
 fun adjustKSortsInIRKItem
   and adjustKSortsInIRBigKWithBag
@@ -2753,7 +3071,7 @@ fun getFunRule where
 definition builtinLabels where
 "builtinLabels = [GetKLabel, IsKResult, AndBool, NotBool,
                       OrBool, Sort, MapUpdate, EqualK, NotEqualK, EqualSet, EqualMap,
-                       EqualKLabel, NotEqualKLabel, PlusInt, MinusInt, TimesInt]"
+              IntToString, EqualKLabel, NotEqualKLabel, PlusInt, MinusInt, TimesInt, StringCon]"
 
 primrec inLabelList where
 "inLabelList a [] = False"
@@ -2769,8 +3087,14 @@ fun turnSet where
 | "turnSet ((ItemS s)#l) = insert s (turnSet l)"
 | "turnSet (a#l) = turnSet l"
 
+term patternMacroingInSUSet
+
 definition evalEqualSet where
-"evalEqualSet a b = ((turnSet a) = (turnSet b))"
+"evalEqualSet a b database subG =
+    (case suToIRInSet a database of None \<Rightarrow> None
+       | Some (NormalPat (SetMatching a'))
+           \<Rightarrow> (case patternMacroingInSUSet a' b [] subG of None \<Rightarrow> Some False
+                 | Some l \<Rightarrow> Some True))"
 
 fun turnMap where
 "turnMap [] = {}"
@@ -2778,7 +3102,36 @@ fun turnMap where
 | "turnMap (a#l) = turnMap l"
 
 definition evalEqualMap where
-"evalEqualMap a b = ((turnMap a) = (turnMap b))"
+"evalEqualMap a b database subG =
+    (case suToIRInMap a database of None \<Rightarrow> None
+       | Some (NormalPat (MapMatching a'))
+           \<Rightarrow> (case patternMacroingInSUMap a' b [] subG of None \<Rightarrow> Some False
+                 | Some l \<Rightarrow> Some True))"
+
+definition evalEqualK where
+"evalEqualK a b database subG =
+    (case suToIRInK a database of None \<Rightarrow> None
+       | Some (NormalPat (KMatching a'))
+           \<Rightarrow> (case patternMacroingInSUK a' b [] subG of None \<Rightarrow> Some False
+                 | Some l \<Rightarrow> Some True))"
+
+fun digitToString where
+"digitToString a = (if a = 0 then ''0'' else if a = 1 then ''1''
+                else if a = 2 then ''2'' else if a = 3 then ''3''
+                else if a = 4 then ''4'' else if a = 5 then ''5''
+                else if a = 6 then ''6'' else if a = 7 then ''7''
+                else if a = 8 then ''8'' else if a = 9 then ''9'' else '''')"
+
+definition abs where
+"abs a = (if a < 0 then - a else a)"
+
+function numToString where
+"numToString a = (if a < 0 then (''-''@(numToString (abs a)))
+               else if a < 10 \<and> a \<ge> 0 then digitToString a
+           else (digitToString (a mod 10))@(numToString (a div 10)))"
+by pat_completeness auto
+
+termination sorry
 
 fun evalBuiltinFun where
 "evalBuiltinFun GetKLabel kl database subG =
@@ -2815,19 +3168,23 @@ fun evalBuiltinFun where
                 \<Rightarrow> Some (MapSubs (evalMapUpdate ml key v)) | _ \<Rightarrow> None)"
 | "evalBuiltinFun EqualSet kl database subG =
     (case kl of [ItemKl (SUBigBag (SUSet a)),ItemKl (SUBigBag (SUSet b))]
-           \<Rightarrow> Some (KItemSubs (SUKItem (SUKLabel (ConstToLabel (BoolConst (evalEqualSet a b)))) [] [Bool]))
+       \<Rightarrow> (case (evalEqualSet a b database subG) of None \<Rightarrow> None
+                | Some bv \<Rightarrow> Some (KItemSubs (SUKItem (SUKLabel (ConstToLabel (BoolConst bv))) [] [Bool])))
                         | _ \<Rightarrow> None)"
 | "evalBuiltinFun EqualMap kl database subG =
     (case kl of [ItemKl (SUBigBag (SUMap a)),ItemKl (SUBigBag (SUMap b))]
-           \<Rightarrow> Some (KItemSubs (SUKItem (SUKLabel (ConstToLabel (BoolConst (evalEqualMap a b)))) [] [Bool]))
+        \<Rightarrow> (case (evalEqualMap a b database subG) of None \<Rightarrow> None
+           | Some bv \<Rightarrow> Some (KItemSubs (SUKItem (SUKLabel (ConstToLabel (BoolConst bv))) [] [Bool])))
                         | _ \<Rightarrow> None)"
 | "evalBuiltinFun EqualK kl database subG =
     (case kl of [ItemKl (SUBigBag (SUK a)),ItemKl (SUBigBag (SUK b))]
-           \<Rightarrow> Some (KItemSubs (SUKItem (SUKLabel (ConstToLabel (BoolConst (a = b)))) [] [Bool]))
+      \<Rightarrow> (case (evalEqualK a b database subG) of None \<Rightarrow> None
+      | Some bv \<Rightarrow> Some (KItemSubs (SUKItem (SUKLabel (ConstToLabel (BoolConst bv))) [] [Bool])))
                         | _ \<Rightarrow> None)"
 | "evalBuiltinFun NotEqualK kl database subG =
     (case kl of [ItemKl (SUBigBag (SUK a)),ItemKl (SUBigBag (SUK b))]
-           \<Rightarrow> Some (KItemSubs (SUKItem (SUKLabel (ConstToLabel (BoolConst (a \<noteq> b)))) [] [Bool]))
+      \<Rightarrow> (case (evalEqualK a b database subG) of None \<Rightarrow> None
+      | Some bv \<Rightarrow> Some (KItemSubs (SUKItem (SUKLabel (ConstToLabel (BoolConst (\<not> bv)))) [] [Bool])))
                         | _ \<Rightarrow> None)"
 | "evalBuiltinFun EqualKLabel kl database subG =
     (case kl of [ItemKl (SUBigLabel (SUKLabel a)),ItemKl (SUBigLabel (SUKLabel b))]
@@ -2858,6 +3215,18 @@ fun evalBuiltinFun where
                                (SUKItem (SUKLabel (ConstToLabel (IntConst b2))) newl2 t2)]))]
                 \<Rightarrow> Some (KItemSubs (SUKItem (SUKLabel (ConstToLabel (IntConst (b1 * b2)))) [] [kSyntax.Int]))
                     | _ \<Rightarrow> None)"
+| "evalBuiltinFun StringCon kl database subG = 
+    (case kl of [ItemKl (SUBigBag (SUK [ItemFactor
+                               (SUKItem (SUKLabel (ConstToLabel (StringConst b1))) newl1 t1)])),
+                 ItemKl (SUBigBag (SUK [ItemFactor
+                               (SUKItem (SUKLabel (ConstToLabel (StringConst b2))) newl2 t2)]))]
+                \<Rightarrow> Some (KItemSubs (SUKItem (SUKLabel (ConstToLabel (StringConst (b1 @ b2)))) [] [kSyntax.String]))
+                    | _ \<Rightarrow> None)"
+| "evalBuiltinFun IntToString kl database subG =
+    (case kl of [ItemKl (SUBigBag (SUK [ItemFactor
+                               (SUKItem (SUKLabel (ConstToLabel (IntConst b1))) newl1 t1)]))]
+                \<Rightarrow> Some (KItemSubs (SUKItem (SUKLabel (ConstToLabel (StringConst (numToString b1)))) [] [kSyntax.String]))
+                    | _ \<Rightarrow> None)"
 | "evalBuiltinFun A kl database subG = None"
 
 inductive funEvaluationBool and funEvaluationBoolAux where
@@ -2875,25 +3244,24 @@ inductive funEvaluationBool and funEvaluationBoolAux where
        funEvaluationBool allRules database subG (Continue C') (Stop C'') \<rbrakk>
         \<Longrightarrow> funEvaluationBool allRules database subG (Continue C) (Stop C'')"
 | emptyRule : "funEvaluationBoolAux allRules database subG [] fun (Continue Cr) (Div Cr)"
-| noPatRule : "\<lbrakk> patternMacroingInSUKList p fun [] subG = None ;
-   funEvaluationBoolAux allRules database subG fl fun (Continue Cr) (Stop C') \<rbrakk>
+| noPatRule : "\<lbrakk> patternMatchingInSUKList p fun subG = None;
+           funEvaluationBoolAux allRules database subG fl fun (Continue Cr) (Stop C') \<rbrakk>
          \<Longrightarrow> funEvaluationBoolAux allRules database subG
-                               ((p,r,c)#fl) fun (Continue Cr) (Stop C')"
-| falseRule : "\<lbrakk> patternMacroingInSUKList p fun [] subG = Some acc ;
-   substitutionInSUKItem c acc  = Some value ;
-   funEvaluationBool allRules database subG (Continue value) (Stop value');
-   getKLabelInSUKItem value' = Some (ConstToLabel (BoolConst False));
-   funEvaluationBoolAux allRules database subG fl fun (Continue Cr) (Stop C') \<rbrakk>
-         \<Longrightarrow> funEvaluationBoolAux allRules database subG
-                               ((p,r,c)#fl) fun (Continue Cr) (Stop C')"
-| trueRule : "\<lbrakk> patternMacroingInSUKList p fun [] subG = Some acc ;
+                       ((p,r,c)#fl) fun (Continue Cr) (Stop C')"
+| trueRule : "\<lbrakk> patternMatchingInSUKList p fun subG = Some acc;
    substitutionInSUKItem c acc  = Some value ;
    funEvaluationBool allRules database subG (Continue value) (Stop value');
    getKLabelInSUKItem value' = Some (ConstToLabel (BoolConst True));
    substitutionInSubsFactor r acc = Some r' ; substitutionInSUKItem Cr [(FunHole, r')] = Some C';
      typeCheckCondition C' database subG = Some C'' \<rbrakk> 
                 \<Longrightarrow> funEvaluationBoolAux allRules database subG
-       ((p,r,c)#l) fun (Continue Cr) (Stop C'')"
+                ((p,r,c)#fl) fun (Continue Cr) (Stop C'')"
+| falseRule : "\<lbrakk> patternMatchingInSUKList p fun subG = Some acc;
+      substitutionInSUKItem c acc  = Some value ;
+   funEvaluationBool allRules database subG (Continue value) (Stop value');
+   getKLabelInSUKItem value' = Some (ConstToLabel (BoolConst False));
+   funEvaluationBoolAux allRules database subG fl fun (Continue Cr) (Stop C') \<rbrakk>
+    \<Longrightarrow> funEvaluationBoolAux allRules database subG ((p,r,c)#fl) fun (Continue Cr) (Stop C')"
 
 code_pred funEvaluationBoolAux .
 code_pred funEvaluationBool .
@@ -2918,25 +3286,24 @@ where
        funEvaluation allRules database subG (Continue B') (Stop B'') \<rbrakk>
         \<Longrightarrow> funEvaluation allRules database subG (Continue B) (Stop B'')"
 | emptyRule : "funEvaluationAux allRules database subG [] fun (Continue Br) (Div Br)"
-| noPatRule : "\<lbrakk> patternMacroingInSUKList p fun [] subG = None ;
-   funEvaluationAux allRules database subG fl fun (Continue Br) (Stop B') \<rbrakk>
+| noPatRule : "\<lbrakk> patternMatchingInSUKList p fun subG = None;
+         funEvaluationAux allRules database subG fl fun (Continue Cr) (Stop C') \<rbrakk>
          \<Longrightarrow> funEvaluationAux allRules database subG
-                               ((p,r,c)#fl) fun (Continue Br) (Stop B')"
-| falseRule : "\<lbrakk> patternMacroingInSUKList p fun [] subG = Some acc ;
-   substitutionInSUKItem c acc  = Some value ;
-   funEvaluationBool allRules database subG (Continue value) (Stop value');
-   getKLabelInSUKItem value' = Some (ConstToLabel (BoolConst False));
-   funEvaluationAux allRules database subG fl fun (Continue Br) (Stop B') \<rbrakk>
-         \<Longrightarrow> funEvaluationAux allRules database subG
-                               ((p,r,c)#fl) fun (Continue Br) (Stop B')"
-| trueRule : "\<lbrakk> patternMacroingInSUKList p fun [] subG = Some acc ;
-   substitutionInSUKItem c acc  = Some value ;
+                              ((p,r,c)#fl) fun (Continue Cr) (Stop C')"
+| trueRule : "\<lbrakk> patternMatchingInSUKList p fun subG = Some acc;
+        substitutionInSUKItem c acc  = Some value ;
    funEvaluationBool allRules database subG (Continue value) (Stop value');
    getKLabelInSUKItem value' = Some (ConstToLabel (BoolConst True));
-   substitutionInSubsFactor r acc = Some r' ; substitutionInSUBag Br [(FunHole, r')] = Some B';
-     typeCheckProgramState B' database subG = Some B'' \<rbrakk> 
+   substitutionInSubsFactor r acc = Some r' ; substitutionInSUBag Cr [(FunHole, r')] = Some C';
+     typeCheckProgramState C' database subG = Some C'' \<rbrakk> 
                 \<Longrightarrow> funEvaluationAux allRules database subG
-       ((p,r,c)#l) fun (Continue Br) (Stop B'')"
+                ((p,r,c)# fl) fun (Continue Cr) (Stop C'')"
+| falseRule : "\<lbrakk> patternMatchingInSUKList p fun subG = Some acc;
+       substitutionInSUKItem c acc  = Some value ;
+   funEvaluationBool allRules database subG (Continue value) (Stop value');
+   getKLabelInSUKItem value' = Some (ConstToLabel (BoolConst False));
+   funEvaluationAux allRules database subG fl fun (Continue Cr) (Stop C) \<rbrakk>
+    \<Longrightarrow> funEvaluationAux allRules database subG ((p,r,c)#fl) fun (Continue Cr) (Stop C)"
 
 code_pred funEvaluation .
 code_pred funEvaluationAux .
@@ -2953,7 +3320,15 @@ export_code Eps Continue Success FunTrans Single IntConst Bool kSyntax.Set Defin
     getValueTerm irToSUInKLabel irToSUInKItem irToSUInPat irToSUInMatchFactor subsortGraph
     AllSubsorts kResultSubsorts getKResultSubsorts preSubsortGraph preSubsortTerms syntaxSetToKItems
      PreAllSubsorts getAllSubsortInKFile mergeTuples mergeList getAllSorts simpleKToIR
-     simpleKToIRKList simpleKToSU simpleKToSUKList  suToIRInKLabel suToIRInSubsFactor genProgramState
+    addImplicitSubsorts  simpleKToIRKList simpleKToSU simpleKToSUKList getFunRule
+    patternMacroingInSUKList substitutionInSUKItem substitutionInSubsFactor substitutionInSUBag
+    suToIRInKLabel suToIRInSubsFactor genProgramState checkTermsInSUKLabel checkTermsInSUKItem
+    checkTermsInSUKList checkTermsInSUK checkTermsInSUList checkTermsInSUSet checkTermsInSUMap
+    checkTermsInSUBag getArgSort hasFunLabelInSUBag localteFunTermInSUBag patternMacroingInSUK
+   patternMacroingInSUBigKWithLabel patternMacroingInSUMap patternMacroingInSUBigKWithBag
+   patternMacroingInSUMapMember patternMacroingInAllSUMapMember patternMacroingInAllSUMapMemberAux
+   patternMacroingInSUMapAux typeCheckRules wellFormRules checkTypesInRules checkTypesInFunPats
+   irToSUInKList getDomainInIRKList constructSortMap subsortList meet
     boolEvalFun funRuleEvalFun tupleToRulePats assignSortInRules collectDatabase tupleToRulePats
    tupleToRulePat tupleToRuleInParsed isFunctionItem getSort in OCaml  module_name K file "k.ml"
 

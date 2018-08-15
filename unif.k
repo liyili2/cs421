@@ -1,6 +1,4 @@
 
-
-  syntax Id ::= Token{[a-z][a-z A-Z 0-9]*} []
   syntax KItem ::= 'some(K) [klabel('some)]
   syntax KItem ::= "none" [klabel('none)]
   syntax Term ::= Id
@@ -16,22 +14,24 @@
   syntax Set ::= 'substInSet(Set, Id, Term) [function,klabel('substInSet)]
   syntax Map ::= 'substMap(Map, Id, Term) [function,klabel('substMap)]
 
+  syntax Bool ::= 'subset(Set, Set)   [function, klabel('subset)]
+  syntax Set ::= 'minusSet(Set, Set)  [function, klabel('minusSet)]
+  syntax KItem ::= "succecss" [klabel('success)]
+  syntax KItem ::= 'error(String) [klabel('error)]
 
-  syntax KItem ::= 'applyDec(TermPair) [function,klabel('applyDec)]
+  syntax KItem ::= 'checkOneDel(Set, Set) [function, klabel('checkOneDel)]
+  syntax KItem ::= 'checkOneDec(Set, Set) [function, klabel('checkOneDec)]
+  syntax KItem ::= 'checkOneDecAux(Set, Set) [function, klabel('checkOneDecAux)]
+  syntax KItem ::= 'checkOrient(Set, Set) [function, klabel('checkOrient)]
+  syntax KItem ::= 'checkElim(Set, Map, Set, Map) [function, klabel('checkElim)]
+  syntax KItem ::= 'checkElimAux(K, Set, Map) [function, klabel('checkElimAux)]
+
   syntax Set ::= 'decom(Terms, Terms) [function, klabel('decom)]
-  syntax List ::= 'applyOneDec(List, Set, K, K, Set) [function, klabel('applyOneDec)]
-  syntax Bool ::= 'applyDel(TermPair) [function,klabel('applyDel)]
-  syntax List ::= 'applyOneDel(List, Set, K, Set) [function, klabel('applyOneDel)]
-  syntax KItem ::= 'toOrient(TermPair) [function, klabel('toOrient)]
-  syntax List ::= 'applyOrient(List, Set, K, K, Set) [function, klabel('applyOrient)]
 
   syntax Bool ::= 'occur(Id, Term)                        [function,klabel('occur)]
   syntax Bool ::= 'occurs(Id, Terms)                      [function,klabel('occurs)]
   syntax KItem ::= 'toEliminate(TermPair, Set, Map)       [function, klabel('toEliminate)]
-  syntax List ::= 'applyElim(List, Set, K, K, Set, Map)   [function, klabel('applyElim)]
 
-  syntax Bool ::= 'existOneSet(List, Set) [function, klabel('existOneSet)]
-  syntax Bool ::= 'existOneResult(List, K)  [function, klabel('existOneResult)]
   syntax Bool ::= 'singleUnif(K, K, K) [function,klabel('singleUnif)]
 
   syntax KItem ::= "delete"    [klabel('delete)]
@@ -44,57 +44,49 @@
   rule 'termLength(.Terms) => '0(.KList)
   rule 'termLength('listCon(A:Term, B:Terms)) => '+Int('termLength(B), '1(.KList))
 
-  rule 'applyDel('termPair(A:Term, A:Term)) => 'true(.KList)
-  rule 'applyDel('termPair(A:Term, B:Term)) => 'false(.KList)
-       requires '=/=K(A, B)
+  rule 'subset(.Set, S:Set) => 'true(.KList)
+  rule 'subset(SetCon(SetItem(A:K), S:Set), SetCon(SetItem(A:K), S':Set))
+          => 'subset(S, S')
+  rule 'subset(SetCon(SetItem(A:K), S:Set), S':Set) => 'false(.KList)  [owise]
 
-  rule 'applyOneDel(L:List, S:Set, .K, .Set) => L
-  rule 'applyOneDel(L:List, S:Set, .K, SetCon(SetItem(X:K), S1:Set))
-                 => 'applyOneDel(L, S, X, S1)
-  rule 'applyOneDel(L:List, S:Set, 'termPair(A:Term, A:Term), S1:Set)
-          => 'applyOneDel(ListCon(L, ListItem('resultSet(SetCon(S, S1)))),
-            SetCon(S, SetItem('termPair(A, A))), .K, S1)
-  rule 'applyOneDel(L:List, S:Set, 'termPair(A:Term, B:Term), S1:Set)
-          => 'applyOneDel(L, SetCon(S, SetItem('termPair(A, B))), .K, S1)
+  rule 'minusSet(S:Set, .Set) => S
+  rule 'minusSet(SetCon(SetItem(A:K), S:Set), SetCon(SetItem(A:K), S':Set))
+            => 'minusSet(S, S')
+  rule 'minusSet(S:Set, SetCon(SetItem(B:K), S':Set))
+            => 'minusSet(S, S') [owise]
+
+  rule 'checkOneDel(SetCon(SetItem('termPair(A:Term, A:Term)),
+                  S:Set), S:Set) => 'success(.KList)
+  rule 'checkOneDel(SetCon(SetItem('termPair(A:Term, B:Term)),
+                  S:Set), S:Set) => 'error("The two terms are not equal so that they cannot be deleted.")
        requires '=/=K(A, B)
+  rule 'checkOneDel(S:Set, S':Set) => 'error("Syntactic error: might have mis-written the output terms, or apply the wrong rule.")
+       [owise]
 
   rule 'decom(.Terms, .Terms) => .Set
   rule 'decom('listCon(A:Term, AL:Terms), 'listCon(B:Term, BL:Terms))
             => SetCon(SetItem('termPair(A, B)), 'decom(AL, BL))
 
-  rule 'applyDec('termPair('const(A:Id, AL:Terms), 'const(A:Id, BL:Terms)))
-             => 'some('resultSet('decom(AL, BL)))
-       requires '==K('termLength(AL), 'termLength(BL))
-  rule 'applyDec('termPair(A:Term, B:Term)) => 'none(.KList) [owise]
+  rule 'checkOneDec(SetCon(SetItem('termPair(A:Term, B:Term)), S1:Set), S:Set)
+         => 'checkOneDecAux(S1, 'minusSet(S, 'decom(A, B)))
+       requires 'subset('decom(A, B), S)
+  rule 'checkOneDec(SetCon(SetItem('termPair(A:Term, B:Term)), S1:Set), S:Set)
+         => 'error("The decomposition rule is not applied properly.")  [owise]
 
-  rule 'applyOneDec(L:List, S:Set, .K, .K, .Set) => L
-  rule 'applyOneDec(L:List, S:Set, .K, .K, SetCon(SetItem(X:K), S1:Set))
-                 => 'applyOneDec(L, S, .K, X, S1)
-  rule 'applyOneDec(L:List, S:Set, .K, 'termPair(A:Term, B:Term), S1:Set)
-          => 'applyOneDec(L:List, S:Set, 'applyDec('termPair(A:Term, B:Term)),
-                       'termPair(A:Term, B:Term), S1:Set)
-  rule 'applyOneDec(L:List, S:Set, 'none(.KList), 'termPair(A:Term, B:Term), S1:Set)
-          => 'applyOneDec(L, SetCon(S, SetItem('termPair(A:Term, B:Term))), .K, .K, S1)
-  rule 'applyOneDec(L:List, S:Set, 'some('resultSet(RS:Set)), 'termPair(A:Term, B:Term), S1:Set)
-           => 'applyOneDec(ListCon(L, ListItem('resultSet(SetCon(S, SetCon(RS, S1))))),
-                  SetCon(S, SetItem('termPair(A:Term, B:Term))), .K, .K, S1)
+  rule 'checkOneDecAux(S:Set, S:Set) => 'success(.KList)
+  rule 'checkOneDecAux(S:Set, S':Set) => 'error("Syntactic error: might have mis-written the output terms, or apply the wrong rule.") [owise]
 
-  rule 'toOrient('termPair('const(A:Id, AL:Terms), B:Id))
-             => 'some('termPair(B, 'const(A, AL)))
-  rule 'toOrient('termPair(A:Term, B:Term)) => 'none(.KList) [owise]
-
-  rule 'applyOrient(L:List, S:Set, .K, .K, .Set) => L
-  rule 'applyOrient(L:List, S:Set, .K, .K, SetCon(SetItem(X:K), S1:Set))
-                 => 'applyOrient(L, S, .K, X, S1)
-  rule 'applyOrient(L:List, S:Set, .K, 'termPair(A:Term, B:Term), S1:Set)
-          => 'applyOrient(L:List, S:Set, 'toOrient('termPair(A:Term, B:Term)),
-                       'termPair(A:Term, B:Term), S1:Set)
-  rule 'applyOrient(L:List, S:Set, 'none(.KList), 'termPair(A:Term, B:Term), S1:Set)
-              => 'applyOrient(L, SetCon(S, SetItem('termPair(A:Term, B:Term))), .K, .K, S1)
-  rule 'applyOrient(L:List, S:Set, 'some(X:K),
-                       'termPair(A:Term, B:Term), S1:Set)
-              => 'applyOrient(ListCon(L, ListItem('resultSet(SetCon(S, SetCon(SetItem(X), S1))))),
-                      SetCon(S, SetItem('termPair(A:Term, B:Term))), .K, .K, S1)
+  rule 'checkOrient(SetCon(SetItem('termPair('const(A:Id, AL:Terms),
+           B:Id)), S:Set), SetCon(SetItem('termPair(B, 'const(A:Id, AL:Terms))),
+              S:Set)) => 'success(.KList)
+  rule 'checkOrient(SetCon(SetItem('termPair('const(A:Id, AL:Terms),
+           B:Id)), S:Set), SetCon(SetItem('termPair(X:Term, Y:Term)),
+              S:Set)) => 'error("Does not apply orient rule correctly.")
+       requires 'andBool('=/=K(X, B), '=/=K(Y, 'const(A:Id, AL:Terms)))
+  rule 'checkOrient(SetCon(SetItem('termPair('const(A:Id, AL:Terms),
+           B:Id)), S:Set), S':Set)
+         => 'error("Syntactic error: might have mis-written the output terms, or apply the wrong rule.")
+       [owise]
 
   rule 'occur(X:Id, X:Id) => 'true(.KList)
   rule 'occur(X:Id, Y:Id) => 'false(.KList)
@@ -104,10 +96,6 @@
   rule 'occurs(X:Id, .Terms) => 'false(.KList)
   rule 'occurs(X:Id, 'listCon(T:Term, Ts:Terms))
           => 'orBool('occur(X, T), 'occurs(X, Ts))
-
-  syntax Term ::= 'subst(K, Id, Term) [function,klabel('subst)]
-  syntax Set ::= 'substInSet(Set, Id, Term) [function,klabel('substInSet)]
-  syntax Map ::= 'substMap(Map, Id, Term) [function,klabel('substMap)]
 
   rule 'subst('termPair(A:Term, B:Term), X:Id, T:Term)
          => 'termPair('subst(A, X, T), 'subst(B, X, T))
@@ -133,57 +121,27 @@
        requires 'occur(Y, T)
 
   rule 'toEliminate('termPair(A:Id, B:Term), S:Set, M:Map)
-           => 'some('result('substInSet(S, A, B), 'substInSet(M, A, B)))
-       requires 'notBool('occur(A, B))
-  rule 'toEliminate('termPair(A:Term, B:Term), S:Set, M:Map) => 'none(.KList) [owise]
+           => 'result('substInSet(S, A, B), 'substMap(M, A, B))
 
-  rule 'applyElim(L:List, S:Set, .K, .K, .Set, M:Map) => L
-  rule 'applyElim(L:List, S:Set, .K, .K, SetCon(SetItem(X:K), S1:Set), M:Map)
-                 => 'applyElim(L, S, .K, X, S1, M)
-  rule 'applyElim(L:List, S:Set, .K, 'termPair(A:Term, B:Term), S1:Set, M:Map)
-          => 'applyElim(L:List, S:Set, 'toEliminate('termPair(A:Term, B:Term), SetCon(S, S1), M),
-                       'termPair(A:Term, B:Term), S1:Set, M)
-  rule 'applyElim(L:List, S:Set, 'none(.KList), 'termPair(A:Term, B:Term), S1:Set, M:Map)
-         => 'applyElim(L, SetCon(S, SetItem('termPair(A:Term, B:Term))), .K, .K, S1, M)
-  rule 'applyElim(L:List, S:Set, 'some('result(RS:Set, RM:Map)),
-               'termPair(A:Term, B:Term), S1:Set, M:Map)
-         => 'applyElim(ListCon(L, ListItem('result(RS:Set, RM:Map))),
-                   SetCon(S, SetItem('termPair(A:Term, B:Term))), .K, .K, S1, M)
+  rule 'checkElim(SetCon(SetItem('termPair(A:Id, B:Term)), S:Set),
+                 M:Map, S':Set, M':Map)
+              => 'checkElimAux('toEliminate('termPair(A:Id, B:Term), S, M), S', M')
+        requires 'notBool('occur(A, B))
+  rule 'checkElim(S:Set, M:Map, S':Set, M':Map)
+             => 'error("There is no term that can be applied with the elimination rule.")
+        [owise]
 
-  rule 'existOneSet(.List, S2:Set) => 'false(.KList)
-  rule 'existOneSet(ListCon(ListItem('resultSet(S1:Set)), L:List), S2:Set) => 'true(.KList)
-       requires '==Set(S1, S2)
-  rule 'existOneSet(ListCon(ListItem('resultSet(S1:Set)), L:List), S2:Set)
-              => 'existOneSet(L, S2)
-       requires 'notBool('==Set(S1, S2))
-
-  rule 'existOneResult(.List, A:K) => 'false(.KList)
-  rule 'existOneResult(ListCon(ListItem('result(S1:Set, M1:Map)), L:List),
-               'result(S2:Set, M2:Map)) => 'true(.KList)
-       requires 'andBool('==Set(S1, S2), '==Map(M1, M2))
-  rule 'existOneResult(ListCon(ListItem('result(S1:Set, M1:Map)), L:List),
-           'result(S2:Set, M2:Map)) => 'existOneResult(L, 'result(S2:Set, M2:Map))
-       requires 'orBool('notBool('==Set(S1, S2)), 'notBool('==Map(M1, M2)))
+  rule 'checkElimAux('result(S:Set, M:Map), S:Set, M:Map) => 'success(.KList)
+  rule 'checkElimAux('result(S:Set, M:Map), S':Set, M':Map)
+          => 'error("The result is not a correct application result of the elimination rule.") [owise]
 
   rule 'singleUnif('delete(.KList), 'result(S1:Set, M1:Map), 'result(S2:Set, M2:Map))
-           => 'existOneSet('applyOneDel(.List, .Set, .K, S1), S2)
+           => 'checkOneDel(S1, S2)
   rule 'singleUnif('decompose(.KList), 'result(S1:Set, M1:Map), 'result(S2:Set, M2:Map))
-           => 'existOneSet('applyOneDec(.List, .Set, .K, .K, S1), S2)
+           => 'checkOneDec(S1, S2)
   rule 'singleUnif('orient(.KList), 'result(S1:Set, M1:Map), 'result(S2:Set, M2:Map))
-           => 'existOneSet('applyOrient(.List, .Set, .K, .K, S1), S2)
+           => 'checkOrient(S1, S2)
   rule 'singleUnif('eliminate(.KList), 'result(S1:Set, M1:Map), 'result(S2:Set, M2:Map))
-           => 'existOneResult('applyElim(.List, .Set, .K, S1, M1), 'result(S2, M2))
+           => 'checkElim(S1, M1, S2, M2)
 
-program 'singleUnif('decompose(.KList), 'result(SetCon(SetItem(
-      'termPair('const($f(.KList), 'listCon($x(.KList), .Terms)), 'const($f(.KList),
-     'listCon('const($g(.KList, 'listCon($y(.KList), 'listCon($z(.KList), .Terms)))), .Terms)))),
-    SetCon(SetItem(
-      'termPair('const($g(.KList), 'listCon($y(.KList),
-             'listCon('const($f(.KList), 'listCon($y(.KList), .Terms)), .Terms))), $x(.KList))),
-         .Set)), .Map),
-    'result(SetCon(SetItem(
-      'termPair($x(.KList), 'const($g(.KList), 'listCon($y(.KList), 'listCon($z(.KList), .Terms))))),
-    SetCon(SetItem(
-      'termPair('const($g(.KList), 'listCon($y(.KList),
-             'listCon('const($f(.KList), 'listCon($y(.KList), .Terms)), .Terms))), $x(.KList))),
-         .Set)), .Map))
+program 'occur($y(.KList), 'const($f(.KList), 'listCon($h(.KList), 'listCon($x(.KList), .Terms))))

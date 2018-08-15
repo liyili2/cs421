@@ -91,13 +91,13 @@ let parString s = List.map (fun c -> parChar c) (explodep s);;
 let parseSort s = match s with K.Top -> parString "Top" | K -> parString "K" | Bool -> parString "Bool"
            | KItem -> parString "KItem" | KLabel -> parString "KLabel"
        | KResult -> parString "KResult" | KList -> parString "KList" | List -> parString "List"
-     | Seta -> parString "Set" | Map -> parString "Map" | Bag -> parString "Bag"
+     | Set -> parString "Set" | Map -> parString "Map" | Bag -> parString "Bag"
       | Id -> parString "Id" | String -> parString "String"
     | Int -> parString "Int" | Float -> parString "Float" | OtherSort s -> s;;
 
 let toSort s = match s with "K" -> K.K | "Bool" -> K.Bool | "KItem" -> KItem
          | "KLabel" -> KLabel | "KResult" -> KResult
-    | "KList" -> KList | "List" -> List | "Set" -> Seta
+    | "KList" -> KList | "List" -> List | "Set" -> Set
     | "Map" -> Map | "Bag" -> Bag | "Id" -> Id | "String" -> String
     | "Int" -> Int | "Float" -> Float | _ -> OtherSort (parseString s);;
 
@@ -125,6 +125,8 @@ let rec dealWithLabel x = match x with "getKLabel" -> GetKLabel
      | "+Int" -> PlusInt | "-Int" -> MinusInt
        | "*Int" -> TimesInt | "true" -> ConstToLabel (BoolConst true)
      | "false" -> ConstToLabel (BoolConst false)
+     | "+String" -> StringCon
+     | "intToString" -> IntToString
      | _ -> if checkAllInts x 0 then ConstToLabel (IntConst (parInt (int_of_string x)))
                    else OtherLabel (parString x);;
 %}
@@ -136,7 +138,7 @@ let rec dealWithLabel x = match x with "getKLabel" -> GetKLabel
 %token <atoken list> AToken
 %token <string> EmptyLabel LabelId Variable
 %token <string * feature list> BagWrap BagBack
-%token Bool K KItem KLabel KResult KList List Set Map Bag Id String Int Float
+%token Bool K KItem KLabel KResult KList List Seta Map Bag Id String Int Float
        Assign Bar Gt EOF Left Right Function Seqstrict
        NonAssoc Tokena Avoid Bracket LBig RBig Dot TheStar Plus LPAREN RPAREN
         TypeCon ASetCon AListCon AConfiguration ARule ASyntax AMapCon ARewrite AMapUpdate Requires
@@ -225,6 +227,7 @@ ruleexpression:
   | sort {SimId (Defined (parseSort $1), Top)}
   | sort TypeCon sort {SimId (Defined (parseSort $1), $3)}
   | LabelId LPAREN ruleexpressions RPAREN {SimTerm (dealWithLabel $1, $3)}
+  | Terminal {SimTerm (ConstToLabel (StringConst $1), [])}
   | Variable LPAREN ruleexpressions RPAREN {SimTerm (ConstToLabel (IdConst (parString $1)), $3)}
   | ASetItem LPAREN ruleexpressions RPAREN {SimTerm (SetItemLabel, $3)}
   | ASetCon LPAREN ruleexpressions RPAREN {SimTerm (SetConLabel, $3)}
@@ -252,7 +255,7 @@ sort:
   | KResult      {KResult}
   | KList      {KList}
   | List      {List}
-  | Set      {Seta}
+  | Seta      {Set}
   | Map      {Map}
   | Bag      {Bag}
   | Id      {Id}

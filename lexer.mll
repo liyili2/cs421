@@ -24,7 +24,7 @@ let parseString s = List.map (fun c -> parseChar c) (explode s);;
 
 let dealwithSort s = match s with "K" -> K | "Bool" -> Bool | "KItem" -> KItem
          | "KLabel" -> KLabel | "KResult" -> KResult
-    | "KList" -> KList | "List" -> List | "Set" -> Set
+    | "KList" -> KList | "List" -> List | "Set" -> Seta
     | "Map" -> Map | "Bag" -> Bag | "Id" -> Id | "String" -> String
     | "Int" -> Int | "Float" -> Float | _ -> OtherSort (parseString s);;
 

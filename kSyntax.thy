@@ -31,7 +31,7 @@ datatype 'upVar label = UnitLabel "'upVar sort" | ConstToLabel theConstant
   | Sort | GetKLabel | IsKResult | AndBool | NotBool | OrBool | SetConLabel
   | SetItemLabel | ListConLabel | ListItemLabel | MapConLabel | MapItemLabel | MapUpdate
   | EqualK | NotEqualK | EqualKLabel | NotEqualKLabel | OtherLabel string | TokenLabel string
-  | PlusInt | MinusInt | TimesInt | EqualSet | EqualMap
+  | PlusInt | MinusInt | TimesInt | EqualSet | EqualMap | StringCon | IntToString
 
 datatype 'upVar symbol = NonTerminal "'upVar sort" | Terminal string
 
@@ -719,7 +719,9 @@ definition builtinSymbolTables where
   ([Bool],[[KLabel],[KLabel]], SingleTon NotEqualKLabel, [Function], True),
   ([kSyntax.Int],[[kSyntax.Int],[kSyntax.Int]], SingleTon PlusInt, [Function], True),
   ([kSyntax.Int],[[kSyntax.Int],[kSyntax.Int]], SingleTon MinusInt, [Function], True),
-  ([kSyntax.Int],[[kSyntax.Int],[kSyntax.Int]], SingleTon TimesInt, [Function], True)]"
+  ([kSyntax.Int],[[kSyntax.Int],[kSyntax.Int]], SingleTon TimesInt, [Function], True),
+  ([kSyntax.String],[[kSyntax.String],[kSyntax.String]], SingleTon StringCon, [Function], True),
+  ([kSyntax.String],[[kSyntax.Int]], SingleTon IntToString, [Function], True)]"
 
 fun isIntConst where
 "isIntConst (ConstToLabel (IntConst n)) = True"
