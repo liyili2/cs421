@@ -124,6 +124,7 @@ let rec dealWithLabel x = match x with "getKLabel" -> GetKLabel
       | "=/=KLabel" -> NotEqualKLabel | "==Set" -> EqualSet | "==Map" -> EqualMap
      | "+Int" -> PlusInt | "-Int" -> MinusInt
        | "*Int" -> TimesInt | "true" -> ConstToLabel (BoolConst true)
+     | "<Int" -> K.LessInt | "<=Int" -> K.LessEqualInt
      | "false" -> ConstToLabel (BoolConst false)
      | "+String" -> StringCon
      | "intToString" -> IntToString

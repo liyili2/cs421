@@ -32,6 +32,7 @@ datatype 'upVar label = UnitLabel "'upVar sort" | ConstToLabel theConstant
   | SetItemLabel | ListConLabel | ListItemLabel | MapConLabel | MapItemLabel | MapUpdate
   | EqualK | NotEqualK | EqualKLabel | NotEqualKLabel | OtherLabel string | TokenLabel string
   | PlusInt | MinusInt | TimesInt | EqualSet | EqualMap | StringCon | IntToString
+  | LessInt | LessEqualInt
 
 datatype 'upVar symbol = NonTerminal "'upVar sort" | Terminal string
 
@@ -720,6 +721,8 @@ definition builtinSymbolTables where
   ([kSyntax.Int],[[kSyntax.Int],[kSyntax.Int]], SingleTon PlusInt, [Function], True),
   ([kSyntax.Int],[[kSyntax.Int],[kSyntax.Int]], SingleTon MinusInt, [Function], True),
   ([kSyntax.Int],[[kSyntax.Int],[kSyntax.Int]], SingleTon TimesInt, [Function], True),
+  ([kSyntax.Bool],[[kSyntax.Int],[kSyntax.Int]], SingleTon LessInt, [Function], True),
+  ([kSyntax.Bool],[[kSyntax.Int],[kSyntax.Int]], SingleTon LessEqualInt, [Function], True),
   ([kSyntax.String],[[kSyntax.String],[kSyntax.String]], SingleTon StringCon, [Function], True),
   ([kSyntax.String],[[kSyntax.Int]], SingleTon IntToString, [Function], True)]"
 

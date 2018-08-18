@@ -3069,7 +3069,7 @@ fun getFunRule where
 | "getFunRule s (x#l) = getFunRule s l"
 
 definition builtinLabels where
-"builtinLabels = [GetKLabel, IsKResult, AndBool, NotBool,
+"builtinLabels = [GetKLabel, IsKResult, AndBool, NotBool, LessInt, LessEqualInt,
                       OrBool, Sort, MapUpdate, EqualK, NotEqualK, EqualSet, EqualMap,
               IntToString, EqualKLabel, NotEqualKLabel, PlusInt, MinusInt, TimesInt, StringCon]"
 
@@ -3194,6 +3194,20 @@ fun evalBuiltinFun where
     (case kl of [ItemKl (SUBigLabel (SUKLabel a)),ItemKl (SUBigLabel (SUKLabel b))]
            \<Rightarrow> Some (KItemSubs (SUKItem (SUKLabel (ConstToLabel (BoolConst (a \<noteq> b)))) [] [Bool]))
                         | _ \<Rightarrow> None)"
+| "evalBuiltinFun LessInt kl database subG =
+    (case kl of [ItemKl (SUBigBag (SUK [ItemFactor
+                               (SUKItem (SUKLabel (ConstToLabel (IntConst b1))) newl1 t1)])),
+                 ItemKl (SUBigBag (SUK [ItemFactor
+                               (SUKItem (SUKLabel (ConstToLabel (IntConst b2))) newl2 t2)]))]
+                \<Rightarrow> Some (KItemSubs (SUKItem (SUKLabel (ConstToLabel (BoolConst (b1 < b2)))) [] [kSyntax.Int]))
+                    | _ \<Rightarrow> None)"
+| "evalBuiltinFun LessEqualInt kl database subG =
+    (case kl of [ItemKl (SUBigBag (SUK [ItemFactor
+                               (SUKItem (SUKLabel (ConstToLabel (IntConst b1))) newl1 t1)])),
+                 ItemKl (SUBigBag (SUK [ItemFactor
+                               (SUKItem (SUKLabel (ConstToLabel (IntConst b2))) newl2 t2)]))]
+                \<Rightarrow> Some (KItemSubs (SUKItem (SUKLabel (ConstToLabel (BoolConst (b1 \<le> b2)))) [] [kSyntax.Int]))
+                    | _ \<Rightarrow> None)"
 | "evalBuiltinFun PlusInt kl database subG =
     (case kl of [ItemKl (SUBigBag (SUK [ItemFactor
                                (SUKItem (SUKLabel (ConstToLabel (IntConst b1))) newl1 t1)])),
@@ -3229,88 +3243,67 @@ fun evalBuiltinFun where
                     | _ \<Rightarrow> None)"
 | "evalBuiltinFun A kl database subG = None"
 
-inductive funEvaluationBool and funEvaluationBoolAux where
- conZeroStep : " \<not> hasFunLabelInSUKItem C database
-    \<Longrightarrow> funEvaluationBool allRules database subG (Continue C) (Stop C)"
-| conFunStep : "\<lbrakk> hasFunLabelInSUKItem C database ; l \<in> set builtinLabels;
-    localteFunTermInSUKItem C database = Some (l, fun, ty, Cr);
-            evalBuiltinFun l fun database subG = Some r;
-      substitutionInSUKItem Cr [(FunHole, r)] = Some C';
-       funEvaluationBool allRules database subG (Continue C') (Stop C'') \<rbrakk>
-        \<Longrightarrow> funEvaluationBool allRules database subG (Continue C) (Stop C'')"
-| conOneStep : "\<lbrakk> hasFunLabelInSUKItem C database ; l \<notin> set builtinLabels;
-    localteFunTermInSUKItem C database = Some (l, fun, ty, Cr); getFunRule l allRules = Some fl;
-          funEvaluationBoolAux allRules database subG fl fun (Continue Cr) (Stop C');
-       funEvaluationBool allRules database subG (Continue C') (Stop C'') \<rbrakk>
-        \<Longrightarrow> funEvaluationBool allRules database subG (Continue C) (Stop C'')"
-| emptyRule : "funEvaluationBoolAux allRules database subG [] fun (Continue Cr) (Div Cr)"
-| noPatRule : "\<lbrakk> patternMatchingInSUKList p fun subG = None;
-           funEvaluationBoolAux allRules database subG fl fun (Continue Cr) (Stop C') \<rbrakk>
-         \<Longrightarrow> funEvaluationBoolAux allRules database subG
-                       ((p,r,c)#fl) fun (Continue Cr) (Stop C')"
-| trueRule : "\<lbrakk> patternMatchingInSUKList p fun subG = Some acc;
-   substitutionInSUKItem c acc  = Some value ;
-   funEvaluationBool allRules database subG (Continue value) (Stop value');
-   getKLabelInSUKItem value' = Some (ConstToLabel (BoolConst True));
-   substitutionInSubsFactor r acc = Some r' ; substitutionInSUKItem Cr [(FunHole, r')] = Some C';
-     typeCheckCondition C' database subG = Some C'' \<rbrakk> 
-                \<Longrightarrow> funEvaluationBoolAux allRules database subG
-                ((p,r,c)#fl) fun (Continue Cr) (Stop C'')"
-| falseRule : "\<lbrakk> patternMatchingInSUKList p fun subG = Some acc;
-      substitutionInSUKItem c acc  = Some value ;
-   funEvaluationBool allRules database subG (Continue value) (Stop value');
-   getKLabelInSUKItem value' = Some (ConstToLabel (BoolConst False));
-   funEvaluationBoolAux allRules database subG fl fun (Continue Cr) (Stop C') \<rbrakk>
-    \<Longrightarrow> funEvaluationBoolAux allRules database subG ((p,r,c)#fl) fun (Continue Cr) (Stop C')"
+function funEvaluationBool and funEvaluationBoolAux where
+"funEvaluationBool allRules database subG C
+     = (if hasFunLabelInSUKItem C database then
+       (case localteFunTermInSUKItem C database of None \<Rightarrow> Some C
+          | Some (l, fun, ty, Cr) \<Rightarrow> 
+             (if l \<in> set builtinLabels then 
+        (case evalBuiltinFun l fun database subG of None \<Rightarrow> None
+            | Some r \<Rightarrow> (case substitutionInSUKItem Cr [(FunHole, r)] of None \<Rightarrow> None
+             | Some C' \<Rightarrow> funEvaluationBool allRules database subG C'))
+       else (case getFunRule l allRules of None \<Rightarrow> None
+               | Some fl \<Rightarrow>
+             (case funEvaluationBoolAux allRules database subG fl fun Cr of None \<Rightarrow> None
+               | Some C' \<Rightarrow> funEvaluationBool allRules database subG C'))))
+     else (Some C))"
+| "funEvaluationBoolAux allRules database subG [] fun Cr = None"
+| "funEvaluationBoolAux allRules database subG ((p,r,c)#fl) fun Cr = 
+         (case patternMatchingInSUKList p fun subG of None
+                     \<Rightarrow> funEvaluationBoolAux allRules database subG fl fun Cr
+            | Some acc \<Rightarrow> (case substitutionInSUKItem c acc of None \<Rightarrow> None
+           | Some value \<Rightarrow> (case funEvaluationBool allRules database subG value of None \<Rightarrow> None
+            | Some value' \<Rightarrow> (case getKLabelInSUKItem value' of
+            Some (ConstToLabel (BoolConst True)) \<Rightarrow> (case substitutionInSubsFactor r acc of None \<Rightarrow> None
+          | Some r' \<Rightarrow> (case substitutionInSUKItem Cr [(FunHole, r')] of None \<Rightarrow> None
+              | Some C' \<Rightarrow> typeCheckCondition C' database subG))
+          | Some (ConstToLabel (BoolConst False))
+                  \<Rightarrow> funEvaluationBoolAux allRules database subG fl fun Cr
+          | _ \<Rightarrow> None))))"
+by pat_completeness auto
 
-code_pred funEvaluationBoolAux .
-code_pred funEvaluationBool .
+termination sorry
 
-definition boolEvalFun where
-"boolEvalFun allRules database subG C =
-         Predicate.the (funEvaluationBool_i_i_i_i_o allRules database subG (Continue C))"
+function funEvaluation and funEvaluationAux where
+"funEvaluation allRules database subG C
+     = (if hasFunLabelInSUBag C database then
+       (case localteFunTermInSUBag C database of None \<Rightarrow> Some C
+          | Some (l, fun, ty, Cr) \<Rightarrow> 
+             (if l \<in> set builtinLabels then 
+        (case evalBuiltinFun l fun database subG of None \<Rightarrow> None
+            | Some r \<Rightarrow> (case substitutionInSUBag Cr [(FunHole, r)] of None \<Rightarrow> None
+             | Some C' \<Rightarrow> funEvaluation allRules database subG C'))
+       else (case getFunRule l allRules of None \<Rightarrow> None
+               | Some fl \<Rightarrow>
+             (case funEvaluationAux allRules database subG fl fun Cr of None \<Rightarrow> None
+               | Some C' \<Rightarrow> funEvaluation allRules database subG C'))))
+     else (Some C))"
+| "funEvaluationAux allRules database subG [] fun Cr = None"
+| "funEvaluationAux allRules database subG ((p,r,c)#fl) fun Cr = 
+         (case patternMatchingInSUKList p fun subG of None
+                     \<Rightarrow> funEvaluationAux allRules database subG fl fun Cr
+            | Some acc \<Rightarrow> (case substitutionInSUKItem c acc of None \<Rightarrow> None
+           | Some value \<Rightarrow> (case funEvaluationBool allRules database subG value of None \<Rightarrow> None
+            | Some value' \<Rightarrow> (case getKLabelInSUKItem value' of
+            Some (ConstToLabel (BoolConst True)) \<Rightarrow> (case substitutionInSubsFactor r acc of None \<Rightarrow> None
+          | Some r' \<Rightarrow> (case substitutionInSUBag Cr [(FunHole, r')] of None \<Rightarrow> None
+              | Some C' \<Rightarrow> typeCheckProgramState C' database subG))
+          | Some (ConstToLabel (BoolConst False))
+                  \<Rightarrow> funEvaluationAux allRules database subG fl fun Cr
+          | _ \<Rightarrow> None))))"
+by pat_completeness auto
 
-inductive funEvaluation and funEvaluationAux
-where
- conZeroStep : " \<not> hasFunLabelInSUBag B database
-                 \<Longrightarrow> funEvaluation allRules database subG (Continue B) (Stop B)"
-| conFunStep : "\<lbrakk> hasFunLabelInSUBag C database ; l \<in> set builtinLabels;
-    localteFunTermInSUBag C database = Some (l, fun, ty, Cr);
-            evalBuiltinFun l fun database subG = Some r;
-      substitutionInSUBag Cr [(FunHole, r)] = Some C';
-       funEvaluation allRules database subG (Continue C') (Stop C'') \<rbrakk>
-        \<Longrightarrow> funEvaluation allRules database subG (Continue C) (Stop C'')"
-| conOneStep : "\<lbrakk> hasFunLabelInSUBag B database ; l \<notin> set builtinLabels;
-    localteFunTermInSUBag B database = Some (l, fun, ty, Br); getFunRule l allRules = Some fl;
-          funEvaluationAux allRules database subG fl fun (Continue Br) (Stop B');
-       funEvaluation allRules database subG (Continue B') (Stop B'') \<rbrakk>
-        \<Longrightarrow> funEvaluation allRules database subG (Continue B) (Stop B'')"
-| emptyRule : "funEvaluationAux allRules database subG [] fun (Continue Br) (Div Br)"
-| noPatRule : "\<lbrakk> patternMatchingInSUKList p fun subG = None;
-         funEvaluationAux allRules database subG fl fun (Continue Cr) (Stop C') \<rbrakk>
-         \<Longrightarrow> funEvaluationAux allRules database subG
-                              ((p,r,c)#fl) fun (Continue Cr) (Stop C')"
-| trueRule : "\<lbrakk> patternMatchingInSUKList p fun subG = Some acc;
-        substitutionInSUKItem c acc  = Some value ;
-   funEvaluationBool allRules database subG (Continue value) (Stop value');
-   getKLabelInSUKItem value' = Some (ConstToLabel (BoolConst True));
-   substitutionInSubsFactor r acc = Some r' ; substitutionInSUBag Cr [(FunHole, r')] = Some C';
-     typeCheckProgramState C' database subG = Some C'' \<rbrakk> 
-                \<Longrightarrow> funEvaluationAux allRules database subG
-                ((p,r,c)# fl) fun (Continue Cr) (Stop C'')"
-| falseRule : "\<lbrakk> patternMatchingInSUKList p fun subG = Some acc;
-       substitutionInSUKItem c acc  = Some value ;
-   funEvaluationBool allRules database subG (Continue value) (Stop value');
-   getKLabelInSUKItem value' = Some (ConstToLabel (BoolConst False));
-   funEvaluationAux allRules database subG fl fun (Continue Cr) (Stop C) \<rbrakk>
-    \<Longrightarrow> funEvaluationAux allRules database subG ((p,r,c)#fl) fun (Continue Cr) (Stop C)"
-
-code_pred funEvaluation .
-code_pred funEvaluationAux .
-
-definition funRuleEvalFun where
-"funRuleEvalFun allRules database subG C =
-         Predicate.the (funEvaluation_i_i_i_i_o allRules database subG (Continue C))"
+termination sorry
 
 export_code Eps Continue Success FunTrans Single IntConst Bool kSyntax.Set Defined UnitLabel NonTerminal
     Strict Syntax Star Stdin Multiplicity KTerm KLabelC Heat TheSyntax IRKLabel IRKItem SimId
@@ -3328,8 +3321,9 @@ export_code Eps Continue Success FunTrans Single IntConst Bool kSyntax.Set Defin
    patternMacroingInSUBigKWithLabel patternMacroingInSUMap patternMacroingInSUBigKWithBag
    patternMacroingInSUMapMember patternMacroingInAllSUMapMember patternMacroingInAllSUMapMemberAux
    patternMacroingInSUMapAux typeCheckRules wellFormRules checkTypesInRules checkTypesInFunPats
-   irToSUInKList getDomainInIRKList constructSortMap subsortList meet
-    boolEvalFun funRuleEvalFun tupleToRulePats assignSortInRules collectDatabase tupleToRulePats
+   irToSUInKList getDomainInIRKList constructSortMap subsortList meet funEvaluationBoolAux
+    funEvaluationBool funEvaluation funEvaluationAux 
+   tupleToRulePats assignSortInRules collectDatabase tupleToRulePats
    tupleToRulePat tupleToRuleInParsed isFunctionItem getSort in OCaml  module_name K file "k.ml"
 
 

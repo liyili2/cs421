@@ -92,6 +92,10 @@
             => 'some('closure(A, 'removeMarker(T), M))
   rule 'eval('app(T1:Term, T2:Term), M:Map)
             => 'evalApp('eval(T1, M), 'eval(T2, M))
+  rule 'eval('let(X:Ids, T:Term), M:Map)
+         => 'eval('toInnerLet('let(X, T)), M)
+  rule 'eval('letIn(X:Ids, T1:Term, T2:Term), M:Map)
+         => 'eval('toInnerLet('letIn(X, T1, T2)), M)
   rule 'eval('innerLet(X:Id, T:Term), M:Map)
           => 'evalLet(X, 'eval(T, M), M)
   rule 'eval('innerLetIn(X:Id, T:Term, T1:Term), M:Map)
@@ -163,21 +167,22 @@
 
 
   syntax KItem ::= 'judgeEval(Terms, Map, Map, Map, Int) [function, klabel('judgeEval)]
-                 | 'judgeEvalAux(K, Map, K) [function, klabel('judgeEvalAux)]
+                 | 'judgeEvalAux(K, Map, Map) [function, klabel('judgeEvalAux)]
                  | 'findError(Map, Map) [function, klabel('findError)]
 
   rule 'judgeEval(Ts:Terms, Pre:Map, Point:Map, An:Map, I:Int)
-          => 'judgeEvalAux('lookup('evalTerms(Ts, Pre), I), Point, 'lookup(An, I))
-  rule 'judgeEvalAux('some('result(M:Map)), Point:Map, 'some('result(M:Map)))
+          => 'judgeEvalAux('lookup('evalTerms(Ts, Pre), I), Point, An)
+  rule 'judgeEvalAux('some('result(M:Map)), Point:Map, M:Map)
              => 'success(.KList)
-  rule 'judgeEvalAux('some('result(M:Map)), Point:Map, 'some('result(M':Map)))
+  rule 'judgeEvalAux('some('result(M:Map)), Point:Map, M':Map)
              => 'error("Student makes a mistake on input the wrong previous environment before the checking point.")
-       requires 'notBool('subMap(Point, M'))
+       requires 'andBool('notBool('==Map(M, M')), 'notBool('subMap(Point, M')))
 
-  rule 'judgeEvalAux('some('result(M:Map)), Point:Map, 'some('result(M':Map)))
+  rule 'judgeEvalAux('some('result(M:Map)), Point:Map, M':Map)
              => 'findError('minusMap(M, Point), 'minusMap(M', Point))
-       requires 'andBool('subMap(Point, M'), 'subMap(Point, M))
-  rule 'judgeEvalAux(A:K, Point:Map, B:K) => 'error("unknown error, maybe syntactic error.") [owise]
+       requires 'andBool('notBool('==Map(M, M')), 'andBool('subMap(Point, M'), 'subMap(Point, M)))
+  rule 'judgeEvalAux(A:K, Point:Map, B:Map)
+              => 'error("unknown error, maybe syntactic error.") [owise]
 
   rule 'findError(MapCon(MapItem(A:K, C:Int), M:Map), MapCon(MapItem(A:K, D:Int), M':Map))
             => 'error("An integer value of an environment key is calculated wrong.")
@@ -196,7 +201,7 @@
        requires 'notBool('==Map(M1, M1'))
   rule 'findError(MapCon(MapItem(A:K, B:K), M:Map), M':Map)
             => 'error("User misses a key in the environment.")
-       requires 'isAKey(A, M')
+       requires 'notBool('isAKey(A, M'))
   rule 'findError(M:Map, M':Map) => 'error("Unknown error") [owise]
 
   syntax Terms ::= 'getRidFirstMarker(Terms) [function]
@@ -210,18 +215,26 @@
   rule 'getRidFirstAux(T:Term, T':Term, Ts:Terms)
             => 'con(T', Ts)  [owise]
 
-  syntax KItem ::= 'judgeAllEvalAux(Terms, Map, Map, Int)  [function]
-                 | 'judgeAllEvalNext(Terms, K, K, Map, Int) [function]
-                 | 'judgeAllEvals(Terms, Map) [function]
-  rule 'judgeAllEvalAux(Ts:Terms, MapCon(MapItem(I, 'result(M:Map)), RM:Map), Point:Map, I:Int) 
+  syntax KItem ::= 'judgeAllEvalAux(Terms, Map, Map, Int, Int)  [function]
+                 | 'judgeAllEvalNext(Terms, K, K, Map, Int, Int) [function]
+                 | 'judgeAllEvals(Terms, Map, Int) [function]
+  rule 'judgeAllEvalAux(Ts:Terms, MapCon(MapItem(I, 'result(M:Map)), RM:Map),
+                    Point:Map, I:Int, N:Int) 
             => 'judgeAllEvalNext(Ts, 'judgeEval(Ts, .Map, Point, M, I),
-                        'lookup('evalTerms(Ts, .Map), I), RM, I)
-  rule 'judgeAllEvalAux(Ts:Terms, M:Map, Point:Map, I:Int) => 'success(.KList) [owise]
-  rule 'judgeAllEvalNext(Ts:Terms, 'success(.KList), 'some('result(M:Map)), RM:Map, I:Int)
-            => 'judgeAllEvalAux('getRidFirstMarker(Ts), RM, M, '+Int(I, '1(.KList)))
-  rule 'judgeAllEvalNext(Ts:Terms, 'error(S:String), R:K, RM:Map, I:Int)
+                        'lookup('evalTerms(Ts, .Map), I), RM, I, N)
+        requires '<=Int(I, N)
+  rule 'judgeAllEvalAux(Ts:Terms, M:Map, Point:Map, I:Int, N:Int) => 'success(.KList)
+        requires '<Int(N, I)
+  rule 'judgeAllEvalNext(Ts:Terms, 'success(.KList), 'some('result(M:Map)), RM:Map, I:Int, N:Int)
+            => 'judgeAllEvalAux('getRidFirstMarker(Ts), RM, M, '+Int(I, '1(.KList)), N)
+  rule 'judgeAllEvalNext(Ts:Terms, 'error(S:String), R:K, RM:Map, I:Int, N:Int)
          => 'error('+String("Error at point ", '+String('intToString(I), S)))
 
-  rule 'judgeAllEvals(Ts:Terms, M:Map) => 'judgeAllEvalAux(Ts, M, .Map, '1(.KList))
+  rule 'judgeAllEvals(Ts:Terms, M:Map, N:Int) => 'judgeAllEvalAux(Ts, M, .Map, '1(.KList), N)
+       requires 'isAKey('1(.KList), M)
+  rule 'judgeAllEvals(Ts:Terms, M:Map, N:Int) => 'error("Unknown errors.") [owise]
 
-program 'eval('fun($x(.KList), 'fun($x(.KList), '1(.KList))),.Map)
+program 'judgeAllEvals('con('let('idCon($x(.KList), .Ids), '5(.KList)),
+               'con('let('idCon($a(.KList), .Ids), 'plus($x(.KList), '4(.KList))),
+              'con('marker('1(.KList)), .Terms))), MapItem('1(.KList),
+           'result(MapCon(MapItem($x(.KList), '5(.KList)), MapItem($a(.KList), '9(.KList))))), '1(.KList))

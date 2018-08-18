@@ -25,6 +25,8 @@ let programState = match genProgramState allEqual allEqual allEqual (interpreta(
 
 typeCheckRules allEqual allEqual allRules database theGraph;;
 
+charsToStringInSUBag (match funEvaluation allEqual allEqual allEqual allRules database theGraph programState with None -> [] | Some a -> a);;
+
 let funs = match localteFunTermInSUBag allEqual programState database
    with Some (l, (funs, (ty, cr))) -> funs;;
 
@@ -43,7 +45,7 @@ genProgramState allEqual allEqual allEqual (interpreta()) database (subsortGraph
 
 subsortGraph allEqual (interpreta());;
 
-charsToStringInState (funRuleEvalFun allEqual allEqual allEqual allRules database theGraph programState);;
+charsToStringInSUBag (match funEvaluation allEqual allEqual allEqual allRules database theGraph programState with None -> [] | Some a -> a);;
 
 checkTermsInSUBag allEqual allEqual programState [] [] database theGraph;;
 
