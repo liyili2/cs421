@@ -68,8 +68,12 @@
          => 'app('removeMarker(A), 'removeMarker(B))
   rule 'removeMarker('innerLet(A:Id, B:Term))
          => 'innerLet(A, 'removeMarker(B))
+  rule 'removeMarker('let(A:Ids, B:Term))
+         => 'let(A, 'removeMarker(B))
   rule 'removeMarker('innerLetIn(A:Id, B:Term, C:Term))
          => 'innerLetIn(A, 'removeMarker(B), 'removeMarker(C))
+  rule 'removeMarker('letIn(A:Ids, B:Term, C:Term))
+         => 'letIn(A, 'removeMarker(B), 'removeMarker(C))
   rule 'removeMarker('termMarker(T:Term, A:Int)) => 'removeMarker(T)
 
   syntax KItem ::= 'eval(Term, Map) [function, klabel('eval)]
@@ -175,12 +179,8 @@
   rule 'judgeEvalAux('some('result(M:Map)), Point:Map, M:Map)
              => 'success(.KList)
   rule 'judgeEvalAux('some('result(M:Map)), Point:Map, M':Map)
-             => 'error("Student makes a mistake on input the wrong previous environment before the checking point.")
-       requires 'andBool('notBool('==Map(M, M')), 'notBool('subMap(Point, M')))
-
-  rule 'judgeEvalAux('some('result(M:Map)), Point:Map, M':Map)
              => 'findError('minusMap(M, Point), 'minusMap(M', Point))
-       requires 'andBool('notBool('==Map(M, M')), 'andBool('subMap(Point, M'), 'subMap(Point, M)))
+       requires 'notBool('==Map(M, M'))
   rule 'judgeEvalAux(A:K, Point:Map, B:Map)
               => 'error("unknown error, maybe syntactic error.") [owise]
 
@@ -236,5 +236,70 @@
 
 program 'judgeAllEvals('con('let('idCon($x(.KList), .Ids), '5(.KList)),
                'con('let('idCon($a(.KList), .Ids), 'plus($x(.KList), '4(.KList))),
-              'con('marker('1(.KList)), .Terms))), MapItem('1(.KList),
-           'result(MapCon(MapItem($x(.KList), '5(.KList)), MapItem($a(.KList), '9(.KList))))), '1(.KList))
+              'con('marker('1(.KList)),
+            'con('let('idCon($f(.KList), 'idCon($x(.KList), 'idCon($y(.KList), .Ids))),
+                  'plus($x(.KList), 'plus($y(.KList), $a(.KList)))),
+            'con('marker('2(.KList)),
+         'con('let('idCon($h(.KList), 'idCon($z(.KList), .Ids)),
+                  'app($f(.KList), 'plus($z(.KList), '4(.KList)))),
+           'con('marker('3(.KList)),
+         'con('let('idCon($a(.KList), .Ids),
+               'letIn('idCon($h(.KList), 'idCon($x(.KList), .Ids)),
+               'app('app($f(.KList),$a(.KList)), 'app('app($h(.KList), '3(.KList)),$x(.KList))),
+                    'termMarker('app($h(.KList), 'times('2(.KList), $x(.KList))), '4(.KList)))),
+          'con('marker('5(.KList)), .Terms))))))))),
+         MapCon(MapItem('1(.KList),
+           'result(MapCon(MapItem($x(.KList), '5(.KList)), MapItem($a(.KList), '9(.KList))))),
+       MapCon(MapItem('2(.KList),
+         'result(MapCon(MapItem($x(.KList), '5(.KList)), MapCon(MapItem($a(.KList), '9(.KList)),
+           MapItem($f(.KList), 'closure($x(.KList), 'fun($y(.KList),
+                    'plus($x(.KList), 'plus($y(.KList), $a(.KList)))),
+                MapCon(MapItem($x(.KList), '5(.KList)), MapItem($a(.KList), '9(.KList))))))))),
+    MapCon(MapItem('3(.KList),
+         'result(MapCon(MapItem($h(.KList), 'closure($z(.KList), 
+                    'app($f(.KList), 'plus($z(.KList), '4(.KList))),
+              MapCon(MapItem($f(.KList), 'closure($x(.KList), 'fun($y(.KList),
+                    'plus($x(.KList), 'plus($y(.KList), $a(.KList)))),
+                MapCon(MapItem($x(.KList), '5(.KList)), MapItem($a(.KList), '9(.KList))))),
+          MapCon(MapItem($x(.KList), '5(.KList)), MapItem($a(.KList), '9(.KList)))))),
+         MapCon(MapItem($x(.KList), '5(.KList)), MapCon(MapItem($a(.KList), '9(.KList)),
+           MapItem($f(.KList), 'closure($x(.KList), 'fun($y(.KList),
+                    'plus($x(.KList), 'plus($y(.KList), $a(.KList)))),
+                MapCon(MapItem($x(.KList), '5(.KList)), MapItem($a(.KList), '9(.KList)))))))))),
+       MapCon(MapItem('4(.KList),
+          'result(MapCon(MapItem($h(.KList), 'closure($x(.KList), 
+            'app('app($f(.KList),$a(.KList)), 'app('app($h(.KList), '3(.KList)),$x(.KList))),
+              MapCon(MapItem($h(.KList), 'closure($z(.KList), 
+                    'app($f(.KList), 'plus($z(.KList), '4(.KList))),
+              MapCon(MapItem($f(.KList), 'closure($x(.KList), 'fun($y(.KList),
+                    'plus($x(.KList), 'plus($y(.KList), $a(.KList)))),
+                MapCon(MapItem($x(.KList), '5(.KList)), MapItem($a(.KList), '9(.KList))))),
+          MapCon(MapItem($x(.KList), '5(.KList)), MapItem($a(.KList), '9(.KList)))))),
+         MapCon(MapItem($x(.KList), '5(.KList)), MapCon(MapItem($a(.KList), '9(.KList)),
+           MapItem($f(.KList), 'closure($x(.KList), 'fun($y(.KList),
+                    'plus($x(.KList), 'plus($y(.KList), $a(.KList)))),
+                MapCon(MapItem($x(.KList), '5(.KList)), MapItem($a(.KList), '9(.KList)))))))))),
+         MapCon(MapItem($x(.KList), '5(.KList)), MapCon(MapItem($a(.KList), '9(.KList)),
+           MapItem($f(.KList), 'closure($x(.KList), 'fun($y(.KList),
+                    'plus($x(.KList), 'plus($y(.KList), $a(.KList)))),
+                MapCon(MapItem($x(.KList), '5(.KList)), MapItem($a(.KList), '9(.KList)))))))))),
+        MapItem('5(.KList),
+          'result(MapCon(MapItem($h(.KList), 'closure($x(.KList), 
+            'app('app($f(.KList),$a(.KList)), 'app('app($h(.KList), '3(.KList)),$x(.KList))),
+              MapCon(MapItem($h(.KList), 'closure($z(.KList), 
+                    'app($f(.KList), 'plus($z(.KList), '4(.KList))),
+              MapCon(MapItem($f(.KList), 'closure($x(.KList), 'fun($y(.KList),
+                    'plus($x(.KList), 'plus($y(.KList), $a(.KList)))),
+                MapCon(MapItem($x(.KList), '5(.KList)), MapItem($a(.KList), '9(.KList))))),
+          MapCon(MapItem($x(.KList), '5(.KList)), MapItem($a(.KList), '44(.KList)))))),
+         MapCon(MapItem($x(.KList), '5(.KList)), MapCon(MapItem($a(.KList), '9(.KList)),
+           MapItem($f(.KList), 'closure($x(.KList), 'fun($y(.KList),
+                    'plus($x(.KList), 'plus($y(.KList), $a(.KList)))),
+                MapCon(MapItem($x(.KList), '5(.KList)), MapItem($a(.KList), '9(.KList)))))))))),
+         MapCon(MapItem($x(.KList), '5(.KList)), MapCon(MapItem($a(.KList), '9(.KList)),
+           MapItem($f(.KList), 'closure($x(.KList), 'fun($y(.KList),
+                    'plus($x(.KList), 'plus($y(.KList), $a(.KList)))),
+                MapCon(MapItem($x(.KList), '5(.KList)), MapItem($a(.KList), '9(.KList))))))))))
+          )))), '5(.KList))
+
+
