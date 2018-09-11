@@ -1,8 +1,7 @@
 /* Use the expression datatype defined in mp8common.ml: */
 %{
 (* add any extra code here *)
-open K
-open K
+open K;;
 
 let rec parNat n = if n < 0 then raise (Failure "Strict Num cannot be less than zero") 
                         else if n = 0 then Zero_nat else Suc (parNat (n - 1));;
@@ -146,7 +145,7 @@ let rec dealWithLabel x = match x with "getKLabel" -> GetKLabel
 
 /* Define the "goal" nonterminal of the grammar: */
 %start main
-%type < (char list, char list, char list) theoryParsed> main
+%type < (K.char list, K.char list, K.char list) K.theoryParsed> main
 
 %%
 
