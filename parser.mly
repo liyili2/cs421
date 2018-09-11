@@ -3,7 +3,6 @@
 (* add any extra code here *)
 open K
 open K
-open Lexer
 
 let rec parNat n = if n < 0 then raise (Failure "Strict Num cannot be less than zero") 
                         else if n = 0 then Zero_nat else Suc (parNat (n - 1));;
@@ -99,7 +98,7 @@ let toSort s = match s with "K" -> K.K | "Bool" -> K.Bool | "KItem" -> KItem
          | "KLabel" -> KLabel | "KResult" -> KResult
     | "KList" -> KList | "List" -> List | "Set" -> Set
     | "Map" -> Map | "Bag" -> Bag | "Id" -> Id | "String" -> String
-    | "Int" -> Int | "Float" -> Float | _ -> OtherSort (parseString s);;
+    | "Int" -> Int | "Float" -> Float | _ -> OtherSort (parString s);;
 
 let rec toRuleAttr l = match l with [] -> []
                      | (OtherSynAttr s)::sl -> if s = (parString "owise")
