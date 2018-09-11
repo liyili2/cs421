@@ -132,12 +132,12 @@ let rec dealWithLabel x = match x with "getKLabel" -> GetKLabel
 %}
 
 /* Define the tokens of the language: */
-%token <char list> Terminal OtherSort Klabel OtherSynAttr
-%token <synAttrib list> Attr
-%token <nat list> Strict
-%token <atoken list> AToken
+%token <K.char list> Terminal OtherSort Klabel OtherSynAttr
+%token <K.synAttrib list> Attr
+%token <K.nat list> Strict
+%token <K.atoken list> AToken
 %token <string> EmptyLabel LabelId Variable
-%token <string * feature list> BagWrap BagBack
+%token <string * K.feature list> BagWrap BagBack
 %token Bool K KItem KLabel KResult KList List Seta Map Bag Id String Int Float
        Assign Bar Gt EOF Left Right Function Seqstrict
        NonAssoc Tokena Avoid Bracket LBig RBig Dot TheStar Plus LPAREN RPAREN
