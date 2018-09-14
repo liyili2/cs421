@@ -229,3 +229,25 @@ let rec charsToStringInSubstList l = match l with [] -> []
 let rec charsToStringInSubstListList l = match l with [] -> []
        | (a::al) -> (charsToStringInSubstList a)::(charsToStringInSubstListList al);;
 
+let lexsee () = (get_all_tokens (combineString (read_file "eval.k")));;
+
+let interpreta () = (Parser.main Lexer.token (Lexing.from_string (combineString (read_file "eval.k"))));;
+
+let allEqual = {equal = (=)};;
+
+let theGraph = subsortGraph {equal = (=)} (interpreta ());;
+
+let typecorrects p = match p with Parsed (c, a,b,d) -> assignSortInRules {equal = (=)} {equal = (=)} b;;
+
+let parsed = interpreta();;
+
+let typedTerm = match typecorrects (interpreta()) with None -> [] | Some a -> a;;
+
+let database = match collectDatabase (interpreta()) with None -> [] | Some a -> a;;
+
+let allRules = match (tupleToRuleInParsed allEqual allEqual allEqual (interpreta())) with None -> []
+                    | Some a -> a;;
+
+let programState = match genProgramState allEqual allEqual allEqual (interpreta()) database (subsortGraph allEqual (interpreta())) with None -> []
+                   | Some a -> a;;
+

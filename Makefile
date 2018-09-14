@@ -13,6 +13,7 @@ MKDIR=mkdir
 
 parser.cmo: k.cmo
 	$(OCAMLYACC) parser.mly
+        $(OCAMLC) -c parser.mli
 	$(OCAMLC) -c parser.ml
 
 
