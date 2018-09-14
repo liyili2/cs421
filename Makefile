@@ -13,6 +13,7 @@ MKDIR=mkdir
 
 parser.cmo: k.cmo
 	$(OCAMLYACC) parser.mly
+	$(OCAMLC) -c parser.mli
 	$(OCAMLC) -c parser.ml
 
 
@@ -22,3 +23,7 @@ lexer.cmo: parser.cmo
 
 k.cmo: k.ml
 	$(OCAMLC) -c k.ml
+
+
+clean:
+	rm -fr *.cm? lexer.ml parser.ml parser.mli
