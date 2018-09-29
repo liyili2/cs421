@@ -22,29 +22,6 @@ with End_of_file ->
   close_in chan;
   List.rev !lines ;;
 
-(*
-let rec tokenToList s
-     = match s with Connect (a,b) -> 
-          (tokenToList a) @ (tokenToList b)
-          | _ -> [s];;
-
-let get_all_tokens_fun lexbuf = let rec g () =
-    match Lexer.token lexbuf with EOF -> []
-      | t -> (tokenToList t) @ g () in
-      g ();;
-
-
-let deflate = 
-  let q = Queue.create () in
-  fun lexbuf -> 
-    if not (Queue.is_empty q) then Queue.pop q else   
-      match Lexer.token lexbuf with 
-        | EOF -> EOF 
-        | tok -> (match tokenToList tok with [] -> EOF
-              | [a] -> a
-              | hd::t ->  List.iter (fun tok -> Queue.add tok q) t ; hd);;
-*)
-
 
 let rec combineString lst = match lst with [] -> ""
                                      | x::xs -> x^"\n"^combineString xs;;
@@ -142,7 +119,9 @@ let charsToStringInLabel a =
     | PlusInt -> "'PlusInt" | MinusInt -> "'MinusInt"
     | TimesInt -> "'TimesInt" | EqualSet -> "'EqualSet"
     | EqualMap -> "'EqualMap" | StringCon -> "'StringCon"
-    | IntToString -> "'IntToString";;
+    | IntToString -> "'IntToString"
+    | LessInt -> "'<Int"
+    | LessEqualInt -> "'<=Int";;
 
 let rec charsToStringInSUBigKWithBag a =
      match a with SUK al -> "SUK" ^ " [" ^ (charsToStringInSUKFactorList al) ^ "]"
@@ -229,9 +208,9 @@ let rec charsToStringInSubstList l = match l with [] -> []
 let rec charsToStringInSubstListList l = match l with [] -> []
        | (a::al) -> (charsToStringInSubstList a)::(charsToStringInSubstListList al);;
 
-let lexsee () = (get_all_tokens (combineString (read_file "eval.k")));;
+let lexsee () = (get_all_tokens (combineString (read_file "evalapp.k")));;
 
-let interpreta () = (Parser.main Lexer.token (Lexing.from_string (combineString (read_file "eval.k"))));;
+let interpreta () = (Parser.main Lexer.token (Lexing.from_string (combineString (read_file "evalapp.k"))));;
 
 let allEqual = {equal = (=)};;
 

@@ -1,0 +1,8 @@
+VarExp [[v]] k => k v
+ConstExp [[c]] k => k c
+ifesle  [[if e1 then e2 else e3]]k => [[e1]]_{FN v -> IF v THEN [[e2]]_{k} ELSE [[e3]]_{k}}
+apprule [[e1 e2]]k => [[e2]]_{FN v2 -> [[e1]]_{FN v1 -> v1 v2 k}}
+oprule [[e1 + e2]]k => [[e2]]_{FN v2 -> [[e1]]_{FN v1 -> k (v1 + v2)}}
+unaryrule [[+e]]k => [[e]]_{FN v -> k (+v)}
+funrule [[fun x -> e]]k => k (FUN x k -> [[e]]_{k})
+letrule [[let x = e1 in e2]]k => [[e1]]_{FN x -> [[e2]]_{k}}

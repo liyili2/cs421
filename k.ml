@@ -5,7 +5,8 @@ module K : sig
   type nat = Zero_nat | Suc of nat
   type char = Zero_char | Char of num
   type 'a metaVar = Defined of 'a | Generated of nat | FunHole
-  type real
+  type rat = Frct of (int * int)
+  type real = Ratreal of rat
   type theConstant = IntConst of int | FloatConst of real |
     StringConst of char list | BoolConst of bool | IdConst of char list
   type 'a sort = Bool | K | KItem | KLabel | KResult | KList | List | Set | Map
@@ -15,8 +16,9 @@ module K : sig
     SetItemLabel | ListConLabel | ListItemLabel | MapConLabel | MapItemLabel |
     MapUpdate | EqualK | NotEqualK | EqualKLabel | NotEqualKLabel |
     OtherLabel of char list | TokenLabel of char list | PlusInt | MinusInt |
-    TimesInt | EqualSet | EqualMap | StringCon | IntToString | LessInt |
-    LessEqualInt
+    TimesInt | DivInt | ModInt | PlusFloat | MinusFloat | TimesFloat | DivFloat
+    | EqualSet | EqualMap | StringCon | IntToString | LessInt | LessEqualInt |
+    GtInt | GeqInt | LessFloat | LessEqualFloat | GtFloat | GeqFloat
   type stdType = Stdin | Stdout
   type key = Star | Question
   type feature = Multiplicity of key | Stream of stdType | DotDotDot
@@ -921,8 +923,9 @@ type 'a label = UnitLabel of 'a sort | ConstToLabel of theConstant | Sort |
   SetItemLabel | ListConLabel | ListItemLabel | MapConLabel | MapItemLabel |
   MapUpdate | EqualK | NotEqualK | EqualKLabel | NotEqualKLabel |
   OtherLabel of char list | TokenLabel of char list | PlusInt | MinusInt |
-  TimesInt | EqualSet | EqualMap | StringCon | IntToString | LessInt |
-  LessEqualInt;;
+  TimesInt | DivInt | ModInt | PlusFloat | MinusFloat | TimesFloat | DivFloat |
+  EqualSet | EqualMap | StringCon | IntToString | LessInt | LessEqualInt | GtInt
+  | GeqInt | LessFloat | LessEqualFloat | GtFloat | GeqFloat;;
 
 type stdType = Stdin | Stdout;;
 
@@ -1269,18 +1272,108 @@ let rec equal_sorta _A x0 x1 = match x0, x1 with Id, String -> false
                          | Bool, Bool -> true;;
 
 let rec equal_labela _A
-  x0 x1 = match x0, x1 with LessInt, LessEqualInt -> false
+  x0 x1 = match x0, x1 with GtFloat, GeqFloat -> false
+    | GeqFloat, GtFloat -> false
+    | LessEqualFloat, GeqFloat -> false
+    | GeqFloat, LessEqualFloat -> false
+    | LessEqualFloat, GtFloat -> false
+    | GtFloat, LessEqualFloat -> false
+    | LessFloat, GeqFloat -> false
+    | GeqFloat, LessFloat -> false
+    | LessFloat, GtFloat -> false
+    | GtFloat, LessFloat -> false
+    | LessFloat, LessEqualFloat -> false
+    | LessEqualFloat, LessFloat -> false
+    | GeqInt, GeqFloat -> false
+    | GeqFloat, GeqInt -> false
+    | GeqInt, GtFloat -> false
+    | GtFloat, GeqInt -> false
+    | GeqInt, LessEqualFloat -> false
+    | LessEqualFloat, GeqInt -> false
+    | GeqInt, LessFloat -> false
+    | LessFloat, GeqInt -> false
+    | GtInt, GeqFloat -> false
+    | GeqFloat, GtInt -> false
+    | GtInt, GtFloat -> false
+    | GtFloat, GtInt -> false
+    | GtInt, LessEqualFloat -> false
+    | LessEqualFloat, GtInt -> false
+    | GtInt, LessFloat -> false
+    | LessFloat, GtInt -> false
+    | GtInt, GeqInt -> false
+    | GeqInt, GtInt -> false
+    | LessEqualInt, GeqFloat -> false
+    | GeqFloat, LessEqualInt -> false
+    | LessEqualInt, GtFloat -> false
+    | GtFloat, LessEqualInt -> false
+    | LessEqualInt, LessEqualFloat -> false
+    | LessEqualFloat, LessEqualInt -> false
+    | LessEqualInt, LessFloat -> false
+    | LessFloat, LessEqualInt -> false
+    | LessEqualInt, GeqInt -> false
+    | GeqInt, LessEqualInt -> false
+    | LessEqualInt, GtInt -> false
+    | GtInt, LessEqualInt -> false
+    | LessInt, GeqFloat -> false
+    | GeqFloat, LessInt -> false
+    | LessInt, GtFloat -> false
+    | GtFloat, LessInt -> false
+    | LessInt, LessEqualFloat -> false
+    | LessEqualFloat, LessInt -> false
+    | LessInt, LessFloat -> false
+    | LessFloat, LessInt -> false
+    | LessInt, GeqInt -> false
+    | GeqInt, LessInt -> false
+    | LessInt, GtInt -> false
+    | GtInt, LessInt -> false
+    | LessInt, LessEqualInt -> false
     | LessEqualInt, LessInt -> false
+    | IntToString, GeqFloat -> false
+    | GeqFloat, IntToString -> false
+    | IntToString, GtFloat -> false
+    | GtFloat, IntToString -> false
+    | IntToString, LessEqualFloat -> false
+    | LessEqualFloat, IntToString -> false
+    | IntToString, LessFloat -> false
+    | LessFloat, IntToString -> false
+    | IntToString, GeqInt -> false
+    | GeqInt, IntToString -> false
+    | IntToString, GtInt -> false
+    | GtInt, IntToString -> false
     | IntToString, LessEqualInt -> false
     | LessEqualInt, IntToString -> false
     | IntToString, LessInt -> false
     | LessInt, IntToString -> false
+    | StringCon, GeqFloat -> false
+    | GeqFloat, StringCon -> false
+    | StringCon, GtFloat -> false
+    | GtFloat, StringCon -> false
+    | StringCon, LessEqualFloat -> false
+    | LessEqualFloat, StringCon -> false
+    | StringCon, LessFloat -> false
+    | LessFloat, StringCon -> false
+    | StringCon, GeqInt -> false
+    | GeqInt, StringCon -> false
+    | StringCon, GtInt -> false
+    | GtInt, StringCon -> false
     | StringCon, LessEqualInt -> false
     | LessEqualInt, StringCon -> false
     | StringCon, LessInt -> false
     | LessInt, StringCon -> false
     | StringCon, IntToString -> false
     | IntToString, StringCon -> false
+    | EqualMap, GeqFloat -> false
+    | GeqFloat, EqualMap -> false
+    | EqualMap, GtFloat -> false
+    | GtFloat, EqualMap -> false
+    | EqualMap, LessEqualFloat -> false
+    | LessEqualFloat, EqualMap -> false
+    | EqualMap, LessFloat -> false
+    | LessFloat, EqualMap -> false
+    | EqualMap, GeqInt -> false
+    | GeqInt, EqualMap -> false
+    | EqualMap, GtInt -> false
+    | GtInt, EqualMap -> false
     | EqualMap, LessEqualInt -> false
     | LessEqualInt, EqualMap -> false
     | EqualMap, LessInt -> false
@@ -1289,6 +1382,18 @@ let rec equal_labela _A
     | IntToString, EqualMap -> false
     | EqualMap, StringCon -> false
     | StringCon, EqualMap -> false
+    | EqualSet, GeqFloat -> false
+    | GeqFloat, EqualSet -> false
+    | EqualSet, GtFloat -> false
+    | GtFloat, EqualSet -> false
+    | EqualSet, LessEqualFloat -> false
+    | LessEqualFloat, EqualSet -> false
+    | EqualSet, LessFloat -> false
+    | LessFloat, EqualSet -> false
+    | EqualSet, GeqInt -> false
+    | GeqInt, EqualSet -> false
+    | EqualSet, GtInt -> false
+    | GtInt, EqualSet -> false
     | EqualSet, LessEqualInt -> false
     | LessEqualInt, EqualSet -> false
     | EqualSet, LessInt -> false
@@ -1299,6 +1404,192 @@ let rec equal_labela _A
     | StringCon, EqualSet -> false
     | EqualSet, EqualMap -> false
     | EqualMap, EqualSet -> false
+    | DivFloat, GeqFloat -> false
+    | GeqFloat, DivFloat -> false
+    | DivFloat, GtFloat -> false
+    | GtFloat, DivFloat -> false
+    | DivFloat, LessEqualFloat -> false
+    | LessEqualFloat, DivFloat -> false
+    | DivFloat, LessFloat -> false
+    | LessFloat, DivFloat -> false
+    | DivFloat, GeqInt -> false
+    | GeqInt, DivFloat -> false
+    | DivFloat, GtInt -> false
+    | GtInt, DivFloat -> false
+    | DivFloat, LessEqualInt -> false
+    | LessEqualInt, DivFloat -> false
+    | DivFloat, LessInt -> false
+    | LessInt, DivFloat -> false
+    | DivFloat, IntToString -> false
+    | IntToString, DivFloat -> false
+    | DivFloat, StringCon -> false
+    | StringCon, DivFloat -> false
+    | DivFloat, EqualMap -> false
+    | EqualMap, DivFloat -> false
+    | DivFloat, EqualSet -> false
+    | EqualSet, DivFloat -> false
+    | TimesFloat, GeqFloat -> false
+    | GeqFloat, TimesFloat -> false
+    | TimesFloat, GtFloat -> false
+    | GtFloat, TimesFloat -> false
+    | TimesFloat, LessEqualFloat -> false
+    | LessEqualFloat, TimesFloat -> false
+    | TimesFloat, LessFloat -> false
+    | LessFloat, TimesFloat -> false
+    | TimesFloat, GeqInt -> false
+    | GeqInt, TimesFloat -> false
+    | TimesFloat, GtInt -> false
+    | GtInt, TimesFloat -> false
+    | TimesFloat, LessEqualInt -> false
+    | LessEqualInt, TimesFloat -> false
+    | TimesFloat, LessInt -> false
+    | LessInt, TimesFloat -> false
+    | TimesFloat, IntToString -> false
+    | IntToString, TimesFloat -> false
+    | TimesFloat, StringCon -> false
+    | StringCon, TimesFloat -> false
+    | TimesFloat, EqualMap -> false
+    | EqualMap, TimesFloat -> false
+    | TimesFloat, EqualSet -> false
+    | EqualSet, TimesFloat -> false
+    | TimesFloat, DivFloat -> false
+    | DivFloat, TimesFloat -> false
+    | MinusFloat, GeqFloat -> false
+    | GeqFloat, MinusFloat -> false
+    | MinusFloat, GtFloat -> false
+    | GtFloat, MinusFloat -> false
+    | MinusFloat, LessEqualFloat -> false
+    | LessEqualFloat, MinusFloat -> false
+    | MinusFloat, LessFloat -> false
+    | LessFloat, MinusFloat -> false
+    | MinusFloat, GeqInt -> false
+    | GeqInt, MinusFloat -> false
+    | MinusFloat, GtInt -> false
+    | GtInt, MinusFloat -> false
+    | MinusFloat, LessEqualInt -> false
+    | LessEqualInt, MinusFloat -> false
+    | MinusFloat, LessInt -> false
+    | LessInt, MinusFloat -> false
+    | MinusFloat, IntToString -> false
+    | IntToString, MinusFloat -> false
+    | MinusFloat, StringCon -> false
+    | StringCon, MinusFloat -> false
+    | MinusFloat, EqualMap -> false
+    | EqualMap, MinusFloat -> false
+    | MinusFloat, EqualSet -> false
+    | EqualSet, MinusFloat -> false
+    | MinusFloat, DivFloat -> false
+    | DivFloat, MinusFloat -> false
+    | MinusFloat, TimesFloat -> false
+    | TimesFloat, MinusFloat -> false
+    | PlusFloat, GeqFloat -> false
+    | GeqFloat, PlusFloat -> false
+    | PlusFloat, GtFloat -> false
+    | GtFloat, PlusFloat -> false
+    | PlusFloat, LessEqualFloat -> false
+    | LessEqualFloat, PlusFloat -> false
+    | PlusFloat, LessFloat -> false
+    | LessFloat, PlusFloat -> false
+    | PlusFloat, GeqInt -> false
+    | GeqInt, PlusFloat -> false
+    | PlusFloat, GtInt -> false
+    | GtInt, PlusFloat -> false
+    | PlusFloat, LessEqualInt -> false
+    | LessEqualInt, PlusFloat -> false
+    | PlusFloat, LessInt -> false
+    | LessInt, PlusFloat -> false
+    | PlusFloat, IntToString -> false
+    | IntToString, PlusFloat -> false
+    | PlusFloat, StringCon -> false
+    | StringCon, PlusFloat -> false
+    | PlusFloat, EqualMap -> false
+    | EqualMap, PlusFloat -> false
+    | PlusFloat, EqualSet -> false
+    | EqualSet, PlusFloat -> false
+    | PlusFloat, DivFloat -> false
+    | DivFloat, PlusFloat -> false
+    | PlusFloat, TimesFloat -> false
+    | TimesFloat, PlusFloat -> false
+    | PlusFloat, MinusFloat -> false
+    | MinusFloat, PlusFloat -> false
+    | ModInt, GeqFloat -> false
+    | GeqFloat, ModInt -> false
+    | ModInt, GtFloat -> false
+    | GtFloat, ModInt -> false
+    | ModInt, LessEqualFloat -> false
+    | LessEqualFloat, ModInt -> false
+    | ModInt, LessFloat -> false
+    | LessFloat, ModInt -> false
+    | ModInt, GeqInt -> false
+    | GeqInt, ModInt -> false
+    | ModInt, GtInt -> false
+    | GtInt, ModInt -> false
+    | ModInt, LessEqualInt -> false
+    | LessEqualInt, ModInt -> false
+    | ModInt, LessInt -> false
+    | LessInt, ModInt -> false
+    | ModInt, IntToString -> false
+    | IntToString, ModInt -> false
+    | ModInt, StringCon -> false
+    | StringCon, ModInt -> false
+    | ModInt, EqualMap -> false
+    | EqualMap, ModInt -> false
+    | ModInt, EqualSet -> false
+    | EqualSet, ModInt -> false
+    | ModInt, DivFloat -> false
+    | DivFloat, ModInt -> false
+    | ModInt, TimesFloat -> false
+    | TimesFloat, ModInt -> false
+    | ModInt, MinusFloat -> false
+    | MinusFloat, ModInt -> false
+    | ModInt, PlusFloat -> false
+    | PlusFloat, ModInt -> false
+    | DivInt, GeqFloat -> false
+    | GeqFloat, DivInt -> false
+    | DivInt, GtFloat -> false
+    | GtFloat, DivInt -> false
+    | DivInt, LessEqualFloat -> false
+    | LessEqualFloat, DivInt -> false
+    | DivInt, LessFloat -> false
+    | LessFloat, DivInt -> false
+    | DivInt, GeqInt -> false
+    | GeqInt, DivInt -> false
+    | DivInt, GtInt -> false
+    | GtInt, DivInt -> false
+    | DivInt, LessEqualInt -> false
+    | LessEqualInt, DivInt -> false
+    | DivInt, LessInt -> false
+    | LessInt, DivInt -> false
+    | DivInt, IntToString -> false
+    | IntToString, DivInt -> false
+    | DivInt, StringCon -> false
+    | StringCon, DivInt -> false
+    | DivInt, EqualMap -> false
+    | EqualMap, DivInt -> false
+    | DivInt, EqualSet -> false
+    | EqualSet, DivInt -> false
+    | DivInt, DivFloat -> false
+    | DivFloat, DivInt -> false
+    | DivInt, TimesFloat -> false
+    | TimesFloat, DivInt -> false
+    | DivInt, MinusFloat -> false
+    | MinusFloat, DivInt -> false
+    | DivInt, PlusFloat -> false
+    | PlusFloat, DivInt -> false
+    | DivInt, ModInt -> false
+    | ModInt, DivInt -> false
+    | TimesInt, GeqFloat -> false
+    | GeqFloat, TimesInt -> false
+    | TimesInt, GtFloat -> false
+    | GtFloat, TimesInt -> false
+    | TimesInt, LessEqualFloat -> false
+    | LessEqualFloat, TimesInt -> false
+    | TimesInt, LessFloat -> false
+    | LessFloat, TimesInt -> false
+    | TimesInt, GeqInt -> false
+    | GeqInt, TimesInt -> false
+    | TimesInt, GtInt -> false
+    | GtInt, TimesInt -> false
     | TimesInt, LessEqualInt -> false
     | LessEqualInt, TimesInt -> false
     | TimesInt, LessInt -> false
@@ -1311,6 +1602,30 @@ let rec equal_labela _A
     | EqualMap, TimesInt -> false
     | TimesInt, EqualSet -> false
     | EqualSet, TimesInt -> false
+    | TimesInt, DivFloat -> false
+    | DivFloat, TimesInt -> false
+    | TimesInt, TimesFloat -> false
+    | TimesFloat, TimesInt -> false
+    | TimesInt, MinusFloat -> false
+    | MinusFloat, TimesInt -> false
+    | TimesInt, PlusFloat -> false
+    | PlusFloat, TimesInt -> false
+    | TimesInt, ModInt -> false
+    | ModInt, TimesInt -> false
+    | TimesInt, DivInt -> false
+    | DivInt, TimesInt -> false
+    | MinusInt, GeqFloat -> false
+    | GeqFloat, MinusInt -> false
+    | MinusInt, GtFloat -> false
+    | GtFloat, MinusInt -> false
+    | MinusInt, LessEqualFloat -> false
+    | LessEqualFloat, MinusInt -> false
+    | MinusInt, LessFloat -> false
+    | LessFloat, MinusInt -> false
+    | MinusInt, GeqInt -> false
+    | GeqInt, MinusInt -> false
+    | MinusInt, GtInt -> false
+    | GtInt, MinusInt -> false
     | MinusInt, LessEqualInt -> false
     | LessEqualInt, MinusInt -> false
     | MinusInt, LessInt -> false
@@ -1323,8 +1638,32 @@ let rec equal_labela _A
     | EqualMap, MinusInt -> false
     | MinusInt, EqualSet -> false
     | EqualSet, MinusInt -> false
+    | MinusInt, DivFloat -> false
+    | DivFloat, MinusInt -> false
+    | MinusInt, TimesFloat -> false
+    | TimesFloat, MinusInt -> false
+    | MinusInt, MinusFloat -> false
+    | MinusFloat, MinusInt -> false
+    | MinusInt, PlusFloat -> false
+    | PlusFloat, MinusInt -> false
+    | MinusInt, ModInt -> false
+    | ModInt, MinusInt -> false
+    | MinusInt, DivInt -> false
+    | DivInt, MinusInt -> false
     | MinusInt, TimesInt -> false
     | TimesInt, MinusInt -> false
+    | PlusInt, GeqFloat -> false
+    | GeqFloat, PlusInt -> false
+    | PlusInt, GtFloat -> false
+    | GtFloat, PlusInt -> false
+    | PlusInt, LessEqualFloat -> false
+    | LessEqualFloat, PlusInt -> false
+    | PlusInt, LessFloat -> false
+    | LessFloat, PlusInt -> false
+    | PlusInt, GeqInt -> false
+    | GeqInt, PlusInt -> false
+    | PlusInt, GtInt -> false
+    | GtInt, PlusInt -> false
     | PlusInt, LessEqualInt -> false
     | LessEqualInt, PlusInt -> false
     | PlusInt, LessInt -> false
@@ -1337,10 +1676,34 @@ let rec equal_labela _A
     | EqualMap, PlusInt -> false
     | PlusInt, EqualSet -> false
     | EqualSet, PlusInt -> false
+    | PlusInt, DivFloat -> false
+    | DivFloat, PlusInt -> false
+    | PlusInt, TimesFloat -> false
+    | TimesFloat, PlusInt -> false
+    | PlusInt, MinusFloat -> false
+    | MinusFloat, PlusInt -> false
+    | PlusInt, PlusFloat -> false
+    | PlusFloat, PlusInt -> false
+    | PlusInt, ModInt -> false
+    | ModInt, PlusInt -> false
+    | PlusInt, DivInt -> false
+    | DivInt, PlusInt -> false
     | PlusInt, TimesInt -> false
     | TimesInt, PlusInt -> false
     | PlusInt, MinusInt -> false
     | MinusInt, PlusInt -> false
+    | TokenLabel x21, GeqFloat -> false
+    | GeqFloat, TokenLabel x21 -> false
+    | TokenLabel x21, GtFloat -> false
+    | GtFloat, TokenLabel x21 -> false
+    | TokenLabel x21, LessEqualFloat -> false
+    | LessEqualFloat, TokenLabel x21 -> false
+    | TokenLabel x21, LessFloat -> false
+    | LessFloat, TokenLabel x21 -> false
+    | TokenLabel x21, GeqInt -> false
+    | GeqInt, TokenLabel x21 -> false
+    | TokenLabel x21, GtInt -> false
+    | GtInt, TokenLabel x21 -> false
     | TokenLabel x21, LessEqualInt -> false
     | LessEqualInt, TokenLabel x21 -> false
     | TokenLabel x21, LessInt -> false
@@ -1353,12 +1716,36 @@ let rec equal_labela _A
     | EqualMap, TokenLabel x21 -> false
     | TokenLabel x21, EqualSet -> false
     | EqualSet, TokenLabel x21 -> false
+    | TokenLabel x21, DivFloat -> false
+    | DivFloat, TokenLabel x21 -> false
+    | TokenLabel x21, TimesFloat -> false
+    | TimesFloat, TokenLabel x21 -> false
+    | TokenLabel x21, MinusFloat -> false
+    | MinusFloat, TokenLabel x21 -> false
+    | TokenLabel x21, PlusFloat -> false
+    | PlusFloat, TokenLabel x21 -> false
+    | TokenLabel x21, ModInt -> false
+    | ModInt, TokenLabel x21 -> false
+    | TokenLabel x21, DivInt -> false
+    | DivInt, TokenLabel x21 -> false
     | TokenLabel x21, TimesInt -> false
     | TimesInt, TokenLabel x21 -> false
     | TokenLabel x21, MinusInt -> false
     | MinusInt, TokenLabel x21 -> false
     | TokenLabel x21, PlusInt -> false
     | PlusInt, TokenLabel x21 -> false
+    | OtherLabel x20, GeqFloat -> false
+    | GeqFloat, OtherLabel x20 -> false
+    | OtherLabel x20, GtFloat -> false
+    | GtFloat, OtherLabel x20 -> false
+    | OtherLabel x20, LessEqualFloat -> false
+    | LessEqualFloat, OtherLabel x20 -> false
+    | OtherLabel x20, LessFloat -> false
+    | LessFloat, OtherLabel x20 -> false
+    | OtherLabel x20, GeqInt -> false
+    | GeqInt, OtherLabel x20 -> false
+    | OtherLabel x20, GtInt -> false
+    | GtInt, OtherLabel x20 -> false
     | OtherLabel x20, LessEqualInt -> false
     | LessEqualInt, OtherLabel x20 -> false
     | OtherLabel x20, LessInt -> false
@@ -1371,6 +1758,18 @@ let rec equal_labela _A
     | EqualMap, OtherLabel x20 -> false
     | OtherLabel x20, EqualSet -> false
     | EqualSet, OtherLabel x20 -> false
+    | OtherLabel x20, DivFloat -> false
+    | DivFloat, OtherLabel x20 -> false
+    | OtherLabel x20, TimesFloat -> false
+    | TimesFloat, OtherLabel x20 -> false
+    | OtherLabel x20, MinusFloat -> false
+    | MinusFloat, OtherLabel x20 -> false
+    | OtherLabel x20, PlusFloat -> false
+    | PlusFloat, OtherLabel x20 -> false
+    | OtherLabel x20, ModInt -> false
+    | ModInt, OtherLabel x20 -> false
+    | OtherLabel x20, DivInt -> false
+    | DivInt, OtherLabel x20 -> false
     | OtherLabel x20, TimesInt -> false
     | TimesInt, OtherLabel x20 -> false
     | OtherLabel x20, MinusInt -> false
@@ -1379,6 +1778,18 @@ let rec equal_labela _A
     | PlusInt, OtherLabel x20 -> false
     | OtherLabel x20, TokenLabel x21 -> false
     | TokenLabel x21, OtherLabel x20 -> false
+    | NotEqualKLabel, GeqFloat -> false
+    | GeqFloat, NotEqualKLabel -> false
+    | NotEqualKLabel, GtFloat -> false
+    | GtFloat, NotEqualKLabel -> false
+    | NotEqualKLabel, LessEqualFloat -> false
+    | LessEqualFloat, NotEqualKLabel -> false
+    | NotEqualKLabel, LessFloat -> false
+    | LessFloat, NotEqualKLabel -> false
+    | NotEqualKLabel, GeqInt -> false
+    | GeqInt, NotEqualKLabel -> false
+    | NotEqualKLabel, GtInt -> false
+    | GtInt, NotEqualKLabel -> false
     | NotEqualKLabel, LessEqualInt -> false
     | LessEqualInt, NotEqualKLabel -> false
     | NotEqualKLabel, LessInt -> false
@@ -1391,6 +1802,18 @@ let rec equal_labela _A
     | EqualMap, NotEqualKLabel -> false
     | NotEqualKLabel, EqualSet -> false
     | EqualSet, NotEqualKLabel -> false
+    | NotEqualKLabel, DivFloat -> false
+    | DivFloat, NotEqualKLabel -> false
+    | NotEqualKLabel, TimesFloat -> false
+    | TimesFloat, NotEqualKLabel -> false
+    | NotEqualKLabel, MinusFloat -> false
+    | MinusFloat, NotEqualKLabel -> false
+    | NotEqualKLabel, PlusFloat -> false
+    | PlusFloat, NotEqualKLabel -> false
+    | NotEqualKLabel, ModInt -> false
+    | ModInt, NotEqualKLabel -> false
+    | NotEqualKLabel, DivInt -> false
+    | DivInt, NotEqualKLabel -> false
     | NotEqualKLabel, TimesInt -> false
     | TimesInt, NotEqualKLabel -> false
     | NotEqualKLabel, MinusInt -> false
@@ -1401,6 +1824,18 @@ let rec equal_labela _A
     | TokenLabel x21, NotEqualKLabel -> false
     | NotEqualKLabel, OtherLabel x20 -> false
     | OtherLabel x20, NotEqualKLabel -> false
+    | EqualKLabel, GeqFloat -> false
+    | GeqFloat, EqualKLabel -> false
+    | EqualKLabel, GtFloat -> false
+    | GtFloat, EqualKLabel -> false
+    | EqualKLabel, LessEqualFloat -> false
+    | LessEqualFloat, EqualKLabel -> false
+    | EqualKLabel, LessFloat -> false
+    | LessFloat, EqualKLabel -> false
+    | EqualKLabel, GeqInt -> false
+    | GeqInt, EqualKLabel -> false
+    | EqualKLabel, GtInt -> false
+    | GtInt, EqualKLabel -> false
     | EqualKLabel, LessEqualInt -> false
     | LessEqualInt, EqualKLabel -> false
     | EqualKLabel, LessInt -> false
@@ -1413,6 +1848,18 @@ let rec equal_labela _A
     | EqualMap, EqualKLabel -> false
     | EqualKLabel, EqualSet -> false
     | EqualSet, EqualKLabel -> false
+    | EqualKLabel, DivFloat -> false
+    | DivFloat, EqualKLabel -> false
+    | EqualKLabel, TimesFloat -> false
+    | TimesFloat, EqualKLabel -> false
+    | EqualKLabel, MinusFloat -> false
+    | MinusFloat, EqualKLabel -> false
+    | EqualKLabel, PlusFloat -> false
+    | PlusFloat, EqualKLabel -> false
+    | EqualKLabel, ModInt -> false
+    | ModInt, EqualKLabel -> false
+    | EqualKLabel, DivInt -> false
+    | DivInt, EqualKLabel -> false
     | EqualKLabel, TimesInt -> false
     | TimesInt, EqualKLabel -> false
     | EqualKLabel, MinusInt -> false
@@ -1425,6 +1872,18 @@ let rec equal_labela _A
     | OtherLabel x20, EqualKLabel -> false
     | EqualKLabel, NotEqualKLabel -> false
     | NotEqualKLabel, EqualKLabel -> false
+    | NotEqualK, GeqFloat -> false
+    | GeqFloat, NotEqualK -> false
+    | NotEqualK, GtFloat -> false
+    | GtFloat, NotEqualK -> false
+    | NotEqualK, LessEqualFloat -> false
+    | LessEqualFloat, NotEqualK -> false
+    | NotEqualK, LessFloat -> false
+    | LessFloat, NotEqualK -> false
+    | NotEqualK, GeqInt -> false
+    | GeqInt, NotEqualK -> false
+    | NotEqualK, GtInt -> false
+    | GtInt, NotEqualK -> false
     | NotEqualK, LessEqualInt -> false
     | LessEqualInt, NotEqualK -> false
     | NotEqualK, LessInt -> false
@@ -1437,6 +1896,18 @@ let rec equal_labela _A
     | EqualMap, NotEqualK -> false
     | NotEqualK, EqualSet -> false
     | EqualSet, NotEqualK -> false
+    | NotEqualK, DivFloat -> false
+    | DivFloat, NotEqualK -> false
+    | NotEqualK, TimesFloat -> false
+    | TimesFloat, NotEqualK -> false
+    | NotEqualK, MinusFloat -> false
+    | MinusFloat, NotEqualK -> false
+    | NotEqualK, PlusFloat -> false
+    | PlusFloat, NotEqualK -> false
+    | NotEqualK, ModInt -> false
+    | ModInt, NotEqualK -> false
+    | NotEqualK, DivInt -> false
+    | DivInt, NotEqualK -> false
     | NotEqualK, TimesInt -> false
     | TimesInt, NotEqualK -> false
     | NotEqualK, MinusInt -> false
@@ -1451,6 +1922,18 @@ let rec equal_labela _A
     | NotEqualKLabel, NotEqualK -> false
     | NotEqualK, EqualKLabel -> false
     | EqualKLabel, NotEqualK -> false
+    | EqualK, GeqFloat -> false
+    | GeqFloat, EqualK -> false
+    | EqualK, GtFloat -> false
+    | GtFloat, EqualK -> false
+    | EqualK, LessEqualFloat -> false
+    | LessEqualFloat, EqualK -> false
+    | EqualK, LessFloat -> false
+    | LessFloat, EqualK -> false
+    | EqualK, GeqInt -> false
+    | GeqInt, EqualK -> false
+    | EqualK, GtInt -> false
+    | GtInt, EqualK -> false
     | EqualK, LessEqualInt -> false
     | LessEqualInt, EqualK -> false
     | EqualK, LessInt -> false
@@ -1463,6 +1946,18 @@ let rec equal_labela _A
     | EqualMap, EqualK -> false
     | EqualK, EqualSet -> false
     | EqualSet, EqualK -> false
+    | EqualK, DivFloat -> false
+    | DivFloat, EqualK -> false
+    | EqualK, TimesFloat -> false
+    | TimesFloat, EqualK -> false
+    | EqualK, MinusFloat -> false
+    | MinusFloat, EqualK -> false
+    | EqualK, PlusFloat -> false
+    | PlusFloat, EqualK -> false
+    | EqualK, ModInt -> false
+    | ModInt, EqualK -> false
+    | EqualK, DivInt -> false
+    | DivInt, EqualK -> false
     | EqualK, TimesInt -> false
     | TimesInt, EqualK -> false
     | EqualK, MinusInt -> false
@@ -1479,6 +1974,18 @@ let rec equal_labela _A
     | EqualKLabel, EqualK -> false
     | EqualK, NotEqualK -> false
     | NotEqualK, EqualK -> false
+    | MapUpdate, GeqFloat -> false
+    | GeqFloat, MapUpdate -> false
+    | MapUpdate, GtFloat -> false
+    | GtFloat, MapUpdate -> false
+    | MapUpdate, LessEqualFloat -> false
+    | LessEqualFloat, MapUpdate -> false
+    | MapUpdate, LessFloat -> false
+    | LessFloat, MapUpdate -> false
+    | MapUpdate, GeqInt -> false
+    | GeqInt, MapUpdate -> false
+    | MapUpdate, GtInt -> false
+    | GtInt, MapUpdate -> false
     | MapUpdate, LessEqualInt -> false
     | LessEqualInt, MapUpdate -> false
     | MapUpdate, LessInt -> false
@@ -1491,6 +1998,18 @@ let rec equal_labela _A
     | EqualMap, MapUpdate -> false
     | MapUpdate, EqualSet -> false
     | EqualSet, MapUpdate -> false
+    | MapUpdate, DivFloat -> false
+    | DivFloat, MapUpdate -> false
+    | MapUpdate, TimesFloat -> false
+    | TimesFloat, MapUpdate -> false
+    | MapUpdate, MinusFloat -> false
+    | MinusFloat, MapUpdate -> false
+    | MapUpdate, PlusFloat -> false
+    | PlusFloat, MapUpdate -> false
+    | MapUpdate, ModInt -> false
+    | ModInt, MapUpdate -> false
+    | MapUpdate, DivInt -> false
+    | DivInt, MapUpdate -> false
     | MapUpdate, TimesInt -> false
     | TimesInt, MapUpdate -> false
     | MapUpdate, MinusInt -> false
@@ -1509,6 +2028,18 @@ let rec equal_labela _A
     | NotEqualK, MapUpdate -> false
     | MapUpdate, EqualK -> false
     | EqualK, MapUpdate -> false
+    | MapItemLabel, GeqFloat -> false
+    | GeqFloat, MapItemLabel -> false
+    | MapItemLabel, GtFloat -> false
+    | GtFloat, MapItemLabel -> false
+    | MapItemLabel, LessEqualFloat -> false
+    | LessEqualFloat, MapItemLabel -> false
+    | MapItemLabel, LessFloat -> false
+    | LessFloat, MapItemLabel -> false
+    | MapItemLabel, GeqInt -> false
+    | GeqInt, MapItemLabel -> false
+    | MapItemLabel, GtInt -> false
+    | GtInt, MapItemLabel -> false
     | MapItemLabel, LessEqualInt -> false
     | LessEqualInt, MapItemLabel -> false
     | MapItemLabel, LessInt -> false
@@ -1521,6 +2052,18 @@ let rec equal_labela _A
     | EqualMap, MapItemLabel -> false
     | MapItemLabel, EqualSet -> false
     | EqualSet, MapItemLabel -> false
+    | MapItemLabel, DivFloat -> false
+    | DivFloat, MapItemLabel -> false
+    | MapItemLabel, TimesFloat -> false
+    | TimesFloat, MapItemLabel -> false
+    | MapItemLabel, MinusFloat -> false
+    | MinusFloat, MapItemLabel -> false
+    | MapItemLabel, PlusFloat -> false
+    | PlusFloat, MapItemLabel -> false
+    | MapItemLabel, ModInt -> false
+    | ModInt, MapItemLabel -> false
+    | MapItemLabel, DivInt -> false
+    | DivInt, MapItemLabel -> false
     | MapItemLabel, TimesInt -> false
     | TimesInt, MapItemLabel -> false
     | MapItemLabel, MinusInt -> false
@@ -1541,6 +2084,18 @@ let rec equal_labela _A
     | EqualK, MapItemLabel -> false
     | MapItemLabel, MapUpdate -> false
     | MapUpdate, MapItemLabel -> false
+    | MapConLabel, GeqFloat -> false
+    | GeqFloat, MapConLabel -> false
+    | MapConLabel, GtFloat -> false
+    | GtFloat, MapConLabel -> false
+    | MapConLabel, LessEqualFloat -> false
+    | LessEqualFloat, MapConLabel -> false
+    | MapConLabel, LessFloat -> false
+    | LessFloat, MapConLabel -> false
+    | MapConLabel, GeqInt -> false
+    | GeqInt, MapConLabel -> false
+    | MapConLabel, GtInt -> false
+    | GtInt, MapConLabel -> false
     | MapConLabel, LessEqualInt -> false
     | LessEqualInt, MapConLabel -> false
     | MapConLabel, LessInt -> false
@@ -1553,6 +2108,18 @@ let rec equal_labela _A
     | EqualMap, MapConLabel -> false
     | MapConLabel, EqualSet -> false
     | EqualSet, MapConLabel -> false
+    | MapConLabel, DivFloat -> false
+    | DivFloat, MapConLabel -> false
+    | MapConLabel, TimesFloat -> false
+    | TimesFloat, MapConLabel -> false
+    | MapConLabel, MinusFloat -> false
+    | MinusFloat, MapConLabel -> false
+    | MapConLabel, PlusFloat -> false
+    | PlusFloat, MapConLabel -> false
+    | MapConLabel, ModInt -> false
+    | ModInt, MapConLabel -> false
+    | MapConLabel, DivInt -> false
+    | DivInt, MapConLabel -> false
     | MapConLabel, TimesInt -> false
     | TimesInt, MapConLabel -> false
     | MapConLabel, MinusInt -> false
@@ -1575,6 +2142,18 @@ let rec equal_labela _A
     | MapUpdate, MapConLabel -> false
     | MapConLabel, MapItemLabel -> false
     | MapItemLabel, MapConLabel -> false
+    | ListItemLabel, GeqFloat -> false
+    | GeqFloat, ListItemLabel -> false
+    | ListItemLabel, GtFloat -> false
+    | GtFloat, ListItemLabel -> false
+    | ListItemLabel, LessEqualFloat -> false
+    | LessEqualFloat, ListItemLabel -> false
+    | ListItemLabel, LessFloat -> false
+    | LessFloat, ListItemLabel -> false
+    | ListItemLabel, GeqInt -> false
+    | GeqInt, ListItemLabel -> false
+    | ListItemLabel, GtInt -> false
+    | GtInt, ListItemLabel -> false
     | ListItemLabel, LessEqualInt -> false
     | LessEqualInt, ListItemLabel -> false
     | ListItemLabel, LessInt -> false
@@ -1587,6 +2166,18 @@ let rec equal_labela _A
     | EqualMap, ListItemLabel -> false
     | ListItemLabel, EqualSet -> false
     | EqualSet, ListItemLabel -> false
+    | ListItemLabel, DivFloat -> false
+    | DivFloat, ListItemLabel -> false
+    | ListItemLabel, TimesFloat -> false
+    | TimesFloat, ListItemLabel -> false
+    | ListItemLabel, MinusFloat -> false
+    | MinusFloat, ListItemLabel -> false
+    | ListItemLabel, PlusFloat -> false
+    | PlusFloat, ListItemLabel -> false
+    | ListItemLabel, ModInt -> false
+    | ModInt, ListItemLabel -> false
+    | ListItemLabel, DivInt -> false
+    | DivInt, ListItemLabel -> false
     | ListItemLabel, TimesInt -> false
     | TimesInt, ListItemLabel -> false
     | ListItemLabel, MinusInt -> false
@@ -1611,6 +2202,18 @@ let rec equal_labela _A
     | MapItemLabel, ListItemLabel -> false
     | ListItemLabel, MapConLabel -> false
     | MapConLabel, ListItemLabel -> false
+    | ListConLabel, GeqFloat -> false
+    | GeqFloat, ListConLabel -> false
+    | ListConLabel, GtFloat -> false
+    | GtFloat, ListConLabel -> false
+    | ListConLabel, LessEqualFloat -> false
+    | LessEqualFloat, ListConLabel -> false
+    | ListConLabel, LessFloat -> false
+    | LessFloat, ListConLabel -> false
+    | ListConLabel, GeqInt -> false
+    | GeqInt, ListConLabel -> false
+    | ListConLabel, GtInt -> false
+    | GtInt, ListConLabel -> false
     | ListConLabel, LessEqualInt -> false
     | LessEqualInt, ListConLabel -> false
     | ListConLabel, LessInt -> false
@@ -1623,6 +2226,18 @@ let rec equal_labela _A
     | EqualMap, ListConLabel -> false
     | ListConLabel, EqualSet -> false
     | EqualSet, ListConLabel -> false
+    | ListConLabel, DivFloat -> false
+    | DivFloat, ListConLabel -> false
+    | ListConLabel, TimesFloat -> false
+    | TimesFloat, ListConLabel -> false
+    | ListConLabel, MinusFloat -> false
+    | MinusFloat, ListConLabel -> false
+    | ListConLabel, PlusFloat -> false
+    | PlusFloat, ListConLabel -> false
+    | ListConLabel, ModInt -> false
+    | ModInt, ListConLabel -> false
+    | ListConLabel, DivInt -> false
+    | DivInt, ListConLabel -> false
     | ListConLabel, TimesInt -> false
     | TimesInt, ListConLabel -> false
     | ListConLabel, MinusInt -> false
@@ -1649,6 +2264,18 @@ let rec equal_labela _A
     | MapConLabel, ListConLabel -> false
     | ListConLabel, ListItemLabel -> false
     | ListItemLabel, ListConLabel -> false
+    | SetItemLabel, GeqFloat -> false
+    | GeqFloat, SetItemLabel -> false
+    | SetItemLabel, GtFloat -> false
+    | GtFloat, SetItemLabel -> false
+    | SetItemLabel, LessEqualFloat -> false
+    | LessEqualFloat, SetItemLabel -> false
+    | SetItemLabel, LessFloat -> false
+    | LessFloat, SetItemLabel -> false
+    | SetItemLabel, GeqInt -> false
+    | GeqInt, SetItemLabel -> false
+    | SetItemLabel, GtInt -> false
+    | GtInt, SetItemLabel -> false
     | SetItemLabel, LessEqualInt -> false
     | LessEqualInt, SetItemLabel -> false
     | SetItemLabel, LessInt -> false
@@ -1661,6 +2288,18 @@ let rec equal_labela _A
     | EqualMap, SetItemLabel -> false
     | SetItemLabel, EqualSet -> false
     | EqualSet, SetItemLabel -> false
+    | SetItemLabel, DivFloat -> false
+    | DivFloat, SetItemLabel -> false
+    | SetItemLabel, TimesFloat -> false
+    | TimesFloat, SetItemLabel -> false
+    | SetItemLabel, MinusFloat -> false
+    | MinusFloat, SetItemLabel -> false
+    | SetItemLabel, PlusFloat -> false
+    | PlusFloat, SetItemLabel -> false
+    | SetItemLabel, ModInt -> false
+    | ModInt, SetItemLabel -> false
+    | SetItemLabel, DivInt -> false
+    | DivInt, SetItemLabel -> false
     | SetItemLabel, TimesInt -> false
     | TimesInt, SetItemLabel -> false
     | SetItemLabel, MinusInt -> false
@@ -1689,6 +2328,18 @@ let rec equal_labela _A
     | ListItemLabel, SetItemLabel -> false
     | SetItemLabel, ListConLabel -> false
     | ListConLabel, SetItemLabel -> false
+    | SetConLabel, GeqFloat -> false
+    | GeqFloat, SetConLabel -> false
+    | SetConLabel, GtFloat -> false
+    | GtFloat, SetConLabel -> false
+    | SetConLabel, LessEqualFloat -> false
+    | LessEqualFloat, SetConLabel -> false
+    | SetConLabel, LessFloat -> false
+    | LessFloat, SetConLabel -> false
+    | SetConLabel, GeqInt -> false
+    | GeqInt, SetConLabel -> false
+    | SetConLabel, GtInt -> false
+    | GtInt, SetConLabel -> false
     | SetConLabel, LessEqualInt -> false
     | LessEqualInt, SetConLabel -> false
     | SetConLabel, LessInt -> false
@@ -1701,6 +2352,18 @@ let rec equal_labela _A
     | EqualMap, SetConLabel -> false
     | SetConLabel, EqualSet -> false
     | EqualSet, SetConLabel -> false
+    | SetConLabel, DivFloat -> false
+    | DivFloat, SetConLabel -> false
+    | SetConLabel, TimesFloat -> false
+    | TimesFloat, SetConLabel -> false
+    | SetConLabel, MinusFloat -> false
+    | MinusFloat, SetConLabel -> false
+    | SetConLabel, PlusFloat -> false
+    | PlusFloat, SetConLabel -> false
+    | SetConLabel, ModInt -> false
+    | ModInt, SetConLabel -> false
+    | SetConLabel, DivInt -> false
+    | DivInt, SetConLabel -> false
     | SetConLabel, TimesInt -> false
     | TimesInt, SetConLabel -> false
     | SetConLabel, MinusInt -> false
@@ -1731,6 +2394,18 @@ let rec equal_labela _A
     | ListConLabel, SetConLabel -> false
     | SetConLabel, SetItemLabel -> false
     | SetItemLabel, SetConLabel -> false
+    | OrBool, GeqFloat -> false
+    | GeqFloat, OrBool -> false
+    | OrBool, GtFloat -> false
+    | GtFloat, OrBool -> false
+    | OrBool, LessEqualFloat -> false
+    | LessEqualFloat, OrBool -> false
+    | OrBool, LessFloat -> false
+    | LessFloat, OrBool -> false
+    | OrBool, GeqInt -> false
+    | GeqInt, OrBool -> false
+    | OrBool, GtInt -> false
+    | GtInt, OrBool -> false
     | OrBool, LessEqualInt -> false
     | LessEqualInt, OrBool -> false
     | OrBool, LessInt -> false
@@ -1743,6 +2418,18 @@ let rec equal_labela _A
     | EqualMap, OrBool -> false
     | OrBool, EqualSet -> false
     | EqualSet, OrBool -> false
+    | OrBool, DivFloat -> false
+    | DivFloat, OrBool -> false
+    | OrBool, TimesFloat -> false
+    | TimesFloat, OrBool -> false
+    | OrBool, MinusFloat -> false
+    | MinusFloat, OrBool -> false
+    | OrBool, PlusFloat -> false
+    | PlusFloat, OrBool -> false
+    | OrBool, ModInt -> false
+    | ModInt, OrBool -> false
+    | OrBool, DivInt -> false
+    | DivInt, OrBool -> false
     | OrBool, TimesInt -> false
     | TimesInt, OrBool -> false
     | OrBool, MinusInt -> false
@@ -1775,6 +2462,18 @@ let rec equal_labela _A
     | SetItemLabel, OrBool -> false
     | OrBool, SetConLabel -> false
     | SetConLabel, OrBool -> false
+    | NotBool, GeqFloat -> false
+    | GeqFloat, NotBool -> false
+    | NotBool, GtFloat -> false
+    | GtFloat, NotBool -> false
+    | NotBool, LessEqualFloat -> false
+    | LessEqualFloat, NotBool -> false
+    | NotBool, LessFloat -> false
+    | LessFloat, NotBool -> false
+    | NotBool, GeqInt -> false
+    | GeqInt, NotBool -> false
+    | NotBool, GtInt -> false
+    | GtInt, NotBool -> false
     | NotBool, LessEqualInt -> false
     | LessEqualInt, NotBool -> false
     | NotBool, LessInt -> false
@@ -1787,6 +2486,18 @@ let rec equal_labela _A
     | EqualMap, NotBool -> false
     | NotBool, EqualSet -> false
     | EqualSet, NotBool -> false
+    | NotBool, DivFloat -> false
+    | DivFloat, NotBool -> false
+    | NotBool, TimesFloat -> false
+    | TimesFloat, NotBool -> false
+    | NotBool, MinusFloat -> false
+    | MinusFloat, NotBool -> false
+    | NotBool, PlusFloat -> false
+    | PlusFloat, NotBool -> false
+    | NotBool, ModInt -> false
+    | ModInt, NotBool -> false
+    | NotBool, DivInt -> false
+    | DivInt, NotBool -> false
     | NotBool, TimesInt -> false
     | TimesInt, NotBool -> false
     | NotBool, MinusInt -> false
@@ -1821,6 +2532,18 @@ let rec equal_labela _A
     | SetConLabel, NotBool -> false
     | NotBool, OrBool -> false
     | OrBool, NotBool -> false
+    | AndBool, GeqFloat -> false
+    | GeqFloat, AndBool -> false
+    | AndBool, GtFloat -> false
+    | GtFloat, AndBool -> false
+    | AndBool, LessEqualFloat -> false
+    | LessEqualFloat, AndBool -> false
+    | AndBool, LessFloat -> false
+    | LessFloat, AndBool -> false
+    | AndBool, GeqInt -> false
+    | GeqInt, AndBool -> false
+    | AndBool, GtInt -> false
+    | GtInt, AndBool -> false
     | AndBool, LessEqualInt -> false
     | LessEqualInt, AndBool -> false
     | AndBool, LessInt -> false
@@ -1833,6 +2556,18 @@ let rec equal_labela _A
     | EqualMap, AndBool -> false
     | AndBool, EqualSet -> false
     | EqualSet, AndBool -> false
+    | AndBool, DivFloat -> false
+    | DivFloat, AndBool -> false
+    | AndBool, TimesFloat -> false
+    | TimesFloat, AndBool -> false
+    | AndBool, MinusFloat -> false
+    | MinusFloat, AndBool -> false
+    | AndBool, PlusFloat -> false
+    | PlusFloat, AndBool -> false
+    | AndBool, ModInt -> false
+    | ModInt, AndBool -> false
+    | AndBool, DivInt -> false
+    | DivInt, AndBool -> false
     | AndBool, TimesInt -> false
     | TimesInt, AndBool -> false
     | AndBool, MinusInt -> false
@@ -1869,6 +2604,18 @@ let rec equal_labela _A
     | OrBool, AndBool -> false
     | AndBool, NotBool -> false
     | NotBool, AndBool -> false
+    | IsKResult, GeqFloat -> false
+    | GeqFloat, IsKResult -> false
+    | IsKResult, GtFloat -> false
+    | GtFloat, IsKResult -> false
+    | IsKResult, LessEqualFloat -> false
+    | LessEqualFloat, IsKResult -> false
+    | IsKResult, LessFloat -> false
+    | LessFloat, IsKResult -> false
+    | IsKResult, GeqInt -> false
+    | GeqInt, IsKResult -> false
+    | IsKResult, GtInt -> false
+    | GtInt, IsKResult -> false
     | IsKResult, LessEqualInt -> false
     | LessEqualInt, IsKResult -> false
     | IsKResult, LessInt -> false
@@ -1881,6 +2628,18 @@ let rec equal_labela _A
     | EqualMap, IsKResult -> false
     | IsKResult, EqualSet -> false
     | EqualSet, IsKResult -> false
+    | IsKResult, DivFloat -> false
+    | DivFloat, IsKResult -> false
+    | IsKResult, TimesFloat -> false
+    | TimesFloat, IsKResult -> false
+    | IsKResult, MinusFloat -> false
+    | MinusFloat, IsKResult -> false
+    | IsKResult, PlusFloat -> false
+    | PlusFloat, IsKResult -> false
+    | IsKResult, ModInt -> false
+    | ModInt, IsKResult -> false
+    | IsKResult, DivInt -> false
+    | DivInt, IsKResult -> false
     | IsKResult, TimesInt -> false
     | TimesInt, IsKResult -> false
     | IsKResult, MinusInt -> false
@@ -1919,6 +2678,18 @@ let rec equal_labela _A
     | NotBool, IsKResult -> false
     | IsKResult, AndBool -> false
     | AndBool, IsKResult -> false
+    | GetKLabel, GeqFloat -> false
+    | GeqFloat, GetKLabel -> false
+    | GetKLabel, GtFloat -> false
+    | GtFloat, GetKLabel -> false
+    | GetKLabel, LessEqualFloat -> false
+    | LessEqualFloat, GetKLabel -> false
+    | GetKLabel, LessFloat -> false
+    | LessFloat, GetKLabel -> false
+    | GetKLabel, GeqInt -> false
+    | GeqInt, GetKLabel -> false
+    | GetKLabel, GtInt -> false
+    | GtInt, GetKLabel -> false
     | GetKLabel, LessEqualInt -> false
     | LessEqualInt, GetKLabel -> false
     | GetKLabel, LessInt -> false
@@ -1931,6 +2702,18 @@ let rec equal_labela _A
     | EqualMap, GetKLabel -> false
     | GetKLabel, EqualSet -> false
     | EqualSet, GetKLabel -> false
+    | GetKLabel, DivFloat -> false
+    | DivFloat, GetKLabel -> false
+    | GetKLabel, TimesFloat -> false
+    | TimesFloat, GetKLabel -> false
+    | GetKLabel, MinusFloat -> false
+    | MinusFloat, GetKLabel -> false
+    | GetKLabel, PlusFloat -> false
+    | PlusFloat, GetKLabel -> false
+    | GetKLabel, ModInt -> false
+    | ModInt, GetKLabel -> false
+    | GetKLabel, DivInt -> false
+    | DivInt, GetKLabel -> false
     | GetKLabel, TimesInt -> false
     | TimesInt, GetKLabel -> false
     | GetKLabel, MinusInt -> false
@@ -1971,6 +2754,18 @@ let rec equal_labela _A
     | AndBool, GetKLabel -> false
     | GetKLabel, IsKResult -> false
     | IsKResult, GetKLabel -> false
+    | Sort, GeqFloat -> false
+    | GeqFloat, Sort -> false
+    | Sort, GtFloat -> false
+    | GtFloat, Sort -> false
+    | Sort, LessEqualFloat -> false
+    | LessEqualFloat, Sort -> false
+    | Sort, LessFloat -> false
+    | LessFloat, Sort -> false
+    | Sort, GeqInt -> false
+    | GeqInt, Sort -> false
+    | Sort, GtInt -> false
+    | GtInt, Sort -> false
     | Sort, LessEqualInt -> false
     | LessEqualInt, Sort -> false
     | Sort, LessInt -> false
@@ -1983,6 +2778,18 @@ let rec equal_labela _A
     | EqualMap, Sort -> false
     | Sort, EqualSet -> false
     | EqualSet, Sort -> false
+    | Sort, DivFloat -> false
+    | DivFloat, Sort -> false
+    | Sort, TimesFloat -> false
+    | TimesFloat, Sort -> false
+    | Sort, MinusFloat -> false
+    | MinusFloat, Sort -> false
+    | Sort, PlusFloat -> false
+    | PlusFloat, Sort -> false
+    | Sort, ModInt -> false
+    | ModInt, Sort -> false
+    | Sort, DivInt -> false
+    | DivInt, Sort -> false
     | Sort, TimesInt -> false
     | TimesInt, Sort -> false
     | Sort, MinusInt -> false
@@ -2025,6 +2832,18 @@ let rec equal_labela _A
     | IsKResult, Sort -> false
     | Sort, GetKLabel -> false
     | GetKLabel, Sort -> false
+    | ConstToLabel x2, GeqFloat -> false
+    | GeqFloat, ConstToLabel x2 -> false
+    | ConstToLabel x2, GtFloat -> false
+    | GtFloat, ConstToLabel x2 -> false
+    | ConstToLabel x2, LessEqualFloat -> false
+    | LessEqualFloat, ConstToLabel x2 -> false
+    | ConstToLabel x2, LessFloat -> false
+    | LessFloat, ConstToLabel x2 -> false
+    | ConstToLabel x2, GeqInt -> false
+    | GeqInt, ConstToLabel x2 -> false
+    | ConstToLabel x2, GtInt -> false
+    | GtInt, ConstToLabel x2 -> false
     | ConstToLabel x2, LessEqualInt -> false
     | LessEqualInt, ConstToLabel x2 -> false
     | ConstToLabel x2, LessInt -> false
@@ -2037,6 +2856,18 @@ let rec equal_labela _A
     | EqualMap, ConstToLabel x2 -> false
     | ConstToLabel x2, EqualSet -> false
     | EqualSet, ConstToLabel x2 -> false
+    | ConstToLabel x2, DivFloat -> false
+    | DivFloat, ConstToLabel x2 -> false
+    | ConstToLabel x2, TimesFloat -> false
+    | TimesFloat, ConstToLabel x2 -> false
+    | ConstToLabel x2, MinusFloat -> false
+    | MinusFloat, ConstToLabel x2 -> false
+    | ConstToLabel x2, PlusFloat -> false
+    | PlusFloat, ConstToLabel x2 -> false
+    | ConstToLabel x2, ModInt -> false
+    | ModInt, ConstToLabel x2 -> false
+    | ConstToLabel x2, DivInt -> false
+    | DivInt, ConstToLabel x2 -> false
     | ConstToLabel x2, TimesInt -> false
     | TimesInt, ConstToLabel x2 -> false
     | ConstToLabel x2, MinusInt -> false
@@ -2081,6 +2912,18 @@ let rec equal_labela _A
     | GetKLabel, ConstToLabel x2 -> false
     | ConstToLabel x2, Sort -> false
     | Sort, ConstToLabel x2 -> false
+    | UnitLabel x1, GeqFloat -> false
+    | GeqFloat, UnitLabel x1 -> false
+    | UnitLabel x1, GtFloat -> false
+    | GtFloat, UnitLabel x1 -> false
+    | UnitLabel x1, LessEqualFloat -> false
+    | LessEqualFloat, UnitLabel x1 -> false
+    | UnitLabel x1, LessFloat -> false
+    | LessFloat, UnitLabel x1 -> false
+    | UnitLabel x1, GeqInt -> false
+    | GeqInt, UnitLabel x1 -> false
+    | UnitLabel x1, GtInt -> false
+    | GtInt, UnitLabel x1 -> false
     | UnitLabel x1, LessEqualInt -> false
     | LessEqualInt, UnitLabel x1 -> false
     | UnitLabel x1, LessInt -> false
@@ -2093,6 +2936,18 @@ let rec equal_labela _A
     | EqualMap, UnitLabel x1 -> false
     | UnitLabel x1, EqualSet -> false
     | EqualSet, UnitLabel x1 -> false
+    | UnitLabel x1, DivFloat -> false
+    | DivFloat, UnitLabel x1 -> false
+    | UnitLabel x1, TimesFloat -> false
+    | TimesFloat, UnitLabel x1 -> false
+    | UnitLabel x1, MinusFloat -> false
+    | MinusFloat, UnitLabel x1 -> false
+    | UnitLabel x1, PlusFloat -> false
+    | PlusFloat, UnitLabel x1 -> false
+    | UnitLabel x1, ModInt -> false
+    | ModInt, UnitLabel x1 -> false
+    | UnitLabel x1, DivInt -> false
+    | DivInt, UnitLabel x1 -> false
     | UnitLabel x1, TimesInt -> false
     | TimesInt, UnitLabel x1 -> false
     | UnitLabel x1, MinusInt -> false
@@ -2143,12 +2998,24 @@ let rec equal_labela _A
     | OtherLabel x20, OtherLabel y20 -> equal_lista equal_char x20 y20
     | ConstToLabel x2, ConstToLabel y2 -> equal_theConstant x2 y2
     | UnitLabel x1, UnitLabel y1 -> equal_sorta _A x1 y1
+    | GeqFloat, GeqFloat -> true
+    | GtFloat, GtFloat -> true
+    | LessEqualFloat, LessEqualFloat -> true
+    | LessFloat, LessFloat -> true
+    | GeqInt, GeqInt -> true
+    | GtInt, GtInt -> true
     | LessEqualInt, LessEqualInt -> true
     | LessInt, LessInt -> true
     | IntToString, IntToString -> true
     | StringCon, StringCon -> true
     | EqualMap, EqualMap -> true
     | EqualSet, EqualSet -> true
+    | DivFloat, DivFloat -> true
+    | TimesFloat, TimesFloat -> true
+    | MinusFloat, MinusFloat -> true
+    | PlusFloat, PlusFloat -> true
+    | ModInt, ModInt -> true
+    | DivInt, DivInt -> true
     | TimesInt, TimesInt -> true
     | MinusInt, MinusInt -> true
     | PlusInt, PlusInt -> true
@@ -4560,6 +5427,21 @@ let rec updateBeta _A _B
             else (match updateBeta _A _B a b l subG with None -> None
                    | Some la -> Some (x :: la))));;
 
+let rec abs_int i = (if less_int i Zero_int then uminus_inta i else i);;
+
+let rec gcd_int
+  k l = abs_int
+          (if equal_inta l Zero_int then k
+            else gcd_int l (modulo_inta (abs_int k) (abs_int l)));;
+
+let rec normalize
+  p = (if less_int Zero_int (snd p)
+        then (let a = gcd_int (fst p) (snd p) in
+               (divide_inta (fst p) a, divide_inta (snd p) a))
+        else (if equal_inta (snd p) Zero_int then (Zero_int, one_inta)
+               else (let a = uminus_inta (gcd_int (fst p) (snd p)) in
+                      (divide_inta (fst p) a, divide_inta (snd p) a))));;
+
 let rec collectSort _A _C
   x0 acc = match x0, acc with
     SimId (a, b), acc ->
@@ -5071,6 +5953,48 @@ let rec simpleKToIR _A
                            Some (NormalPat
                                   (KItemMatching
                                     (IRKItem (IRKLabel l, kla, t)))))
+                     | DivInt ->
+                       (match getSort (equal_label _A) l database
+                         with None -> None
+                         | Some t ->
+                           Some (NormalPat
+                                  (KItemMatching
+                                    (IRKItem (IRKLabel l, kla, t)))))
+                     | ModInt ->
+                       (match getSort (equal_label _A) l database
+                         with None -> None
+                         | Some t ->
+                           Some (NormalPat
+                                  (KItemMatching
+                                    (IRKItem (IRKLabel l, kla, t)))))
+                     | PlusFloat ->
+                       (match getSort (equal_label _A) l database
+                         with None -> None
+                         | Some t ->
+                           Some (NormalPat
+                                  (KItemMatching
+                                    (IRKItem (IRKLabel l, kla, t)))))
+                     | MinusFloat ->
+                       (match getSort (equal_label _A) l database
+                         with None -> None
+                         | Some t ->
+                           Some (NormalPat
+                                  (KItemMatching
+                                    (IRKItem (IRKLabel l, kla, t)))))
+                     | TimesFloat ->
+                       (match getSort (equal_label _A) l database
+                         with None -> None
+                         | Some t ->
+                           Some (NormalPat
+                                  (KItemMatching
+                                    (IRKItem (IRKLabel l, kla, t)))))
+                     | DivFloat ->
+                       (match getSort (equal_label _A) l database
+                         with None -> None
+                         | Some t ->
+                           Some (NormalPat
+                                  (KItemMatching
+                                    (IRKItem (IRKLabel l, kla, t)))))
                      | EqualSet ->
                        (match getSort (equal_label _A) l database
                          with None -> None
@@ -5107,6 +6031,48 @@ let rec simpleKToIR _A
                                   (KItemMatching
                                     (IRKItem (IRKLabel l, kla, t)))))
                      | LessEqualInt ->
+                       (match getSort (equal_label _A) l database
+                         with None -> None
+                         | Some t ->
+                           Some (NormalPat
+                                  (KItemMatching
+                                    (IRKItem (IRKLabel l, kla, t)))))
+                     | GtInt ->
+                       (match getSort (equal_label _A) l database
+                         with None -> None
+                         | Some t ->
+                           Some (NormalPat
+                                  (KItemMatching
+                                    (IRKItem (IRKLabel l, kla, t)))))
+                     | GeqInt ->
+                       (match getSort (equal_label _A) l database
+                         with None -> None
+                         | Some t ->
+                           Some (NormalPat
+                                  (KItemMatching
+                                    (IRKItem (IRKLabel l, kla, t)))))
+                     | LessFloat ->
+                       (match getSort (equal_label _A) l database
+                         with None -> None
+                         | Some t ->
+                           Some (NormalPat
+                                  (KItemMatching
+                                    (IRKItem (IRKLabel l, kla, t)))))
+                     | LessEqualFloat ->
+                       (match getSort (equal_label _A) l database
+                         with None -> None
+                         | Some t ->
+                           Some (NormalPat
+                                  (KItemMatching
+                                    (IRKItem (IRKLabel l, kla, t)))))
+                     | GtFloat ->
+                       (match getSort (equal_label _A) l database
+                         with None -> None
+                         | Some t ->
+                           Some (NormalPat
+                                  (KItemMatching
+                                    (IRKItem (IRKLabel l, kla, t)))))
+                     | GeqFloat ->
                        (match getSort (equal_label _A) l database
                          with None -> None
                          | Some t ->
@@ -5444,6 +6410,36 @@ let rec simpleKToSU _A
                          with None -> None
                          | Some t ->
                            Some (KItemSubs (SUKItem (SUKLabel l, kla, t))))
+                     | DivInt ->
+                       (match getSort (equal_label _A) l database
+                         with None -> None
+                         | Some t ->
+                           Some (KItemSubs (SUKItem (SUKLabel l, kla, t))))
+                     | ModInt ->
+                       (match getSort (equal_label _A) l database
+                         with None -> None
+                         | Some t ->
+                           Some (KItemSubs (SUKItem (SUKLabel l, kla, t))))
+                     | PlusFloat ->
+                       (match getSort (equal_label _A) l database
+                         with None -> None
+                         | Some t ->
+                           Some (KItemSubs (SUKItem (SUKLabel l, kla, t))))
+                     | MinusFloat ->
+                       (match getSort (equal_label _A) l database
+                         with None -> None
+                         | Some t ->
+                           Some (KItemSubs (SUKItem (SUKLabel l, kla, t))))
+                     | TimesFloat ->
+                       (match getSort (equal_label _A) l database
+                         with None -> None
+                         | Some t ->
+                           Some (KItemSubs (SUKItem (SUKLabel l, kla, t))))
+                     | DivFloat ->
+                       (match getSort (equal_label _A) l database
+                         with None -> None
+                         | Some t ->
+                           Some (KItemSubs (SUKItem (SUKLabel l, kla, t))))
                      | EqualSet ->
                        (match getSort (equal_label _A) l database
                          with None -> None
@@ -5470,6 +6466,36 @@ let rec simpleKToSU _A
                          | Some t ->
                            Some (KItemSubs (SUKItem (SUKLabel l, kla, t))))
                      | LessEqualInt ->
+                       (match getSort (equal_label _A) l database
+                         with None -> None
+                         | Some t ->
+                           Some (KItemSubs (SUKItem (SUKLabel l, kla, t))))
+                     | GtInt ->
+                       (match getSort (equal_label _A) l database
+                         with None -> None
+                         | Some t ->
+                           Some (KItemSubs (SUKItem (SUKLabel l, kla, t))))
+                     | GeqInt ->
+                       (match getSort (equal_label _A) l database
+                         with None -> None
+                         | Some t ->
+                           Some (KItemSubs (SUKItem (SUKLabel l, kla, t))))
+                     | LessFloat ->
+                       (match getSort (equal_label _A) l database
+                         with None -> None
+                         | Some t ->
+                           Some (KItemSubs (SUKItem (SUKLabel l, kla, t))))
+                     | LessEqualFloat ->
+                       (match getSort (equal_label _A) l database
+                         with None -> None
+                         | Some t ->
+                           Some (KItemSubs (SUKItem (SUKLabel l, kla, t))))
+                     | GtFloat ->
+                       (match getSort (equal_label _A) l database
+                         with None -> None
+                         | Some t ->
+                           Some (KItemSubs (SUKItem (SUKLabel l, kla, t))))
+                     | GeqFloat ->
                        (match getSort (equal_label _A) l database
                          with None -> None
                          | Some t ->
@@ -5518,9 +6544,11 @@ let rec gen_length n x1 = match n, x1 with n, x :: xs -> gen_length (Suc n) xs
                      | n, [] -> n;;
 
 let builtinLabels : 'a label list
-  = [GetKLabel; IsKResult; AndBool; NotBool; LessInt; LessEqualInt; OrBool;
-      Sort; MapUpdate; EqualK; NotEqualK; EqualSet; EqualMap; IntToString;
-      EqualKLabel; NotEqualKLabel; PlusInt; MinusInt; TimesInt; StringCon];;
+  = [GetKLabel; IsKResult; AndBool; NotBool; LessInt; LessEqualInt; GtInt;
+      GeqInt; OrBool; Sort; MapUpdate; EqualK; NotEqualK; EqualSet; EqualMap;
+      DivInt; ModInt; PlusFloat; MinusFloat; TimesFloat; DivFloat; LessFloat;
+      LessEqualFloat; GtFloat; GeqFloat; IntToString; EqualKLabel;
+      NotEqualKLabel; PlusInt; MinusInt; TimesInt; StringCon];;
 
 let rec evalMapUpdate _A _B _C
   x0 a b = match x0, a, b with [], a, b -> [ItemM (a, b)]
@@ -7088,6 +8116,64 @@ let rec typeCheckCondition _A _B _C
              | Some (_, (_, aa)) -> regularizeInSUKItem _A _B _C aa subG)
       else None);;
 
+let rec divide_rat
+  p q = Frct (let a = quotient_of p in
+              let (aa, c) = a in
+              let b = quotient_of q in
+              let (ba, d) = b in
+               normalize (times_inta aa d, times_inta c ba));;
+
+let rec divide_real (Ratreal x) (Ratreal y) = Ratreal (divide_rat x y);;
+
+let rec times_rat
+  p q = Frct (let a = quotient_of p in
+              let (aa, c) = a in
+              let b = quotient_of q in
+              let (ba, d) = b in
+               normalize (times_inta aa ba, times_inta c d));;
+
+let rec times_real (Ratreal x) (Ratreal y) = Ratreal (times_rat x y);;
+
+let rec less_eq_rat
+  p q = (let a = quotient_of p in
+         let (aa, c) = a in
+         let b = quotient_of q in
+         let (ba, d) = b in
+          less_eq_int (times_inta aa d) (times_inta c ba));;
+
+let rec less_eq_real (Ratreal x) (Ratreal y) = less_eq_rat x y;;
+
+let rec minus_rat
+  p q = Frct (let a = quotient_of p in
+              let (aa, c) = a in
+              let b = quotient_of q in
+              let (ba, d) = b in
+               normalize
+                 (minus_int (times_inta aa d) (times_inta ba c),
+                   times_inta c d));;
+
+let rec minus_real (Ratreal x) (Ratreal y) = Ratreal (minus_rat x y);;
+
+let rec plus_rat
+  p q = Frct (let a = quotient_of p in
+              let (aa, c) = a in
+              let b = quotient_of q in
+              let (ba, d) = b in
+               normalize
+                 (plus_inta (times_inta aa d) (times_inta ba c),
+                   times_inta c d));;
+
+let rec plus_real (Ratreal x) (Ratreal y) = Ratreal (plus_rat x y);;
+
+let rec less_rat
+  p q = (let a = quotient_of p in
+         let (aa, c) = a in
+         let b = quotient_of q in
+         let (ba, d) = b in
+          less_int (times_inta aa d) (times_inta c ba));;
+
+let rec less_real (Ratreal x) (Ratreal y) = less_rat x y;;
+
 let rec evalBuiltinFun _B _C _D
   x0 kl database subG = match x0, kl, database, subG with
     GetKLabel, kl, database, subG ->
@@ -7839,6 +8925,76 @@ let rec evalBuiltinFun _B _C _D
                             [Bool]))])) ::
               ItemKl
                 (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel DivInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (BoolConst _)), _,
+                            [Bool]))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel ModInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (BoolConst _)), _,
+                            [Bool]))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel PlusFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (BoolConst _)), _,
+                            [Bool]))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MinusFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (BoolConst _)), _,
+                            [Bool]))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel TimesFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (BoolConst _)), _,
+                            [Bool]))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel DivFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (BoolConst _)), _,
+                            [Bool]))])) ::
+              ItemKl
+                (SUBigBag
                   (SUK (ItemFactor (SUKItem (SUKLabel EqualSet, _, _)) ::
                          _))) ::
                 _
@@ -7899,6 +9055,75 @@ let rec evalBuiltinFun _B _C _D
               ItemKl
                 (SUBigBag
                   (SUK (ItemFactor (SUKItem (SUKLabel LessEqualInt, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (BoolConst _)), _,
+                            [Bool]))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GtInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (BoolConst _)), _,
+                            [Bool]))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GeqInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (BoolConst _)), _,
+                            [Bool]))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (BoolConst _)), _,
+                            [Bool]))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessEqualFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (BoolConst _)), _,
+                            [Bool]))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GtFloat, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (BoolConst _)), _,
+                            [Bool]))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GeqFloat, _, _)) ::
                          _))) ::
                 _
             -> None
@@ -8285,6 +9510,38 @@ let rec evalBuiltinFun _B _C _D
             -> None
           | ItemKl
               (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel DivInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel ModInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel PlusFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MinusFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel TimesFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel DivFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
                 (SUK (ItemFactor (SUKItem (SUKLabel EqualSet, _, _)) :: _))) ::
               _
             -> None
@@ -8313,6 +9570,37 @@ let rec evalBuiltinFun _B _C _D
               (SUBigBag
                 (SUK (ItemFactor (SUKItem (SUKLabel LessEqualInt, _, _)) ::
                        _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GtInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GeqInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessEqualFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GtFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GeqFloat, _, _)) :: _))) ::
               _
             -> None
           | ItemKl
@@ -9023,6 +10311,76 @@ let rec evalBuiltinFun _B _C _D
                             [Bool]))])) ::
               ItemKl
                 (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel DivInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (BoolConst _)), _,
+                            [Bool]))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel ModInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (BoolConst _)), _,
+                            [Bool]))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel PlusFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (BoolConst _)), _,
+                            [Bool]))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MinusFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (BoolConst _)), _,
+                            [Bool]))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel TimesFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (BoolConst _)), _,
+                            [Bool]))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel DivFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (BoolConst _)), _,
+                            [Bool]))])) ::
+              ItemKl
+                (SUBigBag
                   (SUK (ItemFactor (SUKItem (SUKLabel EqualSet, _, _)) ::
                          _))) ::
                 _
@@ -9083,6 +10441,75 @@ let rec evalBuiltinFun _B _C _D
               ItemKl
                 (SUBigBag
                   (SUK (ItemFactor (SUKItem (SUKLabel LessEqualInt, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (BoolConst _)), _,
+                            [Bool]))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GtInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (BoolConst _)), _,
+                            [Bool]))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GeqInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (BoolConst _)), _,
+                            [Bool]))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (BoolConst _)), _,
+                            [Bool]))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessEqualFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (BoolConst _)), _,
+                            [Bool]))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GtFloat, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (BoolConst _)), _,
+                            [Bool]))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GeqFloat, _, _)) ::
                          _))) ::
                 _
             -> None
@@ -9469,6 +10896,38 @@ let rec evalBuiltinFun _B _C _D
             -> None
           | ItemKl
               (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel DivInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel ModInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel PlusFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MinusFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel TimesFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel DivFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
                 (SUK (ItemFactor (SUKItem (SUKLabel EqualSet, _, _)) :: _))) ::
               _
             -> None
@@ -9497,6 +10956,37 @@ let rec evalBuiltinFun _B _C _D
               (SUBigBag
                 (SUK (ItemFactor (SUKItem (SUKLabel LessEqualInt, _, _)) ::
                        _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GtInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GeqInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessEqualFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GtFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GeqFloat, _, _)) :: _))) ::
               _
             -> None
           | ItemKl
@@ -9857,6 +11347,38 @@ let rec evalBuiltinFun _B _C _D
             -> None
           | ItemKl
               (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel DivInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel ModInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel PlusFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MinusFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel TimesFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel DivFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
                 (SUK (ItemFactor (SUKItem (SUKLabel EqualSet, _, _)) :: _))) ::
               _
             -> None
@@ -9885,6 +11407,37 @@ let rec evalBuiltinFun _B _C _D
               (SUBigBag
                 (SUK (ItemFactor (SUKItem (SUKLabel LessEqualInt, _, _)) ::
                        _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GtInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GeqInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessEqualFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GtFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GeqFloat, _, _)) :: _))) ::
               _
             -> None
           | ItemKl
@@ -10115,6 +11668,3676 @@ Some (KItemSubs
                       | IdKl _ :: _ -> None)
                   | SUIdKLabel _ -> None | SUKLabelFun (_, _) -> None))
           | IdKl _ :: _ -> None)
+    | LessFloat, kl, database, subG ->
+        (match kl with [] -> None | ItemKl (SUBigBag (SUK [])) :: _ -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel (UnitLabel _), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | [ItemKl
+               (SUBigBag
+                 (SUK [ItemFactor
+                         (SUKItem
+                           (SUKLabel (ConstToLabel (FloatConst _)), _, _))]))]
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK [])) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel (UnitLabel _), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (IntConst _)), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | [ItemKl
+               (SUBigBag
+                 (SUK [ItemFactor
+                         (SUKItem
+                           (SUKLabel (ConstToLabel (FloatConst b1)), _, _))]));
+              ItemKl
+                (SUBigBag
+                  (SUK [ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (FloatConst b2)), _, _))]))]
+            -> Some (KItemSubs
+                      (SUKItem
+                        (SUKLabel (ConstToLabel (BoolConst (less_real b1 b2))),
+                          [], [Int])))
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK [ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (FloatConst _)), _,
+                              _))])) ::
+                _ :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (FloatConst _)), _, _)) ::
+                         _ :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (StringConst _)), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (BoolConst _)), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (IdConst _)), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel Sort, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GetKLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel IsKResult, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel AndBool, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel NotBool, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel OrBool, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel SetConLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel SetItemLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel ListConLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel ListItemLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MapConLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MapItemLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MapUpdate, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualK, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel NotEqualK, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualKLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel NotEqualKLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel (OtherLabel _), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel (TokenLabel _), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel PlusInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MinusInt, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel TimesInt, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel DivInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel ModInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel PlusFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MinusFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel TimesFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel DivFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualSet, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualMap, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel StringCon, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel IntToString, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessEqualInt, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GtInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GeqInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessEqualFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GtFloat, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GeqFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUIdKLabel _, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabelFun (_, _), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK (ItemFactor (SUIdKItem (_, _)) :: _))) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK (ItemFactor (SUHOLE _) :: _))) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK (IdFactor _ :: _))) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK (SUKKItem (_, _, _) :: _))) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUList _)) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUSet _)) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUMap _)) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUBag _)) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigLabel _) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              IdKl _ :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _)) ::
+                       _ :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (BoolConst _)), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem (SUKLabel (ConstToLabel (IdConst _)), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel Sort, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GetKLabel, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel IsKResult, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel AndBool, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel NotBool, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel OrBool, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel SetConLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel SetItemLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel ListConLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel ListItemLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MapConLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MapItemLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MapUpdate, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualK, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel NotEqualK, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualKLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel NotEqualKLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel (OtherLabel _), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel (TokenLabel _), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel PlusInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MinusInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel TimesInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel DivInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel ModInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel PlusFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MinusFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel TimesFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel DivFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualSet, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualMap, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel StringCon, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel IntToString, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessEqualInt, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GtInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GeqInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessEqualFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GtFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GeqFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUIdKLabel _, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabelFun (_, _), _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl (SUBigBag (SUK (ItemFactor (SUIdKItem (_, _)) :: _))) :: _ ->
+            None
+          | ItemKl (SUBigBag (SUK (ItemFactor (SUHOLE _) :: _))) :: _ -> None
+          | ItemKl (SUBigBag (SUK (IdFactor _ :: _))) :: _ -> None
+          | ItemKl (SUBigBag (SUK (SUKKItem (_, _, _) :: _))) :: _ -> None
+          | ItemKl (SUBigBag (SUList _)) :: _ -> None
+          | ItemKl (SUBigBag (SUSet _)) :: _ -> None
+          | ItemKl (SUBigBag (SUMap _)) :: _ -> None
+          | ItemKl (SUBigBag (SUBag _)) :: _ -> None
+          | ItemKl (SUBigLabel _) :: _ -> None | IdKl _ :: _ -> None)
+    | LessEqualFloat, kl, database, subG ->
+        (match kl with [] -> None | ItemKl (SUBigBag (SUK [])) :: _ -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel (UnitLabel _), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | [ItemKl
+               (SUBigBag
+                 (SUK [ItemFactor
+                         (SUKItem
+                           (SUKLabel (ConstToLabel (FloatConst _)), _, _))]))]
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK [])) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel (UnitLabel _), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (IntConst _)), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | [ItemKl
+               (SUBigBag
+                 (SUK [ItemFactor
+                         (SUKItem
+                           (SUKLabel (ConstToLabel (FloatConst b1)), _, _))]));
+              ItemKl
+                (SUBigBag
+                  (SUK [ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (FloatConst b2)), _, _))]))]
+            -> Some (KItemSubs
+                      (SUKItem
+                        (SUKLabel
+                           (ConstToLabel (BoolConst (less_eq_real b1 b2))),
+                          [], [Int])))
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK [ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (FloatConst _)), _,
+                              _))])) ::
+                _ :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (FloatConst _)), _, _)) ::
+                         _ :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (StringConst _)), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (BoolConst _)), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (IdConst _)), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel Sort, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GetKLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel IsKResult, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel AndBool, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel NotBool, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel OrBool, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel SetConLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel SetItemLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel ListConLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel ListItemLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MapConLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MapItemLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MapUpdate, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualK, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel NotEqualK, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualKLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel NotEqualKLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel (OtherLabel _), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel (TokenLabel _), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel PlusInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MinusInt, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel TimesInt, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel DivInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel ModInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel PlusFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MinusFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel TimesFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel DivFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualSet, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualMap, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel StringCon, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel IntToString, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessEqualInt, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GtInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GeqInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessEqualFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GtFloat, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GeqFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUIdKLabel _, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabelFun (_, _), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK (ItemFactor (SUIdKItem (_, _)) :: _))) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK (ItemFactor (SUHOLE _) :: _))) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK (IdFactor _ :: _))) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK (SUKKItem (_, _, _) :: _))) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUList _)) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUSet _)) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUMap _)) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUBag _)) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigLabel _) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              IdKl _ :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _)) ::
+                       _ :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (BoolConst _)), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem (SUKLabel (ConstToLabel (IdConst _)), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel Sort, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GetKLabel, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel IsKResult, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel AndBool, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel NotBool, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel OrBool, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel SetConLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel SetItemLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel ListConLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel ListItemLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MapConLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MapItemLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MapUpdate, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualK, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel NotEqualK, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualKLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel NotEqualKLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel (OtherLabel _), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel (TokenLabel _), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel PlusInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MinusInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel TimesInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel DivInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel ModInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel PlusFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MinusFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel TimesFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel DivFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualSet, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualMap, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel StringCon, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel IntToString, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessEqualInt, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GtInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GeqInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessEqualFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GtFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GeqFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUIdKLabel _, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabelFun (_, _), _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl (SUBigBag (SUK (ItemFactor (SUIdKItem (_, _)) :: _))) :: _ ->
+            None
+          | ItemKl (SUBigBag (SUK (ItemFactor (SUHOLE _) :: _))) :: _ -> None
+          | ItemKl (SUBigBag (SUK (IdFactor _ :: _))) :: _ -> None
+          | ItemKl (SUBigBag (SUK (SUKKItem (_, _, _) :: _))) :: _ -> None
+          | ItemKl (SUBigBag (SUList _)) :: _ -> None
+          | ItemKl (SUBigBag (SUSet _)) :: _ -> None
+          | ItemKl (SUBigBag (SUMap _)) :: _ -> None
+          | ItemKl (SUBigBag (SUBag _)) :: _ -> None
+          | ItemKl (SUBigLabel _) :: _ -> None | IdKl _ :: _ -> None)
+    | GtFloat, kl, database, subG ->
+        (match kl with [] -> None | ItemKl (SUBigBag (SUK [])) :: _ -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel (UnitLabel _), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | [ItemKl
+               (SUBigBag
+                 (SUK [ItemFactor
+                         (SUKItem
+                           (SUKLabel (ConstToLabel (FloatConst _)), _, _))]))]
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK [])) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel (UnitLabel _), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (IntConst _)), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | [ItemKl
+               (SUBigBag
+                 (SUK [ItemFactor
+                         (SUKItem
+                           (SUKLabel (ConstToLabel (FloatConst b1)), _, _))]));
+              ItemKl
+                (SUBigBag
+                  (SUK [ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (FloatConst b2)), _, _))]))]
+            -> Some (KItemSubs
+                      (SUKItem
+                        (SUKLabel (ConstToLabel (BoolConst (less_real b2 b1))),
+                          [], [Int])))
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK [ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (FloatConst _)), _,
+                              _))])) ::
+                _ :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (FloatConst _)), _, _)) ::
+                         _ :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (StringConst _)), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (BoolConst _)), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (IdConst _)), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel Sort, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GetKLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel IsKResult, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel AndBool, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel NotBool, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel OrBool, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel SetConLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel SetItemLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel ListConLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel ListItemLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MapConLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MapItemLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MapUpdate, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualK, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel NotEqualK, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualKLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel NotEqualKLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel (OtherLabel _), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel (TokenLabel _), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel PlusInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MinusInt, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel TimesInt, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel DivInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel ModInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel PlusFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MinusFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel TimesFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel DivFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualSet, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualMap, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel StringCon, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel IntToString, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessEqualInt, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GtInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GeqInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessEqualFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GtFloat, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GeqFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUIdKLabel _, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabelFun (_, _), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK (ItemFactor (SUIdKItem (_, _)) :: _))) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK (ItemFactor (SUHOLE _) :: _))) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK (IdFactor _ :: _))) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK (SUKKItem (_, _, _) :: _))) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUList _)) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUSet _)) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUMap _)) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUBag _)) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigLabel _) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              IdKl _ :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _)) ::
+                       _ :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (BoolConst _)), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem (SUKLabel (ConstToLabel (IdConst _)), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel Sort, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GetKLabel, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel IsKResult, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel AndBool, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel NotBool, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel OrBool, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel SetConLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel SetItemLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel ListConLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel ListItemLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MapConLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MapItemLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MapUpdate, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualK, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel NotEqualK, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualKLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel NotEqualKLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel (OtherLabel _), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel (TokenLabel _), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel PlusInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MinusInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel TimesInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel DivInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel ModInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel PlusFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MinusFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel TimesFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel DivFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualSet, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualMap, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel StringCon, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel IntToString, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessEqualInt, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GtInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GeqInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessEqualFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GtFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GeqFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUIdKLabel _, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabelFun (_, _), _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl (SUBigBag (SUK (ItemFactor (SUIdKItem (_, _)) :: _))) :: _ ->
+            None
+          | ItemKl (SUBigBag (SUK (ItemFactor (SUHOLE _) :: _))) :: _ -> None
+          | ItemKl (SUBigBag (SUK (IdFactor _ :: _))) :: _ -> None
+          | ItemKl (SUBigBag (SUK (SUKKItem (_, _, _) :: _))) :: _ -> None
+          | ItemKl (SUBigBag (SUList _)) :: _ -> None
+          | ItemKl (SUBigBag (SUSet _)) :: _ -> None
+          | ItemKl (SUBigBag (SUMap _)) :: _ -> None
+          | ItemKl (SUBigBag (SUBag _)) :: _ -> None
+          | ItemKl (SUBigLabel _) :: _ -> None | IdKl _ :: _ -> None)
+    | GeqFloat, kl, database, subG ->
+        (match kl with [] -> None | ItemKl (SUBigBag (SUK [])) :: _ -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel (UnitLabel _), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | [ItemKl
+               (SUBigBag
+                 (SUK [ItemFactor
+                         (SUKItem
+                           (SUKLabel (ConstToLabel (FloatConst _)), _, _))]))]
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK [])) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel (UnitLabel _), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (IntConst _)), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | [ItemKl
+               (SUBigBag
+                 (SUK [ItemFactor
+                         (SUKItem
+                           (SUKLabel (ConstToLabel (FloatConst b1)), _, _))]));
+              ItemKl
+                (SUBigBag
+                  (SUK [ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (FloatConst b2)), _, _))]))]
+            -> Some (KItemSubs
+                      (SUKItem
+                        (SUKLabel
+                           (ConstToLabel (BoolConst (less_eq_real b2 b1))),
+                          [], [Int])))
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK [ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (FloatConst _)), _,
+                              _))])) ::
+                _ :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (FloatConst _)), _, _)) ::
+                         _ :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (StringConst _)), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (BoolConst _)), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (IdConst _)), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel Sort, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GetKLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel IsKResult, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel AndBool, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel NotBool, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel OrBool, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel SetConLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel SetItemLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel ListConLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel ListItemLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MapConLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MapItemLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MapUpdate, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualK, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel NotEqualK, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualKLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel NotEqualKLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel (OtherLabel _), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel (TokenLabel _), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel PlusInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MinusInt, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel TimesInt, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel DivInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel ModInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel PlusFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MinusFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel TimesFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel DivFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualSet, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualMap, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel StringCon, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel IntToString, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessEqualInt, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GtInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GeqInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessEqualFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GtFloat, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GeqFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUIdKLabel _, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabelFun (_, _), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK (ItemFactor (SUIdKItem (_, _)) :: _))) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK (ItemFactor (SUHOLE _) :: _))) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK (IdFactor _ :: _))) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK (SUKKItem (_, _, _) :: _))) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUList _)) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUSet _)) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUMap _)) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUBag _)) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigLabel _) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              IdKl _ :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _)) ::
+                       _ :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (BoolConst _)), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem (SUKLabel (ConstToLabel (IdConst _)), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel Sort, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GetKLabel, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel IsKResult, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel AndBool, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel NotBool, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel OrBool, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel SetConLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel SetItemLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel ListConLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel ListItemLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MapConLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MapItemLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MapUpdate, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualK, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel NotEqualK, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualKLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel NotEqualKLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel (OtherLabel _), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel (TokenLabel _), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel PlusInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MinusInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel TimesInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel DivInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel ModInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel PlusFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MinusFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel TimesFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel DivFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualSet, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualMap, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel StringCon, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel IntToString, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessEqualInt, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GtInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GeqInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessEqualFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GtFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GeqFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUIdKLabel _, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabelFun (_, _), _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl (SUBigBag (SUK (ItemFactor (SUIdKItem (_, _)) :: _))) :: _ ->
+            None
+          | ItemKl (SUBigBag (SUK (ItemFactor (SUHOLE _) :: _))) :: _ -> None
+          | ItemKl (SUBigBag (SUK (IdFactor _ :: _))) :: _ -> None
+          | ItemKl (SUBigBag (SUK (SUKKItem (_, _, _) :: _))) :: _ -> None
+          | ItemKl (SUBigBag (SUList _)) :: _ -> None
+          | ItemKl (SUBigBag (SUSet _)) :: _ -> None
+          | ItemKl (SUBigBag (SUMap _)) :: _ -> None
+          | ItemKl (SUBigBag (SUBag _)) :: _ -> None
+          | ItemKl (SUBigLabel _) :: _ -> None | IdKl _ :: _ -> None)
     | LessInt, kl, database, subG ->
         (match kl with [] -> None | ItemKl (SUBigBag (SUK [])) :: _ -> None
           | ItemKl
@@ -10481,6 +15704,70 @@ Some (KItemSubs
                           (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
               ItemKl
                 (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel DivInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel ModInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel PlusFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MinusFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel TimesFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel DivFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
                   (SUK (ItemFactor (SUKItem (SUKLabel EqualSet, _, _)) ::
                          _))) ::
                 _
@@ -10536,6 +15823,69 @@ Some (KItemSubs
               ItemKl
                 (SUBigBag
                   (SUK (ItemFactor (SUKItem (SUKLabel LessEqualInt, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GtInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GeqInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessEqualFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GtFloat, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GeqFloat, _, _)) ::
                          _))) ::
                 _
             -> None
@@ -10791,6 +16141,38 @@ Some (KItemSubs
             -> None
           | ItemKl
               (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel DivInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel ModInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel PlusFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MinusFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel TimesFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel DivFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
                 (SUK (ItemFactor (SUKItem (SUKLabel EqualSet, _, _)) :: _))) ::
               _
             -> None
@@ -10819,6 +16201,953 @@ Some (KItemSubs
               (SUBigBag
                 (SUK (ItemFactor (SUKItem (SUKLabel LessEqualInt, _, _)) ::
                        _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GtInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GeqInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessEqualFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GtFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GeqFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUIdKLabel _, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabelFun (_, _), _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl (SUBigBag (SUK (ItemFactor (SUIdKItem (_, _)) :: _))) :: _ ->
+            None
+          | ItemKl (SUBigBag (SUK (ItemFactor (SUHOLE _) :: _))) :: _ -> None
+          | ItemKl (SUBigBag (SUK (IdFactor _ :: _))) :: _ -> None
+          | ItemKl (SUBigBag (SUK (SUKKItem (_, _, _) :: _))) :: _ -> None
+          | ItemKl (SUBigBag (SUList _)) :: _ -> None
+          | ItemKl (SUBigBag (SUSet _)) :: _ -> None
+          | ItemKl (SUBigBag (SUMap _)) :: _ -> None
+          | ItemKl (SUBigBag (SUBag _)) :: _ -> None
+          | ItemKl (SUBigLabel _) :: _ -> None | IdKl _ :: _ -> None)
+    | GtInt, kl, database, subG ->
+        (match kl with [] -> None | ItemKl (SUBigBag (SUK [])) :: _ -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel (UnitLabel _), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | [ItemKl
+               (SUBigBag
+                 (SUK [ItemFactor
+                         (SUKItem
+                           (SUKLabel (ConstToLabel (IntConst _)), _, _))]))]
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK [])) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel (UnitLabel _), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | [ItemKl
+               (SUBigBag
+                 (SUK [ItemFactor
+                         (SUKItem
+                           (SUKLabel (ConstToLabel (IntConst b1)), _, _))]));
+              ItemKl
+                (SUBigBag
+                  (SUK [ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (IntConst b2)), _, _))]))]
+            -> Some (KItemSubs
+                      (SUKItem
+                        (SUKLabel (ConstToLabel (BoolConst (less_int b2 b1))),
+                          [], [Int])))
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK [ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+                _ :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (IntConst _)), _, _)) ::
+                         _ :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (FloatConst _)), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (StringConst _)), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (BoolConst _)), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (IdConst _)), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel Sort, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GetKLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel IsKResult, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel AndBool, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel NotBool, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel OrBool, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel SetConLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel SetItemLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel ListConLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel ListItemLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MapConLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MapItemLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MapUpdate, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualK, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel NotEqualK, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualKLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel NotEqualKLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel (OtherLabel _), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel (TokenLabel _), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel PlusInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MinusInt, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel TimesInt, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel DivInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel ModInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel PlusFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MinusFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel TimesFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel DivFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualSet, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualMap, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel StringCon, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel IntToString, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessEqualInt, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GtInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GeqInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessEqualFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GtFloat, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GeqFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUIdKLabel _, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabelFun (_, _), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK (ItemFactor (SUIdKItem (_, _)) :: _))) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK (ItemFactor (SUHOLE _) :: _))) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK (IdFactor _ :: _))) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK (SUKKItem (_, _, _) :: _))) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUList _)) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUSet _)) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUMap _)) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUBag _)) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl (SUBigLabel _) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              IdKl _ :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _)) ::
+                       _ :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (BoolConst _)), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem (SUKLabel (ConstToLabel (IdConst _)), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel Sort, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GetKLabel, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel IsKResult, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel AndBool, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel NotBool, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel OrBool, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel SetConLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel SetItemLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel ListConLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel ListItemLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MapConLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MapItemLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MapUpdate, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualK, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel NotEqualK, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualKLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel NotEqualKLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel (OtherLabel _), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel (TokenLabel _), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel PlusInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MinusInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel TimesInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel DivInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel ModInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel PlusFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MinusFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel TimesFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel DivFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualSet, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualMap, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel StringCon, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel IntToString, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessEqualInt, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GtInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GeqInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessEqualFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GtFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GeqFloat, _, _)) :: _))) ::
               _
             -> None
           | ItemKl
@@ -11208,6 +17537,70 @@ Some (KItemSubs
                           (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
               ItemKl
                 (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel DivInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel ModInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel PlusFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MinusFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel TimesFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel DivFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
                   (SUK (ItemFactor (SUKItem (SUKLabel EqualSet, _, _)) ::
                          _))) ::
                 _
@@ -11263,6 +17656,69 @@ Some (KItemSubs
               ItemKl
                 (SUBigBag
                   (SUK (ItemFactor (SUKItem (SUKLabel LessEqualInt, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GtInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GeqInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessEqualFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GtFloat, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GeqFloat, _, _)) ::
                          _))) ::
                 _
             -> None
@@ -11518,6 +17974,38 @@ Some (KItemSubs
             -> None
           | ItemKl
               (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel DivInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel ModInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel PlusFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MinusFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel TimesFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel DivFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
                 (SUK (ItemFactor (SUKItem (SUKLabel EqualSet, _, _)) :: _))) ::
               _
             -> None
@@ -11546,6 +18034,954 @@ Some (KItemSubs
               (SUBigBag
                 (SUK (ItemFactor (SUKItem (SUKLabel LessEqualInt, _, _)) ::
                        _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GtInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GeqInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessEqualFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GtFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GeqFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUIdKLabel _, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabelFun (_, _), _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl (SUBigBag (SUK (ItemFactor (SUIdKItem (_, _)) :: _))) :: _ ->
+            None
+          | ItemKl (SUBigBag (SUK (ItemFactor (SUHOLE _) :: _))) :: _ -> None
+          | ItemKl (SUBigBag (SUK (IdFactor _ :: _))) :: _ -> None
+          | ItemKl (SUBigBag (SUK (SUKKItem (_, _, _) :: _))) :: _ -> None
+          | ItemKl (SUBigBag (SUList _)) :: _ -> None
+          | ItemKl (SUBigBag (SUSet _)) :: _ -> None
+          | ItemKl (SUBigBag (SUMap _)) :: _ -> None
+          | ItemKl (SUBigBag (SUBag _)) :: _ -> None
+          | ItemKl (SUBigLabel _) :: _ -> None | IdKl _ :: _ -> None)
+    | GeqInt, kl, database, subG ->
+        (match kl with [] -> None | ItemKl (SUBigBag (SUK [])) :: _ -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel (UnitLabel _), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | [ItemKl
+               (SUBigBag
+                 (SUK [ItemFactor
+                         (SUKItem
+                           (SUKLabel (ConstToLabel (IntConst _)), _, _))]))]
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK [])) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel (UnitLabel _), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | [ItemKl
+               (SUBigBag
+                 (SUK [ItemFactor
+                         (SUKItem
+                           (SUKLabel (ConstToLabel (IntConst b1)), _, _))]));
+              ItemKl
+                (SUBigBag
+                  (SUK [ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (IntConst b2)), _, _))]))]
+            -> Some (KItemSubs
+                      (SUKItem
+                        (SUKLabel
+                           (ConstToLabel (BoolConst (less_eq_int b2 b1))),
+                          [], [Int])))
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK [ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+                _ :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (IntConst _)), _, _)) ::
+                         _ :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (FloatConst _)), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (StringConst _)), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (BoolConst _)), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (IdConst _)), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel Sort, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GetKLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel IsKResult, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel AndBool, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel NotBool, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel OrBool, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel SetConLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel SetItemLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel ListConLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel ListItemLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MapConLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MapItemLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MapUpdate, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualK, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel NotEqualK, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualKLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel NotEqualKLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel (OtherLabel _), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel (TokenLabel _), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel PlusInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MinusInt, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel TimesInt, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel DivInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel ModInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel PlusFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MinusFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel TimesFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel DivFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualSet, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualMap, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel StringCon, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel IntToString, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessEqualInt, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GtInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GeqInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessEqualFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GtFloat, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GeqFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUIdKLabel _, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabelFun (_, _), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK (ItemFactor (SUIdKItem (_, _)) :: _))) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK (ItemFactor (SUHOLE _) :: _))) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK (IdFactor _ :: _))) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK (SUKKItem (_, _, _) :: _))) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUList _)) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUSet _)) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUMap _)) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUBag _)) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl (SUBigLabel _) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              IdKl _ :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _)) ::
+                       _ :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (BoolConst _)), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem (SUKLabel (ConstToLabel (IdConst _)), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel Sort, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GetKLabel, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel IsKResult, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel AndBool, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel NotBool, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel OrBool, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel SetConLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel SetItemLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel ListConLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel ListItemLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MapConLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MapItemLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MapUpdate, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualK, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel NotEqualK, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualKLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel NotEqualKLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel (OtherLabel _), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel (TokenLabel _), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel PlusInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MinusInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel TimesInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel DivInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel ModInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel PlusFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MinusFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel TimesFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel DivFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualSet, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualMap, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel StringCon, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel IntToString, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessEqualInt, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GtInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GeqInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessEqualFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GtFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GeqFloat, _, _)) :: _))) ::
               _
             -> None
           | ItemKl
@@ -11934,6 +19370,70 @@ Some (KItemSubs
                           (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
               ItemKl
                 (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel DivInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel ModInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel PlusFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MinusFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel TimesFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel DivFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
                   (SUK (ItemFactor (SUKItem (SUKLabel EqualSet, _, _)) ::
                          _))) ::
                 _
@@ -11989,6 +19489,69 @@ Some (KItemSubs
               ItemKl
                 (SUBigBag
                   (SUK (ItemFactor (SUKItem (SUKLabel LessEqualInt, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GtInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GeqInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessEqualFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GtFloat, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GeqFloat, _, _)) ::
                          _))) ::
                 _
             -> None
@@ -12244,6 +19807,38 @@ Some (KItemSubs
             -> None
           | ItemKl
               (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel DivInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel ModInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel PlusFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MinusFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel TimesFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel DivFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
                 (SUK (ItemFactor (SUKItem (SUKLabel EqualSet, _, _)) :: _))) ::
               _
             -> None
@@ -12272,6 +19867,37 @@ Some (KItemSubs
               (SUBigBag
                 (SUK (ItemFactor (SUKItem (SUKLabel LessEqualInt, _, _)) ::
                        _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GtInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GeqInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessEqualFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GtFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GeqFloat, _, _)) :: _))) ::
               _
             -> None
           | ItemKl
@@ -12660,6 +20286,70 @@ Some (KItemSubs
                           (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
               ItemKl
                 (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel DivInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel ModInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel PlusFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MinusFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel TimesFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel DivFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
                   (SUK (ItemFactor (SUKItem (SUKLabel EqualSet, _, _)) ::
                          _))) ::
                 _
@@ -12715,6 +20405,69 @@ Some (KItemSubs
               ItemKl
                 (SUBigBag
                   (SUK (ItemFactor (SUKItem (SUKLabel LessEqualInt, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GtInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GeqInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessEqualFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GtFloat, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GeqFloat, _, _)) ::
                          _))) ::
                 _
             -> None
@@ -12970,6 +20723,38 @@ Some (KItemSubs
             -> None
           | ItemKl
               (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel DivInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel ModInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel PlusFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MinusFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel TimesFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel DivFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
                 (SUK (ItemFactor (SUKItem (SUKLabel EqualSet, _, _)) :: _))) ::
               _
             -> None
@@ -12998,6 +20783,37 @@ Some (KItemSubs
               (SUBigBag
                 (SUK (ItemFactor (SUKItem (SUKLabel LessEqualInt, _, _)) ::
                        _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GtInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GeqInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessEqualFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GtFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GeqFloat, _, _)) :: _))) ::
               _
             -> None
           | ItemKl
@@ -13386,6 +21202,70 @@ Some (KItemSubs
                           (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
               ItemKl
                 (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel DivInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel ModInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel PlusFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MinusFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel TimesFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel DivFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
                   (SUK (ItemFactor (SUKItem (SUKLabel EqualSet, _, _)) ::
                          _))) ::
                 _
@@ -13441,6 +21321,69 @@ Some (KItemSubs
               ItemKl
                 (SUBigBag
                   (SUK (ItemFactor (SUKItem (SUKLabel LessEqualInt, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GtInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GeqInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessEqualFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GtFloat, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GeqFloat, _, _)) ::
                          _))) ::
                 _
             -> None
@@ -13696,6 +21639,38 @@ Some (KItemSubs
             -> None
           | ItemKl
               (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel DivInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel ModInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel PlusFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MinusFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel TimesFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel DivFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
                 (SUK (ItemFactor (SUKItem (SUKLabel EqualSet, _, _)) :: _))) ::
               _
             -> None
@@ -13724,6 +21699,5540 @@ Some (KItemSubs
               (SUBigBag
                 (SUK (ItemFactor (SUKItem (SUKLabel LessEqualInt, _, _)) ::
                        _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GtInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GeqInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessEqualFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GtFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GeqFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUIdKLabel _, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabelFun (_, _), _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl (SUBigBag (SUK (ItemFactor (SUIdKItem (_, _)) :: _))) :: _ ->
+            None
+          | ItemKl (SUBigBag (SUK (ItemFactor (SUHOLE _) :: _))) :: _ -> None
+          | ItemKl (SUBigBag (SUK (IdFactor _ :: _))) :: _ -> None
+          | ItemKl (SUBigBag (SUK (SUKKItem (_, _, _) :: _))) :: _ -> None
+          | ItemKl (SUBigBag (SUList _)) :: _ -> None
+          | ItemKl (SUBigBag (SUSet _)) :: _ -> None
+          | ItemKl (SUBigBag (SUMap _)) :: _ -> None
+          | ItemKl (SUBigBag (SUBag _)) :: _ -> None
+          | ItemKl (SUBigLabel _) :: _ -> None | IdKl _ :: _ -> None)
+    | DivInt, kl, database, subG ->
+        (match kl with [] -> None | ItemKl (SUBigBag (SUK [])) :: _ -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel (UnitLabel _), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | [ItemKl
+               (SUBigBag
+                 (SUK [ItemFactor
+                         (SUKItem
+                           (SUKLabel (ConstToLabel (IntConst _)), _, _))]))]
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK [])) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel (UnitLabel _), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | [ItemKl
+               (SUBigBag
+                 (SUK [ItemFactor
+                         (SUKItem
+                           (SUKLabel (ConstToLabel (IntConst b1)), _, _))]));
+              ItemKl
+                (SUBigBag
+                  (SUK [ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (IntConst b2)), _, _))]))]
+            -> Some (KItemSubs
+                      (SUKItem
+                        (SUKLabel (ConstToLabel (IntConst (divide_inta b1 b2))),
+                          [], [Int])))
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK [ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+                _ :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (IntConst _)), _, _)) ::
+                         _ :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (FloatConst _)), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (StringConst _)), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (BoolConst _)), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (IdConst _)), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel Sort, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GetKLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel IsKResult, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel AndBool, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel NotBool, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel OrBool, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel SetConLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel SetItemLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel ListConLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel ListItemLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MapConLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MapItemLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MapUpdate, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualK, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel NotEqualK, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualKLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel NotEqualKLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel (OtherLabel _), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel (TokenLabel _), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel PlusInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MinusInt, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel TimesInt, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel DivInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel ModInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel PlusFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MinusFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel TimesFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel DivFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualSet, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualMap, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel StringCon, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel IntToString, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessEqualInt, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GtInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GeqInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessEqualFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GtFloat, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GeqFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUIdKLabel _, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabelFun (_, _), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK (ItemFactor (SUIdKItem (_, _)) :: _))) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK (ItemFactor (SUHOLE _) :: _))) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK (IdFactor _ :: _))) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK (SUKKItem (_, _, _) :: _))) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUList _)) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUSet _)) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUMap _)) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUBag _)) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl (SUBigLabel _) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              IdKl _ :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _)) ::
+                       _ :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (BoolConst _)), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem (SUKLabel (ConstToLabel (IdConst _)), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel Sort, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GetKLabel, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel IsKResult, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel AndBool, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel NotBool, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel OrBool, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel SetConLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel SetItemLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel ListConLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel ListItemLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MapConLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MapItemLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MapUpdate, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualK, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel NotEqualK, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualKLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel NotEqualKLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel (OtherLabel _), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel (TokenLabel _), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel PlusInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MinusInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel TimesInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel DivInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel ModInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel PlusFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MinusFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel TimesFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel DivFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualSet, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualMap, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel StringCon, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel IntToString, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessEqualInt, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GtInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GeqInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessEqualFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GtFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GeqFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUIdKLabel _, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabelFun (_, _), _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl (SUBigBag (SUK (ItemFactor (SUIdKItem (_, _)) :: _))) :: _ ->
+            None
+          | ItemKl (SUBigBag (SUK (ItemFactor (SUHOLE _) :: _))) :: _ -> None
+          | ItemKl (SUBigBag (SUK (IdFactor _ :: _))) :: _ -> None
+          | ItemKl (SUBigBag (SUK (SUKKItem (_, _, _) :: _))) :: _ -> None
+          | ItemKl (SUBigBag (SUList _)) :: _ -> None
+          | ItemKl (SUBigBag (SUSet _)) :: _ -> None
+          | ItemKl (SUBigBag (SUMap _)) :: _ -> None
+          | ItemKl (SUBigBag (SUBag _)) :: _ -> None
+          | ItemKl (SUBigLabel _) :: _ -> None | IdKl _ :: _ -> None)
+    | ModInt, kl, database, subG ->
+        (match kl with [] -> None | ItemKl (SUBigBag (SUK [])) :: _ -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel (UnitLabel _), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | [ItemKl
+               (SUBigBag
+                 (SUK [ItemFactor
+                         (SUKItem
+                           (SUKLabel (ConstToLabel (IntConst _)), _, _))]))]
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK [])) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel (UnitLabel _), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | [ItemKl
+               (SUBigBag
+                 (SUK [ItemFactor
+                         (SUKItem
+                           (SUKLabel (ConstToLabel (IntConst b1)), _, _))]));
+              ItemKl
+                (SUBigBag
+                  (SUK [ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (IntConst b2)), _, _))]))]
+            -> Some (KItemSubs
+                      (SUKItem
+                        (SUKLabel (ConstToLabel (IntConst (modulo_inta b1 b2))),
+                          [], [Int])))
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK [ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+                _ :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (IntConst _)), _, _)) ::
+                         _ :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (FloatConst _)), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (StringConst _)), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (BoolConst _)), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (IdConst _)), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel Sort, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GetKLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel IsKResult, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel AndBool, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel NotBool, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel OrBool, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel SetConLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel SetItemLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel ListConLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel ListItemLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MapConLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MapItemLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MapUpdate, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualK, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel NotEqualK, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualKLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel NotEqualKLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel (OtherLabel _), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel (TokenLabel _), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel PlusInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MinusInt, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel TimesInt, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel DivInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel ModInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel PlusFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MinusFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel TimesFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel DivFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualSet, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualMap, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel StringCon, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel IntToString, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessEqualInt, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GtInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GeqInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessEqualFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GtFloat, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GeqFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUIdKLabel _, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabelFun (_, _), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK (ItemFactor (SUIdKItem (_, _)) :: _))) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK (ItemFactor (SUHOLE _) :: _))) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK (IdFactor _ :: _))) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK (SUKKItem (_, _, _) :: _))) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUList _)) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUSet _)) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUMap _)) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUBag _)) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              ItemKl (SUBigLabel _) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _))])) ::
+              IdKl _ :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _)) ::
+                       _ :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (BoolConst _)), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem (SUKLabel (ConstToLabel (IdConst _)), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel Sort, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GetKLabel, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel IsKResult, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel AndBool, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel NotBool, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel OrBool, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel SetConLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel SetItemLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel ListConLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel ListItemLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MapConLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MapItemLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MapUpdate, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualK, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel NotEqualK, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualKLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel NotEqualKLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel (OtherLabel _), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel (TokenLabel _), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel PlusInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MinusInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel TimesInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel DivInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel ModInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel PlusFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MinusFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel TimesFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel DivFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualSet, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualMap, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel StringCon, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel IntToString, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessEqualInt, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GtInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GeqInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessEqualFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GtFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GeqFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUIdKLabel _, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabelFun (_, _), _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl (SUBigBag (SUK (ItemFactor (SUIdKItem (_, _)) :: _))) :: _ ->
+            None
+          | ItemKl (SUBigBag (SUK (ItemFactor (SUHOLE _) :: _))) :: _ -> None
+          | ItemKl (SUBigBag (SUK (IdFactor _ :: _))) :: _ -> None
+          | ItemKl (SUBigBag (SUK (SUKKItem (_, _, _) :: _))) :: _ -> None
+          | ItemKl (SUBigBag (SUList _)) :: _ -> None
+          | ItemKl (SUBigBag (SUSet _)) :: _ -> None
+          | ItemKl (SUBigBag (SUMap _)) :: _ -> None
+          | ItemKl (SUBigBag (SUBag _)) :: _ -> None
+          | ItemKl (SUBigLabel _) :: _ -> None | IdKl _ :: _ -> None)
+    | PlusFloat, kl, database, subG ->
+        (match kl with [] -> None | ItemKl (SUBigBag (SUK [])) :: _ -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel (UnitLabel _), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | [ItemKl
+               (SUBigBag
+                 (SUK [ItemFactor
+                         (SUKItem
+                           (SUKLabel (ConstToLabel (FloatConst _)), _, _))]))]
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK [])) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel (UnitLabel _), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (IntConst _)), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | [ItemKl
+               (SUBigBag
+                 (SUK [ItemFactor
+                         (SUKItem
+                           (SUKLabel (ConstToLabel (FloatConst b1)), _, _))]));
+              ItemKl
+                (SUBigBag
+                  (SUK [ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (FloatConst b2)), _, _))]))]
+            -> Some (KItemSubs
+                      (SUKItem
+                        (SUKLabel (ConstToLabel (FloatConst (plus_real b1 b2))),
+                          [], [Int])))
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK [ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (FloatConst _)), _,
+                              _))])) ::
+                _ :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (FloatConst _)), _, _)) ::
+                         _ :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (StringConst _)), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (BoolConst _)), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (IdConst _)), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel Sort, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GetKLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel IsKResult, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel AndBool, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel NotBool, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel OrBool, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel SetConLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel SetItemLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel ListConLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel ListItemLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MapConLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MapItemLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MapUpdate, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualK, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel NotEqualK, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualKLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel NotEqualKLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel (OtherLabel _), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel (TokenLabel _), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel PlusInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MinusInt, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel TimesInt, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel DivInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel ModInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel PlusFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MinusFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel TimesFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel DivFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualSet, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualMap, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel StringCon, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel IntToString, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessEqualInt, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GtInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GeqInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessEqualFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GtFloat, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GeqFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUIdKLabel _, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabelFun (_, _), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK (ItemFactor (SUIdKItem (_, _)) :: _))) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK (ItemFactor (SUHOLE _) :: _))) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK (IdFactor _ :: _))) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK (SUKKItem (_, _, _) :: _))) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUList _)) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUSet _)) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUMap _)) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUBag _)) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigLabel _) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              IdKl _ :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _)) ::
+                       _ :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (BoolConst _)), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem (SUKLabel (ConstToLabel (IdConst _)), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel Sort, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GetKLabel, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel IsKResult, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel AndBool, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel NotBool, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel OrBool, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel SetConLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel SetItemLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel ListConLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel ListItemLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MapConLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MapItemLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MapUpdate, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualK, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel NotEqualK, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualKLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel NotEqualKLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel (OtherLabel _), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel (TokenLabel _), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel PlusInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MinusInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel TimesInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel DivInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel ModInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel PlusFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MinusFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel TimesFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel DivFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualSet, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualMap, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel StringCon, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel IntToString, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessEqualInt, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GtInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GeqInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessEqualFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GtFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GeqFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUIdKLabel _, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabelFun (_, _), _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl (SUBigBag (SUK (ItemFactor (SUIdKItem (_, _)) :: _))) :: _ ->
+            None
+          | ItemKl (SUBigBag (SUK (ItemFactor (SUHOLE _) :: _))) :: _ -> None
+          | ItemKl (SUBigBag (SUK (IdFactor _ :: _))) :: _ -> None
+          | ItemKl (SUBigBag (SUK (SUKKItem (_, _, _) :: _))) :: _ -> None
+          | ItemKl (SUBigBag (SUList _)) :: _ -> None
+          | ItemKl (SUBigBag (SUSet _)) :: _ -> None
+          | ItemKl (SUBigBag (SUMap _)) :: _ -> None
+          | ItemKl (SUBigBag (SUBag _)) :: _ -> None
+          | ItemKl (SUBigLabel _) :: _ -> None | IdKl _ :: _ -> None)
+    | MinusFloat, kl, database, subG ->
+        (match kl with [] -> None | ItemKl (SUBigBag (SUK [])) :: _ -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel (UnitLabel _), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | [ItemKl
+               (SUBigBag
+                 (SUK [ItemFactor
+                         (SUKItem
+                           (SUKLabel (ConstToLabel (FloatConst _)), _, _))]))]
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK [])) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel (UnitLabel _), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (IntConst _)), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | [ItemKl
+               (SUBigBag
+                 (SUK [ItemFactor
+                         (SUKItem
+                           (SUKLabel (ConstToLabel (FloatConst b1)), _, _))]));
+              ItemKl
+                (SUBigBag
+                  (SUK [ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (FloatConst b2)), _, _))]))]
+            -> Some (KItemSubs
+                      (SUKItem
+                        (SUKLabel
+                           (ConstToLabel (FloatConst (minus_real b1 b2))),
+                          [], [Int])))
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK [ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (FloatConst _)), _,
+                              _))])) ::
+                _ :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (FloatConst _)), _, _)) ::
+                         _ :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (StringConst _)), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (BoolConst _)), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (IdConst _)), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel Sort, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GetKLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel IsKResult, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel AndBool, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel NotBool, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel OrBool, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel SetConLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel SetItemLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel ListConLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel ListItemLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MapConLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MapItemLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MapUpdate, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualK, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel NotEqualK, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualKLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel NotEqualKLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel (OtherLabel _), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel (TokenLabel _), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel PlusInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MinusInt, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel TimesInt, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel DivInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel ModInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel PlusFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MinusFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel TimesFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel DivFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualSet, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualMap, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel StringCon, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel IntToString, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessEqualInt, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GtInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GeqInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessEqualFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GtFloat, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GeqFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUIdKLabel _, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabelFun (_, _), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK (ItemFactor (SUIdKItem (_, _)) :: _))) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK (ItemFactor (SUHOLE _) :: _))) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK (IdFactor _ :: _))) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK (SUKKItem (_, _, _) :: _))) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUList _)) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUSet _)) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUMap _)) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUBag _)) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigLabel _) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              IdKl _ :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _)) ::
+                       _ :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (BoolConst _)), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem (SUKLabel (ConstToLabel (IdConst _)), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel Sort, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GetKLabel, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel IsKResult, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel AndBool, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel NotBool, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel OrBool, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel SetConLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel SetItemLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel ListConLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel ListItemLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MapConLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MapItemLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MapUpdate, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualK, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel NotEqualK, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualKLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel NotEqualKLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel (OtherLabel _), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel (TokenLabel _), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel PlusInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MinusInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel TimesInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel DivInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel ModInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel PlusFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MinusFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel TimesFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel DivFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualSet, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualMap, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel StringCon, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel IntToString, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessEqualInt, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GtInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GeqInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessEqualFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GtFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GeqFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUIdKLabel _, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabelFun (_, _), _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl (SUBigBag (SUK (ItemFactor (SUIdKItem (_, _)) :: _))) :: _ ->
+            None
+          | ItemKl (SUBigBag (SUK (ItemFactor (SUHOLE _) :: _))) :: _ -> None
+          | ItemKl (SUBigBag (SUK (IdFactor _ :: _))) :: _ -> None
+          | ItemKl (SUBigBag (SUK (SUKKItem (_, _, _) :: _))) :: _ -> None
+          | ItemKl (SUBigBag (SUList _)) :: _ -> None
+          | ItemKl (SUBigBag (SUSet _)) :: _ -> None
+          | ItemKl (SUBigBag (SUMap _)) :: _ -> None
+          | ItemKl (SUBigBag (SUBag _)) :: _ -> None
+          | ItemKl (SUBigLabel _) :: _ -> None | IdKl _ :: _ -> None)
+    | TimesFloat, kl, database, subG ->
+        (match kl with [] -> None | ItemKl (SUBigBag (SUK [])) :: _ -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel (UnitLabel _), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | [ItemKl
+               (SUBigBag
+                 (SUK [ItemFactor
+                         (SUKItem
+                           (SUKLabel (ConstToLabel (FloatConst _)), _, _))]))]
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK [])) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel (UnitLabel _), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (IntConst _)), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | [ItemKl
+               (SUBigBag
+                 (SUK [ItemFactor
+                         (SUKItem
+                           (SUKLabel (ConstToLabel (FloatConst b1)), _, _))]));
+              ItemKl
+                (SUBigBag
+                  (SUK [ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (FloatConst b2)), _, _))]))]
+            -> Some (KItemSubs
+                      (SUKItem
+                        (SUKLabel
+                           (ConstToLabel (FloatConst (times_real b1 b2))),
+                          [], [Int])))
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK [ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (FloatConst _)), _,
+                              _))])) ::
+                _ :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (FloatConst _)), _, _)) ::
+                         _ :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (StringConst _)), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (BoolConst _)), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (IdConst _)), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel Sort, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GetKLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel IsKResult, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel AndBool, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel NotBool, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel OrBool, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel SetConLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel SetItemLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel ListConLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel ListItemLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MapConLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MapItemLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MapUpdate, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualK, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel NotEqualK, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualKLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel NotEqualKLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel (OtherLabel _), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel (TokenLabel _), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel PlusInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MinusInt, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel TimesInt, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel DivInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel ModInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel PlusFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MinusFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel TimesFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel DivFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualSet, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualMap, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel StringCon, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel IntToString, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessEqualInt, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GtInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GeqInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessEqualFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GtFloat, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GeqFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUIdKLabel _, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabelFun (_, _), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK (ItemFactor (SUIdKItem (_, _)) :: _))) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK (ItemFactor (SUHOLE _) :: _))) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK (IdFactor _ :: _))) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK (SUKKItem (_, _, _) :: _))) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUList _)) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUSet _)) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUMap _)) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUBag _)) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigLabel _) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              IdKl _ :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _)) ::
+                       _ :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (BoolConst _)), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem (SUKLabel (ConstToLabel (IdConst _)), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel Sort, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GetKLabel, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel IsKResult, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel AndBool, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel NotBool, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel OrBool, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel SetConLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel SetItemLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel ListConLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel ListItemLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MapConLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MapItemLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MapUpdate, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualK, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel NotEqualK, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualKLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel NotEqualKLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel (OtherLabel _), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel (TokenLabel _), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel PlusInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MinusInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel TimesInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel DivInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel ModInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel PlusFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MinusFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel TimesFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel DivFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualSet, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualMap, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel StringCon, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel IntToString, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessEqualInt, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GtInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GeqInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessEqualFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GtFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GeqFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUIdKLabel _, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabelFun (_, _), _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl (SUBigBag (SUK (ItemFactor (SUIdKItem (_, _)) :: _))) :: _ ->
+            None
+          | ItemKl (SUBigBag (SUK (ItemFactor (SUHOLE _) :: _))) :: _ -> None
+          | ItemKl (SUBigBag (SUK (IdFactor _ :: _))) :: _ -> None
+          | ItemKl (SUBigBag (SUK (SUKKItem (_, _, _) :: _))) :: _ -> None
+          | ItemKl (SUBigBag (SUList _)) :: _ -> None
+          | ItemKl (SUBigBag (SUSet _)) :: _ -> None
+          | ItemKl (SUBigBag (SUMap _)) :: _ -> None
+          | ItemKl (SUBigBag (SUBag _)) :: _ -> None
+          | ItemKl (SUBigLabel _) :: _ -> None | IdKl _ :: _ -> None)
+    | DivFloat, kl, database, subG ->
+        (match kl with [] -> None | ItemKl (SUBigBag (SUK [])) :: _ -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel (UnitLabel _), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (IntConst _)), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | [ItemKl
+               (SUBigBag
+                 (SUK [ItemFactor
+                         (SUKItem
+                           (SUKLabel (ConstToLabel (FloatConst _)), _, _))]))]
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK [])) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel (UnitLabel _), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (IntConst _)), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | [ItemKl
+               (SUBigBag
+                 (SUK [ItemFactor
+                         (SUKItem
+                           (SUKLabel (ConstToLabel (FloatConst b1)), _, _))]));
+              ItemKl
+                (SUBigBag
+                  (SUK [ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (FloatConst b2)), _, _))]))]
+            -> Some (KItemSubs
+                      (SUKItem
+                        (SUKLabel
+                           (ConstToLabel (FloatConst (divide_real b1 b2))),
+                          [], [Int])))
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK [ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (FloatConst _)), _,
+                              _))])) ::
+                _ :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (FloatConst _)), _, _)) ::
+                         _ :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (StringConst _)), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (BoolConst _)), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor
+                          (SUKItem
+                            (SUKLabel (ConstToLabel (IdConst _)), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel Sort, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GetKLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel IsKResult, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel AndBool, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel NotBool, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel OrBool, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel SetConLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel SetItemLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel ListConLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel ListItemLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MapConLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MapItemLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MapUpdate, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualK, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel NotEqualK, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualKLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel NotEqualKLabel, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel (OtherLabel _), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel (TokenLabel _), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel PlusInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MinusInt, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel TimesInt, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel DivInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel ModInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel PlusFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MinusFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel TimesFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel DivFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualSet, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel EqualMap, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel StringCon, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel IntToString, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessEqualInt, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GtInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GeqInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessEqualFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GtFloat, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GeqFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUIdKLabel _, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabelFun (_, _), _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK (ItemFactor (SUIdKItem (_, _)) :: _))) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK (ItemFactor (SUHOLE _) :: _))) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK (IdFactor _ :: _))) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUK (SUKKItem (_, _, _) :: _))) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUList _)) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUSet _)) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUMap _)) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigBag (SUBag _)) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              ItemKl (SUBigLabel _) :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _))])) ::
+              IdKl _ :: _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (FloatConst _)), _, _)) ::
+                       _ :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (BoolConst _)), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor
+                        (SUKItem (SUKLabel (ConstToLabel (IdConst _)), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel Sort, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GetKLabel, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel IsKResult, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel AndBool, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel NotBool, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel OrBool, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel SetConLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel SetItemLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel ListConLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel ListItemLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MapConLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MapItemLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MapUpdate, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualK, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel NotEqualK, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualKLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel NotEqualKLabel, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel (OtherLabel _), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel (TokenLabel _), _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel PlusInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MinusInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel TimesInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel DivInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel ModInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel PlusFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MinusFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel TimesFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel DivFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualSet, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel EqualMap, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel StringCon, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel IntToString, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessEqualInt, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GtInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GeqInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessEqualFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GtFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GeqFloat, _, _)) :: _))) ::
               _
             -> None
           | ItemKl
@@ -14130,6 +27639,70 @@ Some (KItemSubs
                           (SUKLabel (ConstToLabel (StringConst _)), _, _))])) ::
               ItemKl
                 (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel DivInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel ModInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel PlusFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel MinusFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel TimesFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel DivFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
                   (SUK (ItemFactor (SUKItem (SUKLabel EqualSet, _, _)) ::
                          _))) ::
                 _
@@ -14185,6 +27758,69 @@ Some (KItemSubs
               ItemKl
                 (SUBigBag
                   (SUK (ItemFactor (SUKItem (SUKLabel LessEqualInt, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GtInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GeqInt, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel LessEqualFloat, _, _)) ::
+                         _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GtFloat, _, _)) :: _))) ::
+                _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK [ItemFactor
+                        (SUKItem
+                          (SUKLabel (ConstToLabel (StringConst _)), _, _))])) ::
+              ItemKl
+                (SUBigBag
+                  (SUK (ItemFactor (SUKItem (SUKLabel GeqFloat, _, _)) ::
                          _))) ::
                 _
             -> None
@@ -14424,6 +28060,38 @@ Some (KItemSubs
             -> None
           | ItemKl
               (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel DivInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel ModInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel PlusFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MinusFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel TimesFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel DivFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
                 (SUK (ItemFactor (SUKItem (SUKLabel EqualSet, _, _)) :: _))) ::
               _
             -> None
@@ -14452,6 +28120,37 @@ Some (KItemSubs
               (SUBigBag
                 (SUK (ItemFactor (SUKItem (SUKLabel LessEqualInt, _, _)) ::
                        _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GtInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GeqInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessEqualFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GtFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GeqFloat, _, _)) :: _))) ::
               _
             -> None
           | ItemKl
@@ -14665,6 +28364,38 @@ Some (KItemSubs
             -> None
           | ItemKl
               (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel DivInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel ModInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel PlusFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel MinusFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel TimesFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel DivFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
                 (SUK (ItemFactor (SUKItem (SUKLabel EqualSet, _, _)) :: _))) ::
               _
             -> None
@@ -14693,6 +28424,37 @@ Some (KItemSubs
               (SUBigBag
                 (SUK (ItemFactor (SUKItem (SUKLabel LessEqualInt, _, _)) ::
                        _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GtInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GeqInt, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel LessEqualFloat, _, _)) ::
+                       _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GtFloat, _, _)) :: _))) ::
+              _
+            -> None
+          | ItemKl
+              (SUBigBag
+                (SUK (ItemFactor (SUKItem (SUKLabel GeqFloat, _, _)) :: _))) ::
               _
             -> None
           | ItemKl
@@ -14794,9 +28556,15 @@ and funEvaluationBoolAux _A _B _C
                       | Some (OtherLabel _) -> None
                       | Some (TokenLabel _) -> None | Some PlusInt -> None
                       | Some MinusInt -> None | Some TimesInt -> None
+                      | Some DivInt -> None | Some ModInt -> None
+                      | Some PlusFloat -> None | Some MinusFloat -> None
+                      | Some TimesFloat -> None | Some DivFloat -> None
                       | Some EqualSet -> None | Some EqualMap -> None
                       | Some StringCon -> None | Some IntToString -> None
-                      | Some LessInt -> None | Some LessEqualInt -> None))));;
+                      | Some LessInt -> None | Some LessEqualInt -> None
+                      | Some GtInt -> None | Some GeqInt -> None
+                      | Some LessFloat -> None | Some LessEqualFloat -> None
+                      | Some GtFloat -> None | Some GeqFloat -> None))));;
 
 let rec funEvaluationAux _A _B _C
   allRules database subG x3 funa cr = match
@@ -14842,9 +28610,15 @@ let rec funEvaluationAux _A _B _C
                       | Some (OtherLabel _) -> None
                       | Some (TokenLabel _) -> None | Some PlusInt -> None
                       | Some MinusInt -> None | Some TimesInt -> None
+                      | Some DivInt -> None | Some ModInt -> None
+                      | Some PlusFloat -> None | Some MinusFloat -> None
+                      | Some TimesFloat -> None | Some DivFloat -> None
                       | Some EqualSet -> None | Some EqualMap -> None
                       | Some StringCon -> None | Some IntToString -> None
-                      | Some LessInt -> None | Some LessEqualInt -> None))));;
+                      | Some LessInt -> None | Some LessEqualInt -> None
+                      | Some GtInt -> None | Some GeqInt -> None
+                      | Some LessFloat -> None | Some LessEqualFloat -> None
+                      | Some GtFloat -> None | Some GeqFloat -> None))));;
 
 let rec funEvaluation _A _B _C
   allRules database subG c =
@@ -15192,9 +28966,15 @@ let rec tupleToRulePat _A _D _E
                          | Some (OtherLabel _) -> None
                          | Some (TokenLabel _) -> None | Some PlusInt -> None
                          | Some MinusInt -> None | Some TimesInt -> None
+                         | Some DivInt -> None | Some ModInt -> None
+                         | Some PlusFloat -> None | Some MinusFloat -> None
+                         | Some TimesFloat -> None | Some DivFloat -> None
                          | Some EqualSet -> None | Some EqualMap -> None
                          | Some StringCon -> None | Some IntToString -> None
-                         | Some LessInt -> None | Some LessEqualInt -> None)
+                         | Some LessInt -> None | Some LessEqualInt -> None
+                         | Some GtInt -> None | Some GeqInt -> None
+                         | Some LessFloat -> None | Some LessEqualFloat -> None
+                         | Some GtFloat -> None | Some GeqFloat -> None)
                      | Some (KListSubs _) -> None | Some (KSubs _) -> None
                      | Some (ListSubs _) -> None | Some (SetSubs _) -> None
                      | Some (MapSubs _) -> None | Some (BagSubs _) -> None)
@@ -15225,9 +29005,15 @@ let rec tupleToRulePat _A _D _E
                          | Some (OtherLabel _) -> None
                          | Some (TokenLabel _) -> None | Some PlusInt -> None
                          | Some MinusInt -> None | Some TimesInt -> None
+                         | Some DivInt -> None | Some ModInt -> None
+                         | Some PlusFloat -> None | Some MinusFloat -> None
+                         | Some TimesFloat -> None | Some DivFloat -> None
                          | Some EqualSet -> None | Some EqualMap -> None
                          | Some StringCon -> None | Some IntToString -> None
-                         | Some LessInt -> None | Some LessEqualInt -> None)
+                         | Some LessInt -> None | Some LessEqualInt -> None
+                         | Some GtInt -> None | Some GeqInt -> None
+                         | Some LessFloat -> None | Some LessEqualFloat -> None
+                         | Some GtFloat -> None | Some GeqFloat -> None)
                      | Some (KListSubs _) -> None | Some (KSubs _) -> None
                      | Some (ListSubs _) -> None | Some (SetSubs _) -> None
                      | Some (MapSubs _) -> None | Some (BagSubs _) -> None)
@@ -15271,9 +29057,16 @@ let rec tupleToRulePat _A _D _E
                             | Some (OtherLabel _) -> None
                             | Some (TokenLabel _) -> None | Some PlusInt -> None
                             | Some MinusInt -> None | Some TimesInt -> None
+                            | Some DivInt -> None | Some ModInt -> None
+                            | Some PlusFloat -> None | Some MinusFloat -> None
+                            | Some TimesFloat -> None | Some DivFloat -> None
                             | Some EqualSet -> None | Some EqualMap -> None
                             | Some StringCon -> None | Some IntToString -> None
-                            | Some LessInt -> None | Some LessEqualInt -> None)
+                            | Some LessInt -> None | Some LessEqualInt -> None
+                            | Some GtInt -> None | Some GeqInt -> None
+                            | Some LessFloat -> None
+                            | Some LessEqualFloat -> None | Some GtFloat -> None
+                            | Some GeqFloat -> None)
                         | Some (KListSubs _) -> None | Some (KSubs _) -> None
                         | Some (ListSubs _) -> None | Some (SetSubs _) -> None
                         | Some (MapSubs _) -> None | Some (BagSubs _) -> None)
@@ -15306,9 +29099,16 @@ let rec tupleToRulePat _A _D _E
                             | Some (OtherLabel _) -> None
                             | Some (TokenLabel _) -> None | Some PlusInt -> None
                             | Some MinusInt -> None | Some TimesInt -> None
+                            | Some DivInt -> None | Some ModInt -> None
+                            | Some PlusFloat -> None | Some MinusFloat -> None
+                            | Some TimesFloat -> None | Some DivFloat -> None
                             | Some EqualSet -> None | Some EqualMap -> None
                             | Some StringCon -> None | Some IntToString -> None
-                            | Some LessInt -> None | Some LessEqualInt -> None)
+                            | Some LessInt -> None | Some LessEqualInt -> None
+                            | Some GtInt -> None | Some GeqInt -> None
+                            | Some LessFloat -> None
+                            | Some LessEqualFloat -> None | Some GtFloat -> None
+                            | Some GeqFloat -> None)
                         | Some (KListSubs _) -> None | Some (KSubs _) -> None
                         | Some (ListSubs _) -> None | Some (SetSubs _) -> None
                         | Some (MapSubs _) -> None | Some (BagSubs _) -> None)
@@ -16047,10 +29847,16 @@ let rec syntaxToKItem
                                 | OtherLabel _ -> false
                                 | TokenLabel ab -> regMatch s ab
                                 | PlusInt -> false | MinusInt -> false
-                                | TimesInt -> false | EqualSet -> false
+                                | TimesInt -> false | DivInt -> false
+                                | ModInt -> false | PlusFloat -> false
+                                | MinusFloat -> false | TimesFloat -> false
+                                | DivFloat -> false | EqualSet -> false
                                 | EqualMap -> false | StringCon -> false
                                 | IntToString -> false | LessInt -> false
-                                | LessEqualInt -> false)),
+                                | LessEqualInt -> false | GtInt -> false
+                                | GeqInt -> false | LessFloat -> false
+                                | LessEqualFloat -> false | GtFloat -> false
+                                | GeqFloat -> false)),
                            (getRidStrictAttrs c,
                              member equal_synAttrib c Function))))]
     | Subsort (a, b) -> None
@@ -16104,8 +29910,24 @@ let builtinSymbolTables :
       ([Int], ([[Int]; [Int]], (SingleTon PlusInt, ([Function], true))));
       ([Int], ([[Int]; [Int]], (SingleTon MinusInt, ([Function], true))));
       ([Int], ([[Int]; [Int]], (SingleTon TimesInt, ([Function], true))));
+      ([Int], ([[Int]; [Int]], (SingleTon ModInt, ([Function], true))));
+      ([Int], ([[Int]; [Int]], (SingleTon DivInt, ([Function], true))));
+      ([Float],
+        ([[Float]; [Float]], (SingleTon PlusFloat, ([Function], true))));
+      ([Float],
+        ([[Float]; [Float]], (SingleTon MinusFloat, ([Function], true))));
+      ([Float],
+        ([[Float]; [Float]], (SingleTon TimesFloat, ([Function], true))));
+      ([Float], ([[Float]; [Float]], (SingleTon DivFloat, ([Function], true))));
       ([Bool], ([[Int]; [Int]], (SingleTon LessInt, ([Function], true))));
       ([Bool], ([[Int]; [Int]], (SingleTon LessEqualInt, ([Function], true))));
+      ([Bool], ([[Int]; [Int]], (SingleTon GtInt, ([Function], true))));
+      ([Bool], ([[Int]; [Int]], (SingleTon GeqInt, ([Function], true))));
+      ([Bool], ([[Float]; [Float]], (SingleTon LessFloat, ([Function], true))));
+      ([Bool],
+        ([[Float]; [Float]], (SingleTon LessEqualFloat, ([Function], true))));
+      ([Bool], ([[Float]; [Float]], (SingleTon GtFloat, ([Function], true))));
+      ([Bool], ([[Float]; [Float]], (SingleTon GeqFloat, ([Function], true))));
       ([String],
         ([[String]; [String]], (SingleTon StringCon, ([Function], true))));
       ([String], ([[Int]], (SingleTon IntToString, ([Function], true))))];;
@@ -16138,12 +29960,24 @@ let rec isStringConst = function ConstToLabel (StringConst n) -> true
                         | PlusInt -> false
                         | MinusInt -> false
                         | TimesInt -> false
+                        | DivInt -> false
+                        | ModInt -> false
+                        | PlusFloat -> false
+                        | MinusFloat -> false
+                        | TimesFloat -> false
+                        | DivFloat -> false
                         | EqualSet -> false
                         | EqualMap -> false
                         | StringCon -> false
                         | IntToString -> false
                         | LessInt -> false
-                        | LessEqualInt -> false;;
+                        | LessEqualInt -> false
+                        | GtInt -> false
+                        | GeqInt -> false
+                        | LessFloat -> false
+                        | LessEqualFloat -> false
+                        | GtFloat -> false
+                        | GeqFloat -> false;;
 
 let rec isFloatConst = function ConstToLabel (FloatConst n) -> true
                        | UnitLabel v -> false
@@ -16173,12 +30007,24 @@ let rec isFloatConst = function ConstToLabel (FloatConst n) -> true
                        | PlusInt -> false
                        | MinusInt -> false
                        | TimesInt -> false
+                       | DivInt -> false
+                       | ModInt -> false
+                       | PlusFloat -> false
+                       | MinusFloat -> false
+                       | TimesFloat -> false
+                       | DivFloat -> false
                        | EqualSet -> false
                        | EqualMap -> false
                        | StringCon -> false
                        | IntToString -> false
                        | LessInt -> false
-                       | LessEqualInt -> false;;
+                       | LessEqualInt -> false
+                       | GtInt -> false
+                       | GeqInt -> false
+                       | LessFloat -> false
+                       | LessEqualFloat -> false
+                       | GtFloat -> false
+                       | GeqFloat -> false;;
 
 let rec isBoolConst = function ConstToLabel (BoolConst n) -> true
                       | UnitLabel v -> false
@@ -16208,12 +30054,24 @@ let rec isBoolConst = function ConstToLabel (BoolConst n) -> true
                       | PlusInt -> false
                       | MinusInt -> false
                       | TimesInt -> false
+                      | DivInt -> false
+                      | ModInt -> false
+                      | PlusFloat -> false
+                      | MinusFloat -> false
+                      | TimesFloat -> false
+                      | DivFloat -> false
                       | EqualSet -> false
                       | EqualMap -> false
                       | StringCon -> false
                       | IntToString -> false
                       | LessInt -> false
-                      | LessEqualInt -> false;;
+                      | LessEqualInt -> false
+                      | GtInt -> false
+                      | GeqInt -> false
+                      | LessFloat -> false
+                      | LessEqualFloat -> false
+                      | GtFloat -> false
+                      | GeqFloat -> false;;
 
 let rec isIntConst = function ConstToLabel (IntConst n) -> true
                      | UnitLabel v -> false
@@ -16243,12 +30101,24 @@ let rec isIntConst = function ConstToLabel (IntConst n) -> true
                      | PlusInt -> false
                      | MinusInt -> false
                      | TimesInt -> false
+                     | DivInt -> false
+                     | ModInt -> false
+                     | PlusFloat -> false
+                     | MinusFloat -> false
+                     | TimesFloat -> false
+                     | DivFloat -> false
                      | EqualSet -> false
                      | EqualMap -> false
                      | StringCon -> false
                      | IntToString -> false
                      | LessInt -> false
-                     | LessEqualInt -> false;;
+                     | LessEqualInt -> false
+                     | GtInt -> false
+                     | GeqInt -> false
+                     | LessFloat -> false
+                     | LessEqualFloat -> false
+                     | GtFloat -> false
+                     | GeqFloat -> false;;
 
 let rec isIdConst = function ConstToLabel (IdConst n) -> true
                     | UnitLabel v -> false
@@ -16278,12 +30148,24 @@ let rec isIdConst = function ConstToLabel (IdConst n) -> true
                     | PlusInt -> false
                     | MinusInt -> false
                     | TimesInt -> false
+                    | DivInt -> false
+                    | ModInt -> false
+                    | PlusFloat -> false
+                    | MinusFloat -> false
+                    | TimesFloat -> false
+                    | DivFloat -> false
                     | EqualSet -> false
                     | EqualMap -> false
                     | StringCon -> false
                     | IntToString -> false
                     | LessInt -> false
-                    | LessEqualInt -> false;;
+                    | LessEqualInt -> false
+                    | GtInt -> false
+                    | GeqInt -> false
+                    | LessFloat -> false
+                    | LessEqualFloat -> false
+                    | GtFloat -> false
+                    | GeqFloat -> false;;
 
 let builtinConstTable :
   ('a sort list * ('b list * ('c label kItemSyntax * ('d list * bool)))) list

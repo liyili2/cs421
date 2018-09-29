@@ -3069,9 +3069,10 @@ fun getFunRule where
 | "getFunRule s (x#l) = getFunRule s l"
 
 definition builtinLabels where
-"builtinLabels = [GetKLabel, IsKResult, AndBool, NotBool, LessInt, LessEqualInt,
-                      OrBool, Sort, MapUpdate, EqualK, NotEqualK, EqualSet, EqualMap,
-              IntToString, EqualKLabel, NotEqualKLabel, PlusInt, MinusInt, TimesInt, StringCon]"
+"builtinLabels = [GetKLabel, IsKResult, AndBool, NotBool, LessInt, LessEqualInt, GtInt, GeqInt,
+         OrBool, Sort, MapUpdate, EqualK, NotEqualK, EqualSet, EqualMap, DivInt, ModInt,
+          PlusFloat, MinusFloat, TimesFloat, DivFloat, LessFloat, LessEqualFloat, GtFloat, GeqFloat,
+         IntToString, EqualKLabel, NotEqualKLabel, PlusInt, MinusInt, TimesInt, StringCon]"
 
 primrec inLabelList where
 "inLabelList a [] = False"
@@ -3194,6 +3195,35 @@ fun evalBuiltinFun where
     (case kl of [ItemKl (SUBigLabel (SUKLabel a)),ItemKl (SUBigLabel (SUKLabel b))]
            \<Rightarrow> Some (KItemSubs (SUKItem (SUKLabel (ConstToLabel (BoolConst (a \<noteq> b)))) [] [Bool]))
                         | _ \<Rightarrow> None)"
+
+| "evalBuiltinFun LessFloat kl database subG =
+    (case kl of [ItemKl (SUBigBag (SUK [ItemFactor
+                               (SUKItem (SUKLabel (ConstToLabel (FloatConst b1))) newl1 t1)])),
+                 ItemKl (SUBigBag (SUK [ItemFactor
+                               (SUKItem (SUKLabel (ConstToLabel (FloatConst b2))) newl2 t2)]))]
+                \<Rightarrow> Some (KItemSubs (SUKItem (SUKLabel (ConstToLabel (BoolConst (b1 < b2)))) [] [kSyntax.Int]))
+                    | _ \<Rightarrow> None)"
+| "evalBuiltinFun LessEqualFloat kl database subG =
+    (case kl of [ItemKl (SUBigBag (SUK [ItemFactor
+                               (SUKItem (SUKLabel (ConstToLabel (FloatConst b1))) newl1 t1)])),
+                 ItemKl (SUBigBag (SUK [ItemFactor
+                               (SUKItem (SUKLabel (ConstToLabel (FloatConst b2))) newl2 t2)]))]
+                \<Rightarrow> Some (KItemSubs (SUKItem (SUKLabel (ConstToLabel (BoolConst (b1 \<le> b2)))) [] [kSyntax.Int]))
+                    | _ \<Rightarrow> None)"
+| "evalBuiltinFun GtFloat kl database subG =
+    (case kl of [ItemKl (SUBigBag (SUK [ItemFactor
+                               (SUKItem (SUKLabel (ConstToLabel (FloatConst b1))) newl1 t1)])),
+                 ItemKl (SUBigBag (SUK [ItemFactor
+                               (SUKItem (SUKLabel (ConstToLabel (FloatConst b2))) newl2 t2)]))]
+                \<Rightarrow> Some (KItemSubs (SUKItem (SUKLabel (ConstToLabel (BoolConst (b1 > b2)))) [] [kSyntax.Int]))
+                    | _ \<Rightarrow> None)"
+| "evalBuiltinFun GeqFloat kl database subG =
+    (case kl of [ItemKl (SUBigBag (SUK [ItemFactor
+                               (SUKItem (SUKLabel (ConstToLabel (FloatConst b1))) newl1 t1)])),
+                 ItemKl (SUBigBag (SUK [ItemFactor
+                               (SUKItem (SUKLabel (ConstToLabel (FloatConst b2))) newl2 t2)]))]
+                \<Rightarrow> Some (KItemSubs (SUKItem (SUKLabel (ConstToLabel (BoolConst (b1 \<ge> b2)))) [] [kSyntax.Int]))
+                    | _ \<Rightarrow> None)"
 | "evalBuiltinFun LessInt kl database subG =
     (case kl of [ItemKl (SUBigBag (SUK [ItemFactor
                                (SUKItem (SUKLabel (ConstToLabel (IntConst b1))) newl1 t1)])),
@@ -3201,12 +3231,26 @@ fun evalBuiltinFun where
                                (SUKItem (SUKLabel (ConstToLabel (IntConst b2))) newl2 t2)]))]
                 \<Rightarrow> Some (KItemSubs (SUKItem (SUKLabel (ConstToLabel (BoolConst (b1 < b2)))) [] [kSyntax.Int]))
                     | _ \<Rightarrow> None)"
+| "evalBuiltinFun GtInt kl database subG =
+    (case kl of [ItemKl (SUBigBag (SUK [ItemFactor
+                               (SUKItem (SUKLabel (ConstToLabel (IntConst b1))) newl1 t1)])),
+                 ItemKl (SUBigBag (SUK [ItemFactor
+                               (SUKItem (SUKLabel (ConstToLabel (IntConst b2))) newl2 t2)]))]
+                \<Rightarrow> Some (KItemSubs (SUKItem (SUKLabel (ConstToLabel (BoolConst (b1 > b2)))) [] [kSyntax.Int]))
+                    | _ \<Rightarrow> None)"
 | "evalBuiltinFun LessEqualInt kl database subG =
     (case kl of [ItemKl (SUBigBag (SUK [ItemFactor
                                (SUKItem (SUKLabel (ConstToLabel (IntConst b1))) newl1 t1)])),
                  ItemKl (SUBigBag (SUK [ItemFactor
                                (SUKItem (SUKLabel (ConstToLabel (IntConst b2))) newl2 t2)]))]
                 \<Rightarrow> Some (KItemSubs (SUKItem (SUKLabel (ConstToLabel (BoolConst (b1 \<le> b2)))) [] [kSyntax.Int]))
+                    | _ \<Rightarrow> None)"
+| "evalBuiltinFun GeqInt kl database subG =
+    (case kl of [ItemKl (SUBigBag (SUK [ItemFactor
+                               (SUKItem (SUKLabel (ConstToLabel (IntConst b1))) newl1 t1)])),
+                 ItemKl (SUBigBag (SUK [ItemFactor
+                               (SUKItem (SUKLabel (ConstToLabel (IntConst b2))) newl2 t2)]))]
+                \<Rightarrow> Some (KItemSubs (SUKItem (SUKLabel (ConstToLabel (BoolConst (b1 \<ge> b2)))) [] [kSyntax.Int]))
                     | _ \<Rightarrow> None)"
 | "evalBuiltinFun PlusInt kl database subG =
     (case kl of [ItemKl (SUBigBag (SUK [ItemFactor
@@ -3228,6 +3272,48 @@ fun evalBuiltinFun where
                  ItemKl (SUBigBag (SUK [ItemFactor
                                (SUKItem (SUKLabel (ConstToLabel (IntConst b2))) newl2 t2)]))]
                 \<Rightarrow> Some (KItemSubs (SUKItem (SUKLabel (ConstToLabel (IntConst (b1 * b2)))) [] [kSyntax.Int]))
+                    | _ \<Rightarrow> None)"
+| "evalBuiltinFun DivInt kl database subG =
+    (case kl of [ItemKl (SUBigBag (SUK [ItemFactor
+                               (SUKItem (SUKLabel (ConstToLabel (IntConst b1))) newl1 t1)])),
+                 ItemKl (SUBigBag (SUK [ItemFactor
+                               (SUKItem (SUKLabel (ConstToLabel (IntConst b2))) newl2 t2)]))]
+                \<Rightarrow> Some (KItemSubs (SUKItem (SUKLabel (ConstToLabel (IntConst (b1 div b2)))) [] [kSyntax.Int]))
+                    | _ \<Rightarrow> None)"
+| "evalBuiltinFun ModInt kl database subG =
+    (case kl of [ItemKl (SUBigBag (SUK [ItemFactor
+                               (SUKItem (SUKLabel (ConstToLabel (IntConst b1))) newl1 t1)])),
+                 ItemKl (SUBigBag (SUK [ItemFactor
+                               (SUKItem (SUKLabel (ConstToLabel (IntConst b2))) newl2 t2)]))]
+                \<Rightarrow> Some (KItemSubs (SUKItem (SUKLabel (ConstToLabel (IntConst (b1 mod b2)))) [] [kSyntax.Int]))
+                    | _ \<Rightarrow> None)"
+| "evalBuiltinFun PlusFloat kl database subG =
+    (case kl of [ItemKl (SUBigBag (SUK [ItemFactor
+                               (SUKItem (SUKLabel (ConstToLabel (FloatConst b1))) newl1 t1)])),
+                 ItemKl (SUBigBag (SUK [ItemFactor
+                               (SUKItem (SUKLabel (ConstToLabel (FloatConst b2))) newl2 t2)]))]
+                \<Rightarrow> Some (KItemSubs (SUKItem (SUKLabel (ConstToLabel (FloatConst (b1 + b2)))) [] [kSyntax.Int]))
+                    | _ \<Rightarrow> None)"
+| "evalBuiltinFun MinusFloat kl database subG =
+    (case kl of [ItemKl (SUBigBag (SUK [ItemFactor
+                               (SUKItem (SUKLabel (ConstToLabel (FloatConst b1))) newl1 t1)])),
+                 ItemKl (SUBigBag (SUK [ItemFactor
+                               (SUKItem (SUKLabel (ConstToLabel (FloatConst b2))) newl2 t2)]))]
+                \<Rightarrow> Some (KItemSubs (SUKItem (SUKLabel (ConstToLabel (FloatConst (b1 - b2)))) [] [kSyntax.Int]))
+                    | _ \<Rightarrow> None)"
+| "evalBuiltinFun TimesFloat kl database subG =
+    (case kl of [ItemKl (SUBigBag (SUK [ItemFactor
+                               (SUKItem (SUKLabel (ConstToLabel (FloatConst b1))) newl1 t1)])),
+                 ItemKl (SUBigBag (SUK [ItemFactor
+                               (SUKItem (SUKLabel (ConstToLabel (FloatConst b2))) newl2 t2)]))]
+                \<Rightarrow> Some (KItemSubs (SUKItem (SUKLabel (ConstToLabel (FloatConst (b1 * b2)))) [] [kSyntax.Int]))
+                    | _ \<Rightarrow> None)"
+| "evalBuiltinFun DivFloat kl database subG =
+    (case kl of [ItemKl (SUBigBag (SUK [ItemFactor
+                               (SUKItem (SUKLabel (ConstToLabel (FloatConst b1))) newl1 t1)])),
+                 ItemKl (SUBigBag (SUK [ItemFactor
+                               (SUKItem (SUKLabel (ConstToLabel (FloatConst b2))) newl2 t2)]))]
+                \<Rightarrow> Some (KItemSubs (SUKItem (SUKLabel (ConstToLabel (FloatConst (b1 / b2)))) [] [kSyntax.Int]))
                     | _ \<Rightarrow> None)"
 | "evalBuiltinFun StringCon kl database subG = 
     (case kl of [ItemKl (SUBigBag (SUK [ItemFactor
@@ -3307,8 +3393,8 @@ termination sorry
 
 export_code Eps Continue Success FunTrans Single IntConst Bool kSyntax.Set Defined UnitLabel NonTerminal
     Strict Syntax Star Stdin Multiplicity KTerm KLabelC Heat TheSyntax IRKLabel IRKItem SimId
-       KLabelMatching KLabelFunPat SUKLabel KLabelSubs FunPat SingleTon OtherVar 
-    Parsed AChar Suc Char Num.One Int.Pos Num.inc formGraph syntaxSetToKItemSetAux
+       KLabelMatching KLabelFunPat SUKLabel KLabelSubs FunPat SingleTon OtherVar
+    Parsed AChar Suc Char Num.One Int.Pos Num.inc Real.Ratreal formGraph syntaxSetToKItemSetAux
    symbolsToKLabel syntaxToKItem getKLabelName subsort getNonTerminalInList builtinConstTable
     getValueTerm irToSUInKLabel irToSUInKItem irToSUInPat irToSUInMatchFactor subsortGraph
     AllSubsorts kResultSubsorts getKResultSubsorts preSubsortGraph preSubsortTerms syntaxSetToKItems

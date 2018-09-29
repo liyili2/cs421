@@ -1,4 +1,3 @@
-#use "start.ml";;
 
 
 typeCheckRules allEqual allEqual allRules database theGraph;;

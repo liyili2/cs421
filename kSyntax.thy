@@ -31,8 +31,9 @@ datatype 'upVar label = UnitLabel "'upVar sort" | ConstToLabel theConstant
   | Sort | GetKLabel | IsKResult | AndBool | NotBool | OrBool | SetConLabel
   | SetItemLabel | ListConLabel | ListItemLabel | MapConLabel | MapItemLabel | MapUpdate
   | EqualK | NotEqualK | EqualKLabel | NotEqualKLabel | OtherLabel string | TokenLabel string
-  | PlusInt | MinusInt | TimesInt | EqualSet | EqualMap | StringCon | IntToString
-  | LessInt | LessEqualInt
+  | PlusInt | MinusInt | TimesInt | DivInt | ModInt | PlusFloat | MinusFloat | TimesFloat | DivFloat
+  | EqualSet | EqualMap | StringCon | IntToString
+  | LessInt | LessEqualInt | GtInt | GeqInt | LessFloat | LessEqualFloat | GtFloat | GeqFloat
 
 datatype 'upVar symbol = NonTerminal "'upVar sort" | Terminal string
 
@@ -721,8 +722,20 @@ definition builtinSymbolTables where
   ([kSyntax.Int],[[kSyntax.Int],[kSyntax.Int]], SingleTon PlusInt, [Function], True),
   ([kSyntax.Int],[[kSyntax.Int],[kSyntax.Int]], SingleTon MinusInt, [Function], True),
   ([kSyntax.Int],[[kSyntax.Int],[kSyntax.Int]], SingleTon TimesInt, [Function], True),
+  ([kSyntax.Int],[[kSyntax.Int],[kSyntax.Int]], SingleTon ModInt, [Function], True),
+  ([kSyntax.Int],[[kSyntax.Int],[kSyntax.Int]], SingleTon DivInt, [Function], True),
+  ([kSyntax.Float],[[kSyntax.Float],[kSyntax.Float]], SingleTon PlusFloat, [Function], True),
+  ([kSyntax.Float],[[kSyntax.Float],[kSyntax.Float]], SingleTon MinusFloat, [Function], True),
+  ([kSyntax.Float],[[kSyntax.Float],[kSyntax.Float]], SingleTon TimesFloat, [Function], True),
+  ([kSyntax.Float],[[kSyntax.Float],[kSyntax.Float]], SingleTon DivFloat, [Function], True),
   ([kSyntax.Bool],[[kSyntax.Int],[kSyntax.Int]], SingleTon LessInt, [Function], True),
   ([kSyntax.Bool],[[kSyntax.Int],[kSyntax.Int]], SingleTon LessEqualInt, [Function], True),
+  ([kSyntax.Bool],[[kSyntax.Int],[kSyntax.Int]], SingleTon GtInt, [Function], True),
+  ([kSyntax.Bool],[[kSyntax.Int],[kSyntax.Int]], SingleTon GeqInt, [Function], True),
+  ([kSyntax.Bool],[[kSyntax.Float],[kSyntax.Float]], SingleTon LessFloat, [Function], True),
+  ([kSyntax.Bool],[[kSyntax.Float],[kSyntax.Float]], SingleTon LessEqualFloat, [Function], True),
+  ([kSyntax.Bool],[[kSyntax.Float],[kSyntax.Float]], SingleTon GtFloat, [Function], True),
+  ([kSyntax.Bool],[[kSyntax.Float],[kSyntax.Float]], SingleTon GeqFloat, [Function], True),
   ([kSyntax.String],[[kSyntax.String],[kSyntax.String]], SingleTon StringCon, [Function], True),
   ([kSyntax.String],[[kSyntax.Int]], SingleTon IntToString, [Function], True)]"
 

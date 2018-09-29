@@ -120,8 +120,14 @@ let rec dealWithLabel x = match x with "getKLabel" -> K.K.GetKLabel
      | "==K" -> K.K.EqualK | "=/=K" -> K.K.NotEqualK | "==KLabel" -> K.K.EqualKLabel
       | "=/=KLabel" -> K.K.NotEqualKLabel | "==Set" -> K.K.EqualSet | "==Map" -> K.K.EqualMap
      | "+Int" -> K.K.PlusInt | "-Int" -> K.K.MinusInt
-       | "*Int" -> K.K.TimesInt | "true" -> K.K.ConstToLabel (K.K.BoolConst true)
+       | "*Int" -> K.K.TimesInt | "/Int" -> K.K.DivInt | "%Int" -> K.K.ModInt
+      | "+Float" -> K.K.PlusFloat | "-Float" -> K.K.MinusFloat
+      | "*Float" -> K.K.TimesFloat | "/Float" -> K.K.DivFloat
+      | "<Float" -> K.K.LessFloat | "<=Float" -> K.K.LessEqualFloat
+      | ">Float" -> K.K.GtFloat | ">=Float" -> K.K.GeqFloat
+     | "true" -> K.K.ConstToLabel (K.K.BoolConst true)
      | "<Int" -> K.K.LessInt | "<=Int" -> K.K.LessEqualInt
+     | ">Int" -> K.K.GtInt | ">=Int" -> K.K.GeqInt
      | "false" -> K.K.ConstToLabel (K.K.BoolConst false)
      | "+String" -> K.K.StringCon
      | "intToString" -> K.K.IntToString
