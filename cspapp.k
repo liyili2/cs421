@@ -12,340 +12,387 @@
               | ">"  [klabel('gt)]
               | ">=" [klabel('geq)]
 
-  syntax Input ::= Id | Int | Float
-                 | 'ifelse(Input, Input, Input)  [klabel('ifelse)]
-                 | 'app(Input, Input) [klabel('app)]
-                 | 'bin(Op, Input, Input)  [klabel('bin)]
-                 | 'unary(Op, Input) [klabel('unary)]
-                 | 'fun(Id, Input)   [klabel('fun)]
-                 | 'let(Id, Input, Input) [klabel('let)]
+  syntax Atomic ::= Id | Int | Float
 
-  syntax Exp ::= Id | Int | Float
-               | 'cpsapp(Exp, Exp) [klabel('cpsapp)]
-               | 'cpsbin(Op, Exp, Exp) [klabel('cpsbin)]
-               | 'cpsunary(Op, Exp) [klabel('cpsunary)]
-               | 'cpsfun(Id, Exp) [klabel('cpsfun)]
-               | 'continue(Id, Exp) [klabel('continue)]
- 
+  syntax Exps ::= List{Atomic,","} [klabel('listCon)]
 
-  syntax Exp ::= 'eval(Exp, Map)  [klabel('eval)]
-  syntax Exp ::= "undef" [klabel('undef)]
+  syntax Sub ::= Exps | Atomic
 
-  syntax KItem ::= 'lookup(Map, K) [function, klabel('lookup)]
-  rule 'lookup(.Map, A:K) => 'none(.KList)
-  rule 'lookup(MapCon(MapItem(A:K, V:K), M:Map), A:K) => 'some(V)
-  rule 'lookup(MapCon(MapItem(A':K, V:K), M:Map), A:K)
-          => 'lookup(M, A)
-       requires '=/=K(A, A')
+  syntax Undef ::= "undef" [klabel('undef)]
 
-  syntax Bool ::= 'equalExp(K, K) [function, klabel('equalExp)]
-  rule 'equalExp('eval(A:K, B:Map), 'eval(C:K, D:Map))
-            => 'andBool('==K(A, C), '==Map(B, D))
-  rule 'equalExp(A:K, B:K) => '==K(A, B) [owise]
+  syntax Exp ::= Sub | Undef
+                 | 'ifelse(Exp, Exp, Exp)  [klabel('ifelse)]
+                 | 'app(Exp, Exp) [klabel('app)]
+                 | 'bin(Op, Exp, Exp)  [klabel('bin)]
+                 | 'unary(Op, Exp)    [klabel('unary)]
+                 | 'fun(Id, Exp)      [klabel('fun)]
+                 | 'continue(Id, Exp) [klabel('continue)]
+                 | 'let(Id, Exp, Exp) [klabel('let)]
+                 | 'trans(Exp, Exp) [klabel('trans)]
 
-  syntax KItem ::= 'dealWith(K) [function, klabel('dealWith)]
-  rule 'dealWith('none(.KList)) => 'undef(.KList)
-  rule 'dealWith('some(A:KItem)) => A
+  syntax Rule ::= "var"        [klabel('var)] | "const" [klabel('const)]
+                | "ifelse"     [klabel('ifelse)]
+                | "apprule"    [klabel('apprule)]
+                | "oprule"     [klabel('oprule)]
+                | "unaryrule"  [klabel('unaryrule)]
+                | "funrule"    [klabel('funrule)]
+                | "letrule"    [klabel('letrule)]
+                | Undef
 
-  syntax KItem ::= 'patMatch(K, Pats) [function, klabel('patMatch)]
-                 | 'patMatchAux(K, Pat, Pats) [function, klabel('patMatchAux)]
-  rule 'patMatch(A:K, .Pats) => 'none(.KList)
-  rule 'patMatch(A:K, 'patCon(X:Pat, Es:Pats))
-         => 'patMatchAux(A, X, Es)
-  rule 'patMatchAux(A:Int, 'pat(A:Int, E:Exp), Ps:Pats)
-         => 'some('result(E, .Map))
-  rule 'patMatchAux(A:Int, 'pat(X:Id, E:Exp), Ps:Pats)
-         => 'some('result(E, MapItem(X, A)))
-  rule 'patMatchAux(A:Float, 'pat(A:Float, E:Exp), Ps:Pats)
-         => 'some('result(E, .Map))
-  rule 'patMatchAux(A:Float, 'pat(X:Id, E:Exp), Ps:Pats)
-         => 'some('result(E, MapItem(X, A)))
-  rule 'patMatchAux(A:K, 'pat(X:Exp, E:Exp), Ps:Pats)
-         => 'patMatch(A, Ps)
+  syntax Exp ::= 'number(Int, Exp) [klabel('number)]
 
-  syntax KItem ::= 'calEval(Exp, Map) [function, klabel('calEval)]
-                 | 'nextEval(Exp) [function, klabel('nextEval)]
-  rule 'nextEval('plus(A:Int, B:Int)) => '+Int(A, B)
-  rule 'nextEval('minus(A:Int, B:Int)) => '-Int(A, B)
-  rule 'nextEval('times(A:Int, B:Int)) => '*Int(A, B)
-  rule 'nextEval('div(A:Int, B:Int)) => '/Int(A, B)
-  rule 'nextEval('mod(A:Int, B:Int)) => '%Int(A, B)
-  rule 'nextEval('dplus(A:Int, B:Int)) => '+Float(A, B)
-  rule 'nextEval('dminus(A:Int, B:Int)) => '-Float(A, B)
-  rule 'nextEval('dtimes(A:Int, B:Int)) => '*Float(A, B)
-  rule 'nextEval('ddiv(A:Int, B:Int)) => '/Float(A, B)
-  rule 'nextEval('less(A:Int, B:Int)) => '<Int(A, B)
-  rule 'nextEval('leq(A:Int, B:Int)) => '<=Int(A, B)
-  rule 'nextEval('greater(A:Int, B:Int)) => '>Int(A, B)
-  rule 'nextEval('geq(A:Int, B:Int)) => '>=Int(A, B)
-  rule 'nextEval('less(A:Float, B:Float)) => '<Float(A, B)
-  rule 'nextEval('leq(A:Float, B:Float)) => '<=Float(A, B)
-  rule 'nextEval('greater(A:Float, B:Float)) => '>Float(A, B)
-  rule 'nextEval('geq(A:Float, B:Float)) => '>=Float(A, B)
-  rule 'nextEval('equal(A:K, B:K)) => '==K(A, B)
-  rule 'nextEval(A:K) => 'undef(.KList) [owise]
+  syntax Id ::= 'genId(Int) [klabel('genId)]
 
-  rule 'calEval(A:Int, M:Map) => A
-  rule 'calEval(A:Float, M:Map) => A
-  rule 'calEval(A:Id, M:Map) => 'dealWith('lookup(M, A))
-  rule 'calEval('plus(A:Exp, B:Exp), M:Map)
-                  => 'nextEval('plus('calEval(A, M), 'calEval(B, M)))
-  rule 'calEval('minus(A:Exp, B:Exp), M:Map)
-                  => 'nextEval('minus('calEval(A, M), 'calEval(B, M)))
-  rule 'calEval('times(A:Exp, B:Exp), M:Map)
-                  => 'nextEval('times('calEval(A, M), 'calEval(B, M)))
-  rule 'calEval('div(A:Exp, B:Exp), M:Map)
-                  => 'nextEval('div('calEval(A, M), 'calEval(B, M)))
-  rule 'calEval('mod(A:Exp, B:Exp), M:Map)
-                  => 'nextEval('mod('calEval(A, M), 'calEval(B, M)))
-  rule 'calEval('dplus(A:Exp, B:Exp), M:Map)
-                  => 'nextEval('dplus('calEval(A, M), 'calEval(B, M)))
-  rule 'calEval('dminus(A:Exp, B:Exp), M:Map)
-                  => 'nextEval('dminus('calEval(A, M), 'calEval(B, M)))
-  rule 'calEval('dtimes(A:Exp, B:Exp), M:Map)
-                  => 'nextEval('dtimes('calEval(A, M), 'calEval(B, M)))
-  rule 'calEval('ddiv(A:Exp, B:Exp), M:Map)
-                  => 'nextEval('ddiv('calEval(A, M), 'calEval(B, M)))
-  rule 'calEval('less(A:Exp, B:Exp), M:Map)
-                  => 'nextEval('less('calEval(A, M), 'calEval(B, M)))
-  rule 'calEval('leq(A:Exp, B:Exp), M:Map)
-                  => 'nextEval('leq('calEval(A, M), 'calEval(B, M)))
-  rule 'calEval('greater(A:Exp, B:Exp), M:Map)
-                  => 'nextEval('greater('calEval(A, M), 'calEval(B, M)))
-  rule 'calEval('geq(A:Exp, B:Exp), M:Map)
-                  => 'nextEval('geq('calEval(A, M), 'calEval(B, M)))
-  rule 'calEval('equal(A:Exp, B:Exp), M:Map)
-                  => 'nextEval('equal('calEval(A, M), 'calEval(B, M)))
+  syntax KItem ::= 'result(Int, Exp) [klabel('result)]
 
-  syntax KItem ::= 'infer(Exp, K, Name) [function, klabel('infer)]
+  syntax Bool ::= 'isGenId(K) [function, klabel('isGenId)]
+  rule 'isGenId('genId(A:Int)) => 'true(.KList)
+  rule 'isGenId(A:K) => 'false(.KList) [owise]
 
-  rule 'infer('eval(A:Int, M:Map), A:Int,'const(.KList)) => 'success(.KList)
-  rule 'infer('eval(A:Int, M:Map), A':Int, X:Name) => 'error("Wrong inference rule name.")
-       requires '=/=K(X, 'const(.KList))
-  rule 'infer('eval(A:Int, M:Map), A':K, 'const(.KList)) => 'error("Wrong inference result.")
-       requires '=/=K(A, A')
+  syntax Set ::= 'minusSet(Set, K) [function, klabel('minusSet)]
+  rule 'minusSet(SetCon(SetItem(A:K), S:Set), A:K) => S
+  rule 'minusSet(S:Set, A:K) => S [owise]
 
-  rule 'infer('eval(A:Float, M:Map), A:Float,'const(.KList)) => 'success(.KList)
-  rule 'infer('eval(A:Float, M:Map), A':Float, X:Name) => 'error("Wrong inference rule name.")
-       requires '=/=K(X, 'const(.KList))
-  rule 'infer('eval(A:Float, M:Map), A':K, 'const(.KList)) => 'error("Wrong inference result.")
-       requires '=/=K(A, A')
+  syntax Set ::= 'getGenIds(Exp) [function, klabel('getGenIds)]
+  rule 'getGenIds('genId(A:Int)) => SetItem(A)
+  rule 'getGenIds(A:Id) => .Set
+       requires 'notBool('isGenId(A))
+  rule 'getGenIds(.Exps) => .Set
+  rule 'getGenIds('listCon(A:Exp, B:Exps)) => SetCon('getGenIds(A), 'getGenIds(B))
+  rule 'getGenIds('ifelse(A:Exp, B:Exp, C:Exp))
+             => SetCon('getGenIds(A), SetCon('getGenIds(B), 'getGenIds(C)))
+  rule 'getGenIds('app(A:Exp, B:Exp))
+             => SetCon('getGenIds(A), 'getGenIds(B))
+  rule 'getGenIds('trans(A:Exp, B:Exp))
+             => SetCon('getGenIds(A), 'getGenIds(B))
+  rule 'getGenIds('bin(O:Op, A:Exp, B:Exp))
+             => SetCon('getGenIds(A), 'getGenIds(B))
+  rule 'getGenIds('unary(O:Op, B:Exp)) => 'getGenIds(B)
+  rule 'getGenIds('fun(A:Id, B:Exp)) => 'minusSet('getGenIds(B), A)
+  rule 'getGenIds('continue(A:Id, B:Exp)) => 'minusSet('getGenIds(B), A)
+  rule 'getGenIds('let(A:Id, B:Exp, C:Exp))
+               => SetCon('getGenIds(B), 'minusSet('getGenIds(C), A))
+  rule 'getGenIds(E:Exp) => .Set [owise]
 
-  rule 'infer('eval(A:Id, M:Map), B:K, 'var(.KList)) => 'success(.KList)
-       requires '==K('lookup(M, A), 'some(B))
-  rule 'infer('eval(A:Id, M:Map), 'undef(.KList), 'var(.KList)) => 'success(.KList)
-       requires '==K('lookup(M, A), 'none(.KList))
-  rule 'infer('eval(A:Id, M:Map), B:K, 'var(.KList)) => 'error("Wrong inference result.")
-       requires 'andBool('==K('lookup(M, A), 'none(.KList)), '=/=K(B, 'undef(.KList)))
-  rule 'infer('eval(A:Id, M:Map), B:K, 'var(.KList)) => 'error("Wrong inference result.")
-       requires '=/=K('lookup(M, A), 'some(B))
-  rule 'infer('eval(A:Id, M:Map), B:K, X:Name) => 'error("Wrong inference rule name.")
-       requires '=/=K(X, 'var(.KList))
+  syntax Int ::= 'maxInt(Int, Set) [function, klabel('maxInt)]
+  rule 'maxInt(A:Int, .Set) => A
+  rule 'maxInt(A:Int, SetCon(SetItem(B:Int), S:Set))
+             => 'maxInt(B, S)
+       requires '>Int(B, A)
+  rule 'maxInt(A:Int, SetCon(SetItem(B:Int), S:Set))
+             => 'maxInt(A, S) [owise]
 
-  rule 'infer('eval('plus(A:Exp, B:Exp), M:Map), X:K, 'plusrule(.KList))
-          => 'success(.KList)
-       requires '==K('calEval('plus(A:Exp, B:Exp), M:Map), X)
-  rule 'infer('eval('plus(A:Exp, B:Exp), M:Map), X:K, 'plusrule(.KList))
-          => 'error("Wrong inference result.")
-       requires '=/=K('calEval('plus(A:Exp, B:Exp), M:Map), X)
-  rule 'infer('eval('plus(A:Exp, B:Exp), M:Map), X:K, Name:K)
-          => 'error("Wrong inference rule name.")
-       requires '=/=K(Name, 'plusrule(.KList))
+  syntax Id ::= 'freshId(Exp) [function, klabel('freshId)]
+              | 'freshIdAux(Int) [function, klabel('freshIdAux)]
+  rule 'freshId(A:Exp) => 'freshIdAux('maxInt('0(.KList), 'getGenIds(A)))
+  rule 'freshIdAux(A:Int) => 'genId('+Int('1(.KList), A))
 
-  rule 'infer('eval('minus(A:Exp, B:Exp), M:Map), X:K, 'minusrule(.KList))
-          => 'success(.KList)
-       requires '==K('calEval('minus(A:Exp, B:Exp), M:Map), X)
-  rule 'infer('eval('minus(A:Exp, B:Exp), M:Map), X:K, 'minusrule(.KList))
-          => 'error("Wrong inference result.")
-       requires '=/=K('calEval('minus(A:Exp, B:Exp), M:Map), X)
-  rule 'infer('eval('minus(A:Exp, B:Exp), M:Map), X:K, Name:K)
-          => 'error("Wrong inference rule name.")
-       requires '=/=K(Name, 'minusrule(.KList))
+  syntax KItem ::= 'applyRule(Rule, Exp, Exp) [function, klabel('applyRule)]
+                 | 'applyRuleIf(Exp, Exp, Exp, Exp, Id) [function, klabel('applyRuleIf)]
+                 | 'applyRuleApp(Exp, Exp, Exp, Id) [function, klabel('applyRuleApp)]
+                 | 'applyRuleAppAux(Exp, Exp, Exp, Id, Id) [function, klabel('applyRuleAppAux)]
+                 | 'applyRuleBin(Op, Exp, Exp, Exp, Id) [function, klabel('applyRuleBin)]
+                 | 'applyRuleBinAux(Op, Exp, Exp, Exp, Id, Id) [function, klabel('applyRuleBinAux)]
+                 | 'applyRuleUnary(Op, Exp, Exp, Id) [function, klabel('applyRuleUnary)]
+                 | 'applyRuleFun(Id, Exp, Exp, Id) [function, klabel('applyRuleFun)]
 
-  rule 'infer('eval('times(A:Exp, B:Exp), M:Map), X:K, 'timesrule(.KList))
-          => 'success(.KList)
-       requires '==K('calEval('times(A:Exp, B:Exp), M:Map), X)
-  rule 'infer('eval('times(A:Exp, B:Exp), M:Map), X:K, 'timesrule(.KList))
-          => 'error("Wrong inference result.")
-       requires '=/=K('calEval('times(A:Exp, B:Exp), M:Map), X)
-  rule 'infer('eval('times(A:Exp, B:Exp), M:Map), X:K, Name:K)
-          => 'error("Wrong inference rule name.")
-       requires '=/=K(Name, 'timesrule(.KList))
+  rule 'applyRule('var(.KList), A:Id, K:Exp) => 'app(K, A)
+  rule 'applyRule('const(.KList), A:Int, K:Exp) => 'app(K, A)
+  rule 'applyRule('const(.KList), A:Float, K:Exp) => 'app(K, A)
+  rule 'applyRule('const(.KList), .Exps, K:Exp) => 'app(K, .Exps)
 
-  rule 'infer('eval('div(A:Exp, B:Exp), M:Map), X:K, 'divrule(.KList))
-          => 'success(.KList)
-       requires '==K('calEval('div(A:Exp, B:Exp), M:Map), X)
-  rule 'infer('eval('div(A:Exp, B:Exp), M:Map), X:K, 'divrule(.KList))
-          => 'error("Wrong inference result.")
-       requires '=/=K('calEval('div(A:Exp, B:Exp), M:Map), X)
-  rule 'infer('eval('div(A:Exp, B:Exp), M:Map), X:K, Name:K)
-          => 'error("Wrong inference rule name.")
-       requires '=/=K(Name, 'divrule(.KList))
+  rule 'applyRule('ifelse(.KList), 'ifelse(E1:Exp, E2:Exp, E3:Exp), K:Exp)
+            => 'applyRuleIf(E1, E2, E3, K,
+                'freshId('trans('ifelse(E1:Exp, E2:Exp, E3:Exp), K)))
+  rule 'applyRuleIf(E1:Exp, E2:Exp, E3:Exp, K:Exp, A:Id)
+         => 'trans(E1, 'fun(A, 'ifelse(A, 'trans(E2, K), 'trans(E3, K))))
 
-  rule 'infer('eval('mod(A:Exp, B:Exp), M:Map), X:K, 'modrule(.KList))
-          => 'success(.KList)
-       requires '==K('calEval('mod(A:Exp, B:Exp), M:Map), X)
-  rule 'infer('eval('mod(A:Exp, B:Exp), M:Map), X:K, 'modrule(.KList))
-          => 'error("Wrong inference result.")
-       requires '=/=K('calEval('mod(A:Exp, B:Exp), M:Map), X)
-  rule 'infer('eval('mod(A:Exp, B:Exp), M:Map), X:K, Name:K)
-          => 'error("Wrong inference rule name.")
-       requires '=/=K(Name, 'modrule(.KList))
+  rule 'applyRule('ifelse(.KList), 'app(E1:Exp, E2:Exp), K:Exp)
+            => 'applyRuleApp(E1, E2, K, 'freshId(K))
+  rule 'applyRuleApp(E1:Exp, E2:Exp, K:Exp, A:Id)
+         => 'applyRuleAppAux(E1, E2, K, A, 'freshId('trans('app(A, E1), K)))
+  rule 'applyRuleAppAux(E1:Exp, E2:Exp, K:Exp, A:Id, B:Id)
+          => 'trans(E2, 'fun(B, 'trans(E1, 'fun(A, 'app(A, 'app(B,K))))))
 
-  rule 'infer('eval('dplus(A:Exp, B:Exp), M:Map), X:K, 'dplusrule(.KList))
-          => 'success(.KList)
-       requires '==K('calEval('dplus(A:Exp, B:Exp), M:Map), X)
-  rule 'infer('eval('dplus(A:Exp, B:Exp), M:Map), X:K, 'dplusrule(.KList))
-          => 'error("Wrong inference result.")
-       requires '=/=K('calEval('dplus(A:Exp, B:Exp), M:Map), X)
-  rule 'infer('eval('dplus(A:Exp, B:Exp), M:Map), X:K, Name:K)
-          => 'error("Wrong inference rule name.")
-       requires '=/=K(Name, 'dplusrule(.KList))
+  rule 'applyRule('oprule(.KList), 'bin(A:Op, E1:Exp, E2:Exp), K:Exp)
+          => 'applyRuleBin(A, E1, E2, K, 'freshId(K))
+  rule 'applyRuleBin(A:Op, E1:Exp, E2:Exp, K:Exp, B:Id)
+         => 'applyRuleBinAux(A:Op, E1, E2, K, B, 'freshId('trans('app(B, E1), K)))
+  rule 'applyRuleBinAux(A:Op, E1:Exp, E2:Exp, K:Exp, B:Id, C:Id)
+          => 'trans(E2, 'fun(C, 'trans(E1, 'fun(B, 'app(K, 'bin(A:Op, B, C))))))
 
-  rule 'infer('eval('dminus(A:Exp, B:Exp), M:Map), X:K, 'dminusrule(.KList))
-          => 'success(.KList)
-       requires '==K('calEval('dminus(A:Exp, B:Exp), M:Map), X)
-  rule 'infer('eval('dminus(A:Exp, B:Exp), M:Map), X:K, 'dminusrule(.KList))
-          => 'error("Wrong inference result.")
-       requires '=/=K('calEval('dminus(A:Exp, B:Exp), M:Map), X)
-  rule 'infer('eval('dminus(A:Exp, B:Exp), M:Map), X:K, Name:K)
-          => 'error("Wrong inference rule name.")
-       requires '=/=K(Name, 'dminusrule(.KList))
+  rule 'applyRule('unaryrule(.KList), 'unary(A:Op, E1:Exp), K:Exp)
+          => 'applyRuleUnary(A, E1, K, 'freshId(K))
+  rule 'applyRuleUnary(A:Op, E:Exp, K:Exp, X:Id)
+          => 'trans(E, 'fun(X, 'app(K, 'unary(A, X))))
 
-  rule 'infer('eval('dtimes(A:Exp, B:Exp), M:Map), X:K, 'dtimesrule(.KList))
-          => 'success(.KList)
-       requires '==K('calEval('dtimes(A:Exp, B:Exp), M:Map), X)
-  rule 'infer('eval('dtimes(A:Exp, B:Exp), M:Map), X:K, 'dtimesrule(.KList))
-          => 'error("Wrong inference result.")
-       requires '=/=K('calEval('dtimes(A:Exp, B:Exp), M:Map), X)
-  rule 'infer('eval('dtimes(A:Exp, B:Exp), M:Map), X:K, Name:K)
-          => 'error("Wrong inference rule name.")
-       requires '=/=K(Name, 'dtimesrule(.KList))
+  rule 'applyRule('funrule(.KList), 'fun(X:Id, E:Exp) , K:Exp)
+          => 'applyRuleFun(X, E, K, 'freshId('trans('fun(X:Id, E:Exp), K)))
+  rule 'applyRuleFun(X:Id, E:Exp, K:Exp, A:Id)
+          => 'app(K, 'fun(X, 'fun(A, 'trans(E, K))))
+  rule 'applyRule('letrule(.KList), 'let(X:Id, E1:Exp, E2:Exp), K:Exp)
+           => 'trans(E1, 'fun(X, 'trans(E2, K)))
+  rule 'applyRule('undef(.KList), B:Exp, C:Exp) => 'undef(.KList)
+  rule 'applyRule(A:Rule, B:Exp, C:Exp) => 'none(.KList) [owise]
 
-  rule 'infer('eval('ddiv(A:Exp, B:Exp), M:Map), X:K, 'ddivrule(.KList))
-          => 'success(.KList)
-       requires '==K('calEval('ddiv(A:Exp, B:Exp), M:Map), X)
-  rule 'infer('eval('ddiv(A:Exp, B:Exp), M:Map), X:K, 'ddivrule(.KList))
-          => 'error("Wrong inference result.")
-       requires '=/=K('calEval('ddiv(A:Exp, B:Exp), M:Map), X)
-  rule 'infer('eval('ddiv(A:Exp, B:Exp), M:Map), X:K, Name:K)
-          => 'error("Wrong inference rule name.")
-       requires '=/=K(Name, 'ddivrule(.KList))
+  syntax KItem ::= 'giveNum(Int, Exp) [function, klabel('giveNum)]
+               | 'giveNumExps(K, Exps) [function, klabel('giveNumExps)]
+               | 'giveNumExpsAux(Exp, K) [function, klabel('giveNumExpsAux)]
+               | 'giveNumIf(K, Exp, Exp) [function, klabel('giveNumIf)]
+               | 'giveNumIfAux(Exp, K, Exp) [function, klabel('giveNumIfAux)]
+               | 'giveNumIfNext(Exp, Exp, K) [function, klabel('giveNumIfNext)]
+               | 'giveNumApp(K, Exp) [function, klabel('giveNumApp)]
+               | 'giveNumAppAux(Exp, K) [function, klabel('giveNumAppAux)]
+               | 'giveNumBin(Op, K, Exp) [function, klabel('giveNumBin)]
+               | 'giveNumBinAux(Op, Exp, K) [function, klabel('giveNumBinAux)]
+               | 'giveNumUnary(Op, K) [function, klabel('giveNumUnary)]
+               | 'giveNumContinue(Id, K) [function, klabel('giveNumContinue)]
+               | 'giveNumFun(Id, K) [function, klabel('giveNumFun)]
+               | 'giveNumLet(Id, K, Exp) [function, klabel('giveNumLet)]
+               | 'giveNumLetAux(Id, Exp, K) [function, klabel('giveNumLetAux)]
+               | 'giveNumTrans(Int, K, Exp) [function, klabel('giveNumTrans)]
+               | 'giveNumTransAux(Int, Exp, K) [function, klabel('giveNumTransAux)]
 
-  rule 'infer('eval('equal(A:Exp, B:Exp), M:Map), X:K, 'equalrule(.KList))
-          => 'success(.KList)
-       requires '==K('calEval('equal(A:Exp, B:Exp), M:Map), X)
-  rule 'infer('eval('equal(A:Exp, B:Exp), M:Map), X:K, 'equalrule(.KList))
-          => 'error("Wrong inference result.")
-       requires '=/=K('calEval('equal(A:Exp, B:Exp), M:Map), X)
-  rule 'infer('eval('equal(A:Exp, B:Exp), M:Map), X:K, Name:K)
-          => 'error("Wrong inference rule name.")
-       requires '=/=K(Name, 'equalrule(.KList))
+  rule 'giveNum(A:Int, B:Undef) => B
+  rule 'giveNum(A:Int, B:Atomic) => 'result(A, B)
+  rule 'giveNum(A:Int, .Exps) => 'result(A, .Exps)
+  rule 'giveNum(A:Int, 'listCon(B:Exp, C:Exps))
+          => 'giveNumExps('giveNum(A, B), C)
+  rule 'giveNumExps('result(A:Int, B:Exp), C:Exps)
+          => 'giveNumExpsAux(B, 'giveNum(A, C))
+  rule 'giveNumExpsAux(B:Exp, 'result(A:Int, C:Exps))
+             => 'result(A, 'listCon(B, C))
 
-  rule 'infer('eval('less(A:Exp, B:Exp), M:Map), X:K, 'lessrule(.KList))
-          => 'success(.KList)
-       requires '==K('calEval('less(A:Exp, B:Exp), M:Map), X)
-  rule 'infer('eval('less(A:Exp, B:Exp), M:Map), X:K, 'lessrule(.KList))
-          => 'error("Wrong inference result.")
-       requires '=/=K('calEval('less(A:Exp, B:Exp), M:Map), X)
-  rule 'infer('eval('less(A:Exp, B:Exp), M:Map), X:K, Name:K)
-          => 'error("Wrong inference rule name.")
-       requires '=/=K(Name, 'lessrule(.KList))
+  rule 'giveNum(A:Int, 'ifelse(B:Exp, E1:Exp, E2:Exp))
+          => 'giveNumIf('giveNum(A, B), E1, E2)
+  rule 'giveNumIf('result(A:Int, B:Exp), E1:Exp, E2:Exp)
+          => 'giveNumIfAux(B, 'giveNum(A, E1), E2)
+  rule 'giveNumIfAux(B:Exp, 'result(A:Int, E1:Exp), E2:Exp)
+          => 'giveNumIfNext(B, E1, 'giveNum(A, E2))
+  rule 'giveNumIfNext(B:Exp, E1:Exp, 'result(A:Int, E2:Exp))
+          => 'result(A, 'ifelse(B, E1, E2))
 
-  rule 'infer('eval('leq(A:Exp, B:Exp), M:Map), X:K, 'leqrule(.KList))
-          => 'success(.KList)
-       requires '==K('calEval('leq(A:Exp, B:Exp), M:Map), X)
-  rule 'infer('eval('leq(A:Exp, B:Exp), M:Map), X:K, 'leqrule(.KList))
-          => 'error("Wrong inference result.")
-       requires '=/=K('calEval('leq(A:Exp, B:Exp), M:Map), X)
-  rule 'infer('eval('leq(A:Exp, B:Exp), M:Map), X:K, Name:K)
-          => 'error("Wrong inference rule name.")
-       requires '=/=K(Name, 'leqrule(.KList))
+  rule 'giveNum(A:Int, 'app(E1:Exp, E2:Exp))
+          => 'giveNumApp('giveNum(A, E1), E2)
+  rule 'giveNumApp('result(A:Int, E1:Exp),E2:Exp)
+          => 'giveNumAppAux(E1, 'giveNum(A, E2))
+  rule 'giveNumAppAux(E1:Exp, 'result(A:Int, E2:Exp))
+          => 'result(A, 'app(E1, E2))
 
-  rule 'infer('eval('greater(A:Exp, B:Exp), M:Map), X:K, 'greaterrule(.KList))
-          => 'success(.KList)
-       requires '==K('calEval('greater(A:Exp, B:Exp), M:Map), X)
-  rule 'infer('eval('greater(A:Exp, B:Exp), M:Map), X:K, 'greaterrule(.KList))
-          => 'error("Wrong inference result.")
-       requires '=/=K('calEval('greater(A:Exp, B:Exp), M:Map), X)
-  rule 'infer('eval('greater(A:Exp, B:Exp), M:Map), X:K, Name:K)
-          => 'error("Wrong inference rule name.")
-       requires '=/=K(Name, 'greaterrule(.KList))
+  rule 'giveNum(A:Int, 'bin(X:Op, E1:Exp, E2:Exp))
+          => 'giveNumBin(X, 'giveNum(A, E1), E2)
+  rule 'giveNumBin(X:Op, 'result(A:Int, E1:Exp), E2:Exp)
+         => 'giveNumBinAux(X, E1, 'giveNum(A, E2))
+  rule 'giveNumBinAux(X:Op, E1:Exp, 'result(A:Int, E2:Exp))
+         => 'result(A, 'bin(X, E1, E2))
 
-  rule 'infer('eval('geq(A:Exp, B:Exp), M:Map), X:K, 'geqrule(.KList))
-          => 'success(.KList)
-       requires '==K('calEval('geq(A:Exp, B:Exp), M:Map), X)
-  rule 'infer('eval('geq(A:Exp, B:Exp), M:Map), X:K, 'geqrule(.KList))
-          => 'error("Wrong inference result.")
-       requires '=/=K('calEval('geq(A:Exp, B:Exp), M:Map), X)
-  rule 'infer('eval('geq(A:Exp, B:Exp), M:Map), X:K, Name:K)
-          => 'error("Wrong inference rule name.")
-       requires '=/=K(Name, 'geqrule(.KList))
+  rule 'giveNum(A:Int, 'unary(X:Op, E1:Exp))
+          => 'giveNumUnary(X, 'giveNum(A, E1))
+  rule 'giveNumUnary(X:Op, 'result(A:Int, E1:Exp))
+          => 'result(A, 'unary(X, E1))
 
-  rule 'infer('eval('appop(A:Exp, B:Exp), M:Map), X:K, 'appfirst(.KList))
-          => 'success(.KList)
-       requires 'equalExp('app('calEval(A, M:Map), 'calEval(B, M)), X)
-  rule 'infer('eval('appop(A:Exp, B:Exp), M:Map), X:K, 'appfirst(.KList))
-          => 'error("Wrong inference result.")
-       requires 'notBool('equalExp('app('calEval(A, M:Map), 'calEval(B, M)), X))
-  rule 'infer('eval('appop(A:Exp, B:Exp), M:Map), X:K, Name:K)
-          => 'error("Wrong inference rule name.")
-       requires '=/=K(Name, 'appfirst(.KList))
+  rule 'giveNum(A:Int, 'fun(X:Id, E:Exp))
+           => 'giveNumFun(X, 'giveNum(A, E))
+  rule 'giveNumFun(X:Id, 'result(A:Int, E:Exp))
+          => 'result(A, 'fun(X, E))
+  rule 'giveNum(A:Int, 'continue(X:Id, E:Exp))
+           => 'giveNumContinue(X, 'giveNum(A, E))
+  rule 'giveNumContinue(X:Id, 'result(A:Int, E:Exp))
+          => 'result(A, 'continue(X, E))
 
-  rule 'infer('app('closure(A:Id, E:Exp, M1:Map), B:Exp), X:K, 'appfinal(.KList))
-          => 'success(.KList)
-       requires 'equalExp('calEval(E, 'mapUpdate(M1, A, B)), X)
-  rule 'infer('app('closure(A:Id, E:Exp, M1:Map), B:Exp), X:K, 'appfinal(.KList))
-          => 'error("Wrong inference result.")
-       requires 'notBool('equalExp('calEval(E, 'mapUpdate(M1, A, B)), X))
-  rule 'infer('app('closure(A:Id, E:Exp, M1:Map), B:Exp), X:K, Name:K)
-          => 'error("Wrong inference rule name.")
-       requires '=/=K(Name, 'appfinal(.KList))
+  rule 'giveNum(A:Int, 'let(X:Id, E1:Exp, E2:Exp))
+         => 'giveNumLet(X, 'giveNum(A, E1), E2)
+  rule 'giveNumLet(X:Id, 'result(A:Int, E1:Exp), E2:Exp)
+          => 'giveNumLetAux(X, E1, 'giveNum(A,E2))
+  rule 'giveNumLetAux(X:Id, E1:Exp, 'result(A:Int, E2:Exp))
+         => 'result(A, 'let(X, E1, E2))
 
-  rule 'infer('eval('if(A:Exp, B:Exp, C:Exp), M:Exp), X:K, 'ifrule(.KList))
-          => 'success(.KList)
-       requires 'andBool('==K('calEval(A, M), 'true(.KList)),
-                  'equalExp('eval(B, M), X))
-  rule 'infer('eval('if(A:Exp, B:Exp, C:Exp), M:Exp), X:K, 'ifrule(.KList))
-          => 'error("Wrong inference result.")
-       requires 'andBool('==K('calEval(A, M), 'true(.KList)),
-                  'notBool('equalExp('eval(B, M), X)))
-  rule 'infer('eval('if(A:Exp, B:Exp, C:Exp), M:Exp), X:K, 'ifrule(.KList))
-          => 'success(.KList)
-       requires 'andBool('==K('calEval(A, M), 'false(.KList)),
-                  'equalExp('eval(C, M), X))
-  rule 'infer('eval('if(A:Exp, B:Exp, C:Exp), M:Exp), X:K, 'ifrule(.KList))
-          => 'error("Wrong inference result.")
-       requires 'andBool('==K('calEval(A, M), 'false(.KList)),
-                  'notBool('equalExp('eval(C, M), X)))
-  rule 'infer('eval('if(A:Exp, B:Exp, C:Exp), M:Exp), X:K, Name:K)
-          => 'error("Wrong inference rule name.")
-       requires '=/=K(Name, 'ifrule(.KList))
+  rule 'giveNum(A:Int, 'trans(E1:Exp, E2:Exp))
+         => 'giveNumTrans(A, 'giveNum('+Int(A, '1(.KList)), E1), E2)
+  rule 'giveNumTrans(A:Int, 'result(B:Int, E1:Exp), E2:Exp)
+          => 'giveNumTransAux(A, E1, 'giveNum(B,E2))
+  rule 'giveNumTransAux(A:Int, E1:Exp, 'result(B:Int, E2:Exp))
+         => 'result(B, 'number(A, 'trans(E1, E2)))
 
-  rule 'infer('eval('fun(A:Id, B:Exp), M:Exp), X:K, 'funrule(.KList))
-          => 'success(.KList)
-       requires 'equalExp('calEval('fun(A, B), M), X)
-  rule 'infer('eval('fun(A:Id, B:Exp), M:Exp), X:K, 'funrule(.KList))
-          => 'error("Wrong inference result in fun rule.")
-       requires 'notBool('equalExp('calEval('fun(A, B), M), X))
-  rule 'infer('eval('fun(A:Id, B:Exp), M:Exp), X:K, Name:K)
-          => 'error("Wrong inference rule name.")
-       requires '=/=K(Name, 'funrule(.KList))
+  syntax Exp ::= 'removeNum(Exp) [function, klabel('removeNum)]
+  rule 'removeNum(A:Atomic) => A
+  rule 'removeNum(.Exps) => .Exps
+  rule 'removeNum('listCon(A:Exp, B:Exps))
+               => 'listCon('removeNum(A), 'removeNum(B))
+  rule 'removeNum('undef(.KList)) => 'undef(.KList)
+  rule 'removeNum('ifelse(E1:Exp, E2:Exp, E3:Exp))
+          => 'ifelse('removeNum(E1), 'removeNum(E2), 'removeNum(E3))
+  rule 'removeNum('app(E1:Exp, E2:Exp))
+         => 'app('removeNum(E1), 'removeNum(E2))
+  rule 'removeNum('bin(A:Op, E1:Exp, E2:Exp))
+         => 'bin(A, 'removeNum(E1), 'removeNum(E2))
+  rule 'removeNum('unary(A:Op, E1:Exp))
+         => 'unary(A, 'removeNum(E1))
+  rule 'removeNum('fun(A:Id, E1:Exp))
+         => 'fun(A, 'removeNum(E1))
+  rule 'removeNum('continue(A:Id, E1:Exp))
+         => 'continue(A, 'removeNum(E1))
+  rule 'removeNum('let(A:Id, E1:Exp, E2:Exp))
+         => 'let(A, 'removeNum(E1), 'removeNum(E2))
+  rule 'removeNum('trans(E1:Exp, E2:Exp))
+         => 'trans('removeNum(E1), 'removeNum(E2))
+  rule 'removeNum('number(A:Int, E2:Exp)) => E2
 
-  rule 'infer('eval('let(A:Id, B:Exp, C:Exp), M:Exp), X:K, 'letrule(.KList))
-          => 'success(.KList)
-       requires 'equalExp('eval(C, 'mapUpdate(M, A, 'calEval(B, M))), X)
-  rule 'infer('eval('let(A:Id, B:Exp, C:Exp), M:Exp), X:K, 'letrule(.KList))
-          => 'error("Wrong inference result in let rule.")
-       requires 'notBool('equalExp('eval(C, 'mapUpdate(M, A, 'calEval(B, M))), X))
-  rule 'infer('eval('let(A:Id, B:Exp, C:Exp), M:Exp), X:K, Name:K)
-          => 'error("Wrong inference rule name.")
-       requires '=/=K(Name, 'letrule(.KList))
+  syntax List ::= 'removeNums(List) [function, klabel('removeNums)]
+  rule 'removeNums(.List) => .List
+  rule 'removeNums(ListCon(ListItem(A:K), L:List))
+            => ListCon(ListItem('removeNum(A)), 'removeNums(L))
 
+  syntax Map ::= 'applyRules(Rule, Exp) [function, klabel('applyRules)]
+  rule 'applyRules(A:Rule, B:Sub) => .Map
+  rule 'applyRules(A:Rule, B:Undef) => .Map
+  rule 'applyRules(A:Rule, 'ifelse(E1:Exp, E2:Exp, E3:Exp))
+            => MapCon('applyRules(A, E1), MapCon('applyRules(A, E2), 'applyRules(A, E3)))
+  rule 'applyRules(A:Rule, 'app(E1:Exp, E2:Exp))
+           => MapCon('applyRules(A, E1), 'applyRules(A, E2))
+  rule 'applyRules(A:Rule, 'bin(B:Op, E1:Exp, E2:Exp))
+           => MapCon('applyRules(A, E1), 'applyRules(A, E2))
+  rule 'applyRules(A:Rule, 'unary(B:Op, E1:Exp))
+           => 'applyRules(A, E1)
+  rule 'applyRules(A:Rule, 'fun(B:Id, E1:Exp))
+           => 'applyRules(A, E1)
+  rule 'applyRules(A:Rule, 'continue(B:Id, E1:Exp))
+           => 'applyRules(A, E1)
+  rule 'applyRules(A:Rule, 'let(B:Id, E1:Exp, E2:Exp))
+           => MapCon('applyRules(A, E1), 'applyRules(A, E2))
+  rule 'applyRules(A:Rule, 'number(X:Int, 'trans(E1:Exp, E2:Exp)))
+           => MapCon(MapItem(X, 'applyRule(A, E1, E2)),
+               MapCon('applyRules(A, E1), 'applyRules(A, E2)))
+       requires '=/=K('applyRule(A, E1, E2), 'none(.KList))
+  rule 'applyRules(A:Rule, 'number(X:Int, 'trans(E1:Exp, E2:Exp)))
+             => MapCon('applyRules(A, E1), 'applyRules(A, E2))
+       requires '==K('applyRule(A, E1, E2), 'none(.KList))
 
-  rule 'infer('eval('match(E:Exp, Ps:Pats), M:Map), X:K, 'matchrule(.KList))
-          => 'success(.KList)
+  syntax Exp ::= 'subst(Exp, Int, Exp) [function, klabel('subst)]
+  rule 'subst(E1:Sub, A:Int, E2:Exp) => E1
+  rule 'subst(E1:Undef, A:Int, E2:Exp) => E1
+  rule 'subst('ifelse(E1:Exp, E2:Exp, E3:Exp), A:Int, D:Exp)
+             => 'ifelse('subst(E1, A, D), 'subst(E2, A, D), 'subst(E3, A, D))
+  rule 'subst('app(E1:Exp, E2:Exp), A:Int, D:Exp)
+            => 'app('subst(E1, A, D), 'subst(E2, A, D))
+  rule 'subst('bin(X:Op, E1:Exp, E2:Exp), A:Int, D:Exp)
+            => 'bin(X, 'subst(E1, A, D), 'subst(E2, A, D))
+  rule 'subst('unary(X:Op, E1:Exp), A:Int, D:Exp)
+            => 'unary(X, 'subst(E1, A, D))
+  rule 'subst('fun(X:Id, E1:Exp), A:Int, D:Exp)
+            => 'fun(X, 'subst(E1, A, D))
+  rule 'subst('continue(X:Id, E1:Exp), A:Int, D:Exp)
+            => 'continue(X, 'subst(E1, A, D))
+  rule 'subst('let(X:Id, E1:Exp, E2:Exp), A:Int, D:Exp)
+            => 'let(X, 'subst(E1, A, D), 'subst(E2, A, D))
+  rule 'subst('trans(E1:Exp, E2:Exp), A:Int, D:Exp)
+            => 'trans('subst(E1, A, D), 'subst(E2, A, D))
+  rule 'subst('number(A:Int, E:Exp), A:Int, D:Exp) => D
+  rule 'subst('number(A':Int, E:Exp), A:Int, D:Exp)
+                => 'number(A', 'subst(E, A, D))
+        requires '=/=K(A, A')
 
+  syntax List ::= 'substAll(Exp, Map) [function, klabel('substAll)]
+  rule 'substAll(E:Exp, .Map) => .List
+  rule 'substAll(E:Exp, MapCon(MapItem(A:Int, B:Exp), M:Map))
+            => ListCon(ListItem('subst(E, A, B)), 'substAll(E, M))
+
+  syntax Exp ::= 'alphaSubst(Exp, Id, Id) [function, klabel('alphaSubst)]
+  rule 'alphaSubst(A:Id, A:Id, B:Id) => B
+  rule 'alphaSubst(A:Id, A':Id, B:Id) => A
+        requires '=/=K(A, A')
+  rule 'alphaSubst(A:Int, A':Id, B:Id) => A
+  rule 'alphaSubst(A:Float, A':Id, B:Id) => A
+  rule 'alphaSubst(.Exps, A':Id, B:Id) => .Exps
+  rule 'alphaSubst('listCon(A:Exp, C:Exps), A':Id, B:Id)
+           => 'listCon('alphaSubst(A, A', B), 'alphaSubst(C, A', B))
+  rule 'alphaSubst('undef(.KList), A:Id, B:Id) => 'undef(.KList)
+  rule 'alphaSubst('ifelse(E1:Exp, E2:Exp, E3:Exp), A:Id, B:Id)
+              => 'ifelse('alphaSubst(E1,A, B),
+                'alphaSubst(E2, A, B), 'alphaSubst(E3, A, B))
+  rule 'alphaSubst('app(E1:Exp, E2:Exp), A:Id, B:Id)
+           => 'app('alphaSubst(E1, A, B), 'alphaSubst(E2, A, B))
+  rule 'alphaSubst('bin(X:Op, E1:Exp, E2:Exp), A:Id, B:Id)
+           => 'bin(X, 'alphaSubst(E1, A, B), 'alphaSubst(E2, A, B))
+  rule 'alphaSubst('unary(X:Op, E1:Exp), A:Id, B:Id)
+           => 'unary(X, 'alphaSubst(E1, A, B))
+  rule 'alphaSubst('fun(A:Id, E1:Exp), A:Id, B:Id) => 'fun(A, E1)
+  rule 'alphaSubst('fun(A':Id, E1:Exp), A:Id, B:Id)
+            => 'fun(A', 'alphaSubst(E1, A, B))
+        requires '=/=K(A, A')
+  rule 'alphaSubst('continue(A:Id, E1:Exp), A:Id, B:Id) => 'continue(A, E1)
+  rule 'alphaSubst('continue(A':Id, E1:Exp), A:Id, B:Id)
+            => 'continue(A', 'alphaSubst(E1, A, B))
+        requires '=/=K(A, A')
+
+  rule 'alphaSubst('let(A:Id, E1:Exp, E2:Exp), A:Id, B:Id)
+            => 'let(A, 'alphaSubst(E1, A, B), E2)
+  rule 'alphaSubst('let(A':Id, E1:Exp, E2:Exp), A:Id, B:Id)
+            => 'let(A', 'alphaSubst(E1, A, B), 'alphaSubst(E2, A, B))
+        requires '=/=K(A, A')
+  rule 'alphaSubst('trans(E1:Exp, E2:Exp), A:Id, B:Id)
+            => 'trans('alphaSubst(E1, A, B), 'alphaSubst(E2, A, B))
+
+  syntax Bool ::= 'equalExp(Exp, Exp) [function, klabel('equalExp)]
+  rule 'equalExp(A:Sub, A) => 'true(.KList)
+  rule 'equalExp(A:Undef, A) => 'true(.KList)
+  rule 'equalExp('ifelse(E1:Exp, E2:Exp, E3:Exp), 'ifelse(D1:Exp,D2:Exp, D3:Exp))
+          => 'andBool('equalExp(E1, D1), 'andBool('equalExp(E2, D2), 'equalExp(E3, D3)))
+  rule 'equalExp('app(E1:Exp, E2:Exp), 'app(D1:Exp,D2:Exp))
+          => 'andBool('equalExp(E1, D1), 'equalExp(E2, D2))
+  rule 'equalExp('bin(A:Op, E1:Exp, E2:Exp), 'bin(A:Op, D1:Exp,D2:Exp))
+          => 'andBool('equalExp(E1, D1), 'equalExp(E2, D2))
+  rule 'equalExp('unary(A:Op, E1:Exp), 'unary(A:Op, D1:Exp))
+          => 'equalExp(E1, D1)
+  rule 'equalExp('trans(E1:Exp, E2:Exp), 'trans(D1:Exp, D2:Exp))
+          => 'andBool('equalExp(E1, D1), 'equalExp(E2, D2))
+  rule 'equalExp('fun(X:Id, E1:Exp), 'fun(X:Id, D1:Exp))
+          => 'equalExp(E1, D1)
+  rule 'equalExp('fun(X:Id, E1:Exp), 'fun(Y:Id, D1:Exp))
+          => 'equalExp('alphaSubst(E1, X, Y), D1)
+       requires '=/=K(X, Y)
+  rule 'equalExp('continue(X:Id, E1:Exp), 'continue(X:Id, D1:Exp))
+          => 'equalExp(E1, D1)
+  rule 'equalExp('continue(X:Id, E1:Exp), 'continue(Y:Id, D1:Exp))
+          => 'equalExp('alphaSubst(E1, X, Y), D1)
+       requires '=/=K(X, Y)
+  rule 'equalExp('let(X:Id, E1:Exp, E2:Exp), 'let(X:Id, D1:Exp, D2:Exp))
+          => 'andBool('equalExp(E1, D1), 'equalExp(E2, D2))
+  rule 'equalExp('let(X:Id, E1:Exp, E2:Exp), 'let(Y:Id, D1:Exp, D2:Exp))
+          => 'andBool('equalExp(E1, D1), 'equalExp('alphaSubst(E2, X, Y), D2))
+       requires '=/=K(X, Y)
+
+  syntax Bool ::= 'equalExps(Exp, List) [function, klabel('equalExps)]
+  rule 'equalExps(E:Exp, .List) => 'false(.KList)
+  rule 'equalExps(E:Exp, ListCon(ListItem(A:K), L:List))
+            => 'orBool('equalExp(E, A), 'equalExps(E, L))
+
+  syntax KItem ::= 'stepEval(Exp, Exp, Rule) [function, klabel('stepEval)]
+                 | 'stepEvalAux(Exp, Exp, Exp, Rule) [function, klabel('stepEvalAux)]
+                 | 'stepEvalAux1(Map, Exp, Exp) [function, klabel('stepEvalAux1)]
+                 | 'stepEvalAux2(List, Exp) [function, klabel('stepEvalAux2)]
+  rule 'stepEval(E:Exp, D:Exp, R:Rule)
+         => 'stepEvalAux('giveNum('0(.KList), E), E, D, R)
+  rule 'stepEvalAux(E:Exp, E:Exp, D:Exp, R:Rule) => 'error("Nothing can be transformed.")
+  rule 'stepEvalAux(E':Exp, E:Exp, D:Exp, R:Rule)
+         => 'stepEvalAux1('applyRules(R, E'),E', D) [owise]
+  rule 'stepEvalAux1(.Map, E:Exp, D:Exp) => 'error("The input rule name is incorrect.")
+  rule 'stepEvalAux1(M:Map, E:Exp, D:Exp) => 'stepEvalAux2('removeNums('substAll(E, M)),D) [owise]
+  rule 'stepEvalAux2(L:List, D:Exp) => 'success(.KList)
+        requires 'equalExps(D, L)
+  rule 'stepEvalAux2(L:List, D:Exp)
+                => 'error("Student wrongly transforms the CPS according to the rule.") [owise]
+
+  syntax Term ::= 'pair(Exp, Rule) [klabel('pair)]
+  syntax KItem ::= 'eval(Int, Exp, List) [function, klabel('eval)]
+                 | 'evalAux(Int, K, Exp, List) [function, klabel('evalAux)]
+                 | 'output(Int, K) [klabel('output)]
+  rule 'eval(I:Int, E:Exp, .List) => 'output(I, 'success(.KList))
+  rule 'eval(I:Int, E:Exp, ListCon(ListItem('pair(E1:Exp, R:Rule)), L:List))
+               => 'evalAux(I, 'stepEval(E, E1, R), E, L)
+  rule 'evalAux(I:Int, 'success(.KList), E:Exp, L:List) => 'eval('+Int(I, '1(.KList)), E, L) 
+  rule 'evalAux(I:Int, 'error(S:String), E:Exp, L:List)
+                  => 'error('+String(S, '+String(" at point: ", 'intToString(I))))
 
 
 

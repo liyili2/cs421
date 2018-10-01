@@ -208,9 +208,9 @@ let rec charsToStringInSubstList l = match l with [] -> []
 let rec charsToStringInSubstListList l = match l with [] -> []
        | (a::al) -> (charsToStringInSubstList a)::(charsToStringInSubstListList al);;
 
-let lexsee () = (get_all_tokens (combineString (read_file "evalapp.k")));;
+let lexsee () = (get_all_tokens (combineString (read_file "cspapp.k")));;
 
-let interpreta () = (Parser.main Lexer.token (Lexing.from_string (combineString (read_file "evalapp.k"))));;
+let interpreta () = (Parser.main Lexer.token (Lexing.from_string (combineString (read_file "cspapp.k"))));;
 
 let allEqual = {equal = (=)};;
 
