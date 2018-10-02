@@ -1,10 +1,14 @@
 #load "k.cmo";;
 #load "lexer.cmo";;
 #load "parser.cmo";;
+#load "cpsLexer.cmo";;
+#load "cpsParser.cmo";;
 open K;;
 open K;;
 open Parser;;
 open Lexer;;
+open CpsLexer;;
+open CpsParser;;
 
 let save file string =
      let channel = open_out_gen [Open_wronly; Open_append; Open_creat; Open_text] 0o666 file in
@@ -121,7 +125,12 @@ let charsToStringInLabel a =
     | EqualMap -> "'EqualMap" | StringCon -> "'StringCon"
     | IntToString -> "'IntToString"
     | LessInt -> "'<Int"
-    | LessEqualInt -> "'<=Int";;
+    | LessEqualInt -> "'<=Int"
+    | DivInt -> "/Int" | ModInt -> "%Int" | PlusFloat -> "+Float"
+    | MinusFloat -> "-Float" | TimesFloat -> "*Float"
+    | DivFloat -> "/Float" | GtInt -> ">Int" | GeqInt -> ">=Int"
+    | LessFloat -> "<Float" | LessEqualFloat -> "<=Float"
+    | GtFloat -> ">Float" | GeqFloat -> ">=Float";;
 
 let rec charsToStringInSUBigKWithBag a =
      match a with SUK al -> "SUK" ^ " [" ^ (charsToStringInSUKFactorList al) ^ "]"
@@ -227,6 +236,34 @@ let database = match collectDatabase (interpreta()) with None -> [] | Some a -> 
 let allRules = match (tupleToRuleInParsed allEqual allEqual allEqual (interpreta())) with None -> []
                     | Some a -> a;;
 
-let programState = match genProgramState allEqual allEqual allEqual (interpreta()) database (subsortGraph allEqual (interpreta())) with None -> []
-                   | Some a -> a;;
+let readInProgram s = (Parser.main Lexer.token (Lexing.from_string (CpsParser.main CpsLexer.ftoken (Lexing.from_string s))));;
+
+  let getAllCPSTokens s =
+      let b = Lexing.from_string (s^"\n") in
+      let rec g () =
+      match CpsLexer.ftoken b with EOF -> []
+      | t -> t :: g () in
+      g ();;
+
+let confi = match parsed with Parsed (Some a,b,c,d) -> a;;
+
+let program = match readInProgram "f x" with Parsed (a, b,c, Some d) -> d;;
+
+let programState s = match readInProgram s with Parsed (a,b,c,d) -> 
+       (match parsed with Parsed (x,y,u,v) -> 
+      (match genProgramState allEqual allEqual allEqual (Parsed (x,y,u,d)) database theGraph with None -> []
+            | Some a -> a));;
+
+typeCheckRules allEqual allEqual allRules database theGraph;;
+
+let runCPS s = match programState s with x
+         -> (match funEvaluation allEqual allEqual allEqual allRules database theGraph x
+         with None -> "'output('0(.KList), 'error(\"Unknown Error.\"))"
+     | Some a -> match a with [ItemB (u,v, SUK [ItemFactor n])] ->  charsToStringInSUKItem n
+                            | _ -> "'output('0(.KList), 'error(\"Unknown Error.\"))");;
+
+
+
+
+
 

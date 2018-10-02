@@ -98,7 +98,7 @@ fun getAllSorts :: "'upVar kSyntax list \<Rightarrow> 'upVar sort list" where
 | "getAllSorts ((Syntax x pros l)#xs) = List.insert x (getAllSorts xs)"
 | "getAllSorts ((ListSyntax a b pros l)#xs) = List.insert a (getAllSorts xs)"
 | "getAllSorts ((Token a s l)#xs) = List.insert a (getAllSorts xs)"
-| "getAllSorts (a#xs) = (getAllSorts xs)"
+| "getAllSorts ((Subsort a b)#xs) = List.insert b (List.insert a (getAllSorts xs))"
 
 fun getAllSubsortInList where
  "getAllSubsortInList [] = []"

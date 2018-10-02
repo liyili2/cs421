@@ -29,6 +29,10 @@
                  | 'continue(Id, Exp) [klabel('continue)]
                  | 'let(Id, Exp, Exp) [klabel('let)]
                  | 'trans(Exp, Exp) [klabel('trans)]
+                 | 'match(Exp, Pats) [klabel('match)]
+
+  syntax Pats ::= List{Pat, "|"} [klabel('patCon)]
+  syntax Pat ::= 'pat(Sub, Exp) [klabel('patPair)]
 
   syntax Rule ::= "var"        [klabel('var)] | "const" [klabel('const)]
                 | "ifelse"     [klabel('ifelse)]
@@ -44,6 +48,11 @@
   syntax Id ::= 'genId(Int) [klabel('genId)]
 
   syntax KItem ::= 'result(Int, Exp) [klabel('result)]
+
+  syntax Term ::= 'pair(Exp, Rule) [klabel('pair)]
+  syntax KItem ::= 'eval(Int, Exp, List) [function, klabel('eval)]
+                 | 'evalAux(Int, K, Exp, List) [function, klabel('evalAux)]
+                 | 'output(Int, K) [klabel('output)]
 
   syntax Bool ::= 'isGenId(K) [function, klabel('isGenId)]
   rule 'isGenId('genId(A:Int)) => 'true(.KList)
@@ -382,11 +391,6 @@
         requires 'equalExps(D, L)
   rule 'stepEvalAux2(L:List, D:Exp)
                 => 'error("Student wrongly transforms the CPS according to the rule.") [owise]
-
-  syntax Term ::= 'pair(Exp, Rule) [klabel('pair)]
-  syntax KItem ::= 'eval(Int, Exp, List) [function, klabel('eval)]
-                 | 'evalAux(Int, K, Exp, List) [function, klabel('evalAux)]
-                 | 'output(Int, K) [klabel('output)]
   rule 'eval(I:Int, E:Exp, .List) => 'output(I, 'success(.KList))
   rule 'eval(I:Int, E:Exp, ListCon(ListItem('pair(E1:Exp, R:Rule)), L:List))
                => 'evalAux(I, 'stepEval(E, E1, R), E, L)
@@ -395,6 +399,6 @@
                   => 'error('+String(S, '+String(" at point: ", 'intToString(I))))
 
 
-
+  configuration <k> PGM:KItem </k>
 
 

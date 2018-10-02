@@ -3408,8 +3408,8 @@ export_code Eps Continue Success FunTrans Single IntConst Bool kSyntax.Set Defin
    patternMacroingInSUMapMember patternMacroingInAllSUMapMember patternMacroingInAllSUMapMemberAux
    patternMacroingInSUMapAux typeCheckRules wellFormRules checkTypesInRules checkTypesInFunPats
    irToSUInKList getDomainInIRKList constructSortMap subsortList meet funEvaluationBoolAux
-    funEvaluationBool funEvaluation funEvaluationAux 
-   tupleToRulePats assignSortInRules collectDatabase tupleToRulePats
+    funEvaluationBool funEvaluation funEvaluationAux createInitState replaceProgramInBag
+   tupleToRulePats assignSortInRules collectDatabase tupleToRulePats typeCheckProgramState
    tupleToRulePat tupleToRuleInParsed isFunctionItem getSort in OCaml  module_name K file "k.ml"
 
 

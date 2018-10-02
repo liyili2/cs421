@@ -426,6 +426,12 @@ module K : sig
                 (('c metaVar * 'a sort list) list *
                   (('c metaVar * 'a sort list) list *
                     ('a, 'b, 'c) suL list)) option
+  val typeCheckProgramState :
+    'a equal -> 'b equal -> 'c equal ->
+      ('a, 'b, 'c) suB list ->
+        ('a sort list *
+          (('a sort list) list * ('a label kItemSyntax * ('d * bool)))) list ->
+          ('a sort * 'a sort list) list -> (('a, 'b, 'c) suB list) option
   val funEvaluationBool :
     'a equal -> 'b equal -> 'c equal ->
       ('a, 'b, 'c) rulePat list ->
@@ -519,6 +525,10 @@ module K : sig
       (('a sort list *
          (('a sort list) list *
            ('a label kItemSyntax * (synAttrib list * bool)))) list) option
+  val createInitState :
+    'b equal -> ('a, 'b, 'c) suB list -> (('a, 'b, 'c) suB list) option
+  val replaceProgramInBag :
+    ('a, 'b, 'c) suB list -> ('a, 'b, 'c) suKItem -> ('a, 'b, 'c) suB list
   val genProgramState :
     'a equal -> 'b equal -> 'c equal ->
       ('a, 'b, 'c) theoryParsed ->
@@ -30357,7 +30367,9 @@ let rec getAllSorts _A
     | ListSyntax (a, b, pros, l) :: xs ->
         insert (equal_sort _A) a (getAllSorts _A xs)
     | Token (a, s, l) :: xs -> insert (equal_sort _A) a (getAllSorts _A xs)
-    | Subsort (v, va) :: xs -> getAllSorts _A xs;;
+    | Subsort (a, b) :: xs ->
+        insert (equal_sort _A) b
+          (insert (equal_sort _A) a (getAllSorts _A xs));;
 
 let rec preAllSubsorts _A
   (Parsed (c, a, b, p)) =
