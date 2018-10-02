@@ -21,8 +21,19 @@ lexer.cmo: parser.cmo
 	$(OCAMLLEX) lexer.mll
 	$(OCAMLC) -c lexer.ml
 
+cpsLexer.cmo: cpsParser.cmo
+       	$(OCAMLLEX) cpsLexer.mll
+	$(OCAMLC) -c cpsLexer.ml
+
+cpsParser.cmo: k.cmo
+	$(OCAMLYACC) cpsParser.mly
+	$(OCAMLC) -c cpsParser.mli
+	$(OCAMLC) -c cpsParser.ml
+
 k.cmo: k.ml
 	$(OCAMLC) -c k.ml
+
+
 
 
 clean:
