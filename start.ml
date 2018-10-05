@@ -1,3 +1,7 @@
+type result = Good | Error of int * string;;
+
+type output = Output of int * result;;
+
 #load "k.cmo";;
 #load "lexer.cmo";;
 #load "parser.cmo";;
@@ -236,7 +240,12 @@ let database = match collectDatabase (interpreta()) with None -> [] | Some a -> 
 let allRules = match (tupleToRuleInParsed allEqual allEqual allEqual (interpreta())) with None -> []
                     | Some a -> a;;
 
-let readInProgram s = (Parser.main Lexer.token (Lexing.from_string (CpsParser.main CpsLexer.ftoken (Lexing.from_string s))));;
+let parseCPS s =  try Some (CpsParser.main CpsLexer.ftoken (Lexing.from_string "1")) with 
+            Stdlib.Parsing.Parse_error -> None;;
+
+let readInProgram s = match s with None -> None
+         | Some s1 -> try Some (Parser.main Lexer.token (Lexing.from_string s1))
+                  with Stdlib.Parsing.Parse_error -> None;;
 
   let getAllCPSTokens s =
       let b = Lexing.from_string (s^"\n") in
@@ -247,21 +256,38 @@ let readInProgram s = (Parser.main Lexer.token (Lexing.from_string (CpsParser.ma
 
 let confi = match parsed with Parsed (Some a,b,c,d) -> a;;
 
-let program = match readInProgram "f x" with Parsed (a, b,c, Some d) -> d;;
+(* let program = match readInProgram "f x" with Parsed (a, b,c, Some d) -> d;; *)
 
-let programState s = match readInProgram s with Parsed (a,b,c,d) -> 
+let programState s = match readInProgram s with None -> None
+      | Some (Parsed (a,b,c,d)) -> 
        (match parsed with Parsed (x,y,u,v) -> 
-      (match genProgramState allEqual allEqual allEqual (Parsed (x,y,u,d)) database theGraph with None -> []
-            | Some a -> a));;
+       genProgramState allEqual allEqual allEqual (Parsed (x,y,u,d)) database theGraph);;
 
 typeCheckRules allEqual allEqual allRules database theGraph;;
 
-let runCPS s = match programState s with x
-         -> (match funEvaluation allEqual allEqual allEqual allRules database theGraph x
-         with None -> "'output('0(.KList), 'error(\"Unknown Error.\"))"
-     | Some a -> match a with [ItemB (u,v, SUK [ItemFactor n])] ->  charsToStringInSUKItem n
-                            | _ -> "'output('0(.KList), 'error(\"Unknown Error.\"))");;
-
+(* error 0 for parsing error, 1 for rule error, 2 for rule name error. *)
+let runCPS s = match programState s with None -> Output (0, Error(0, "Student has a parsing error"))
+        | Some x -> (match funEvaluation allEqual allEqual allEqual allRules database theGraph x
+         with None -> Output (0, Error (0, "unknown error."))
+            | Some a -> (match a with [ItemB (u,v, SUK [ItemFactor (SUKItem (la,kl,ty))])]
+              -> (match kl with [ItemKl (SUBigBag (SUK
+                          [ItemFactor (SUKItem
+                  (SUKLabel (ConstToLabel (IntConst laFirst)),klFirst,tyFirst))]));
+                  ItemKl (SUBigBag (SUK [ItemFactor (SUKItem (SUKLabel
+                         (OtherLabel laSecond),klSecond,tySecond))]))] -> 
+                     if (charListToString laSecond) = "success" then
+                    Output (int_of_string (printKInt laFirst), Good)
+                       else (match klSecond with 
+                      [ItemKl (SUBigBag (SUK
+                          [ItemFactor (SUKItem
+                  (SUKLabel (ConstToLabel (IntConst laNext)),klNext,tyNext))]));
+                  ItemKl (SUBigBag (SUK [ItemFactor (SUKItem (SUKLabel
+                        (ConstToLabel (StringConst laNext2)),klNext2,tyNext2))]))]
+                      -> Output (int_of_string (printKInt laFirst),
+                                Error (int_of_string (printKInt laNext), charListToString laNext2))
+                        | _ -> Output (0, Error (0, "unknown error.")))
+                     | _ -> Output (0, Error (0, "unknown error.")))
+                   | _ -> Output (0, Error (0, "unknown error."))));;
 
 
 
