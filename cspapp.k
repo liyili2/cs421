@@ -2,7 +2,7 @@
   syntax KItem ::= 'some(K) [klabel('some)]
   syntax KItem ::= "none" [klabel('none)]
   syntax KItem ::= "succecss" [klabel('success)]
-  syntax KItem ::= 'error(String) [klabel('error)]
+  syntax KItem ::= 'error(Int, String) [klabel('error)]
 
   syntax Op ::= "+" [klabel('plus)]
               | "-" [klabel('minus)]
@@ -21,12 +21,14 @@
   syntax Undef ::= "undef" [klabel('undef)]
 
   syntax Exp ::= Sub | Undef
-                 | 'ifelse(Exp, Exp, Exp)  [klabel('ifelse)]
+                 | 'if(Exp, Exp, Exp)  [klabel('if)]
+                 | 'bigIf(Exp, Exp, Exp)  [klabel('bigIf)]
                  | 'app(Exp, Exp) [klabel('app)]
                  | 'bin(Op, Exp, Exp)  [klabel('bin)]
                  | 'unary(Op, Exp)    [klabel('unary)]
                  | 'fun(Id, Exp)      [klabel('fun)]
-                 | 'continue(Id, Exp) [klabel('continue)]
+                 | 'fn(Id, Exp)      [klabel('fn)]
+                 | 'bigFun(Id, Id, Exp)      [klabel('bigFun)]
                  | 'let(Id, Exp, Exp) [klabel('let)]
                  | 'trans(Exp, Exp) [klabel('trans)]
                  | 'match(Exp, Pats) [klabel('match)]
@@ -35,7 +37,7 @@
   syntax Pat ::= 'pat(Sub, Exp) [klabel('patPair)]
 
   syntax Rule ::= "var"        [klabel('var)] | "const" [klabel('const)]
-                | "ifelse"     [klabel('ifelse)]
+                | "ifrule"     [klabel('ifrule)]
                 | "apprule"    [klabel('apprule)]
                 | "oprule"     [klabel('oprule)]
                 | "unaryrule"  [klabel('unaryrule)]
@@ -68,7 +70,7 @@
        requires 'notBool('isGenId(A))
   rule 'getGenIds(.Exps) => .Set
   rule 'getGenIds('listCon(A:Exp, B:Exps)) => SetCon('getGenIds(A), 'getGenIds(B))
-  rule 'getGenIds('ifelse(A:Exp, B:Exp, C:Exp))
+  rule 'getGenIds('if(A:Exp, B:Exp, C:Exp))
              => SetCon('getGenIds(A), SetCon('getGenIds(B), 'getGenIds(C)))
   rule 'getGenIds('app(A:Exp, B:Exp))
              => SetCon('getGenIds(A), 'getGenIds(B))
@@ -78,7 +80,7 @@
              => SetCon('getGenIds(A), 'getGenIds(B))
   rule 'getGenIds('unary(O:Op, B:Exp)) => 'getGenIds(B)
   rule 'getGenIds('fun(A:Id, B:Exp)) => 'minusSet('getGenIds(B), A)
-  rule 'getGenIds('continue(A:Id, B:Exp)) => 'minusSet('getGenIds(B), A)
+  rule 'getGenIds('fn(A:Id, B:Exp)) => 'minusSet('getGenIds(B), A)
   rule 'getGenIds('let(A:Id, B:Exp, C:Exp))
                => SetCon('getGenIds(B), 'minusSet('getGenIds(C), A))
   rule 'getGenIds(E:Exp) => .Set [owise]
@@ -110,37 +112,37 @@
   rule 'applyRule('const(.KList), A:Float, K:Exp) => 'app(K, A)
   rule 'applyRule('const(.KList), .Exps, K:Exp) => 'app(K, .Exps)
 
-  rule 'applyRule('ifelse(.KList), 'ifelse(E1:Exp, E2:Exp, E3:Exp), K:Exp)
+  rule 'applyRule('ifrule(.KList), 'if(E1:Exp, E2:Exp, E3:Exp), K:Exp)
             => 'applyRuleIf(E1, E2, E3, K,
-                'freshId('trans('ifelse(E1:Exp, E2:Exp, E3:Exp), K)))
+                'freshId('trans('if(E1:Exp, E2:Exp, E3:Exp), K)))
   rule 'applyRuleIf(E1:Exp, E2:Exp, E3:Exp, K:Exp, A:Id)
-         => 'trans(E1, 'fun(A, 'ifelse(A, 'trans(E2, K), 'trans(E3, K))))
+         => 'trans(E1, 'fn(A, 'bigIf(A, 'trans(E2, K), 'trans(E3, K))))
 
-  rule 'applyRule('ifelse(.KList), 'app(E1:Exp, E2:Exp), K:Exp)
+  rule 'applyRule('apprule(.KList), 'app(E1:Exp, E2:Exp), K:Exp)
             => 'applyRuleApp(E1, E2, K, 'freshId(K))
   rule 'applyRuleApp(E1:Exp, E2:Exp, K:Exp, A:Id)
          => 'applyRuleAppAux(E1, E2, K, A, 'freshId('trans('app(A, E1), K)))
   rule 'applyRuleAppAux(E1:Exp, E2:Exp, K:Exp, A:Id, B:Id)
-          => 'trans(E2, 'fun(B, 'trans(E1, 'fun(A, 'app(A, 'app(B,K))))))
+          => 'trans(E2, 'fn(B, 'trans(E1, 'fn(A, 'app(A, 'app(B,K))))))
 
   rule 'applyRule('oprule(.KList), 'bin(A:Op, E1:Exp, E2:Exp), K:Exp)
           => 'applyRuleBin(A, E1, E2, K, 'freshId(K))
   rule 'applyRuleBin(A:Op, E1:Exp, E2:Exp, K:Exp, B:Id)
          => 'applyRuleBinAux(A:Op, E1, E2, K, B, 'freshId('trans('app(B, E1), K)))
   rule 'applyRuleBinAux(A:Op, E1:Exp, E2:Exp, K:Exp, B:Id, C:Id)
-          => 'trans(E2, 'fun(C, 'trans(E1, 'fun(B, 'app(K, 'bin(A:Op, B, C))))))
+          => 'trans(E2, 'fn(C, 'trans(E1, 'fn(B, 'app(K, 'bin(A:Op, B, C))))))
 
   rule 'applyRule('unaryrule(.KList), 'unary(A:Op, E1:Exp), K:Exp)
           => 'applyRuleUnary(A, E1, K, 'freshId(K))
   rule 'applyRuleUnary(A:Op, E:Exp, K:Exp, X:Id)
-          => 'trans(E, 'fun(X, 'app(K, 'unary(A, X))))
+          => 'trans(E, 'fn(X, 'app(K, 'unary(A, X))))
 
   rule 'applyRule('funrule(.KList), 'fun(X:Id, E:Exp) , K:Exp)
           => 'applyRuleFun(X, E, K, 'freshId('trans('fun(X:Id, E:Exp), K)))
   rule 'applyRuleFun(X:Id, E:Exp, K:Exp, A:Id)
-          => 'app(K, 'fun(X, 'fun(A, 'trans(E, K))))
+          => 'app(K, 'bigFun(X, A, 'trans(E, K)))
   rule 'applyRule('letrule(.KList), 'let(X:Id, E1:Exp, E2:Exp), K:Exp)
-           => 'trans(E1, 'fun(X, 'trans(E2, K)))
+           => 'trans(E1, 'fn(X, 'trans(E2, K)))
   rule 'applyRule('undef(.KList), B:Exp, C:Exp) => 'undef(.KList)
   rule 'applyRule(A:Rule, B:Exp, C:Exp) => 'none(.KList) [owise]
 
@@ -150,6 +152,9 @@
                | 'giveNumIf(K, Exp, Exp) [function, klabel('giveNumIf)]
                | 'giveNumIfAux(Exp, K, Exp) [function, klabel('giveNumIfAux)]
                | 'giveNumIfNext(Exp, Exp, K) [function, klabel('giveNumIfNext)]
+               | 'giveNumBigIf(K, Exp, Exp) [function, klabel('giveNumBigIf)]
+               | 'giveNumBigIfAux(Exp, K, Exp) [function, klabel('giveNumBigIfAux)]
+               | 'giveNumBigIfNext(Exp, Exp, K) [function, klabel('giveNumBigIfNext)]
                | 'giveNumApp(K, Exp) [function, klabel('giveNumApp)]
                | 'giveNumAppAux(Exp, K) [function, klabel('giveNumAppAux)]
                | 'giveNumBin(Op, K, Exp) [function, klabel('giveNumBin)]
@@ -157,6 +162,7 @@
                | 'giveNumUnary(Op, K) [function, klabel('giveNumUnary)]
                | 'giveNumContinue(Id, K) [function, klabel('giveNumContinue)]
                | 'giveNumFun(Id, K) [function, klabel('giveNumFun)]
+               | 'giveNumBigFun(Id, Id, K) [function, klabel('giveNumBigFun)]
                | 'giveNumLet(Id, K, Exp) [function, klabel('giveNumLet)]
                | 'giveNumLetAux(Id, Exp, K) [function, klabel('giveNumLetAux)]
                | 'giveNumTrans(Int, K, Exp) [function, klabel('giveNumTrans)]
@@ -172,14 +178,23 @@
   rule 'giveNumExpsAux(B:Exp, 'result(A:Int, C:Exps))
              => 'result(A, 'listCon(B, C))
 
-  rule 'giveNum(A:Int, 'ifelse(B:Exp, E1:Exp, E2:Exp))
+  rule 'giveNum(A:Int, 'if(B:Exp, E1:Exp, E2:Exp))
           => 'giveNumIf('giveNum(A, B), E1, E2)
   rule 'giveNumIf('result(A:Int, B:Exp), E1:Exp, E2:Exp)
           => 'giveNumIfAux(B, 'giveNum(A, E1), E2)
   rule 'giveNumIfAux(B:Exp, 'result(A:Int, E1:Exp), E2:Exp)
           => 'giveNumIfNext(B, E1, 'giveNum(A, E2))
   rule 'giveNumIfNext(B:Exp, E1:Exp, 'result(A:Int, E2:Exp))
-          => 'result(A, 'ifelse(B, E1, E2))
+          => 'result(A, 'if(B, E1, E2))
+
+  rule 'giveNum(A:Int, 'bigIf(B:Exp, E1:Exp, E2:Exp))
+          => 'giveNumBigIf('giveNum(A, B), E1, E2)
+  rule 'giveNumBigIf('result(A:Int, B:Exp), E1:Exp, E2:Exp)
+          => 'giveNumBigIfAux(B, 'giveNum(A, E1), E2)
+  rule 'giveNumBigIfAux(B:Exp, 'result(A:Int, E1:Exp), E2:Exp)
+          => 'giveNumBigIfNext(B, E1, 'giveNum(A, E2))
+  rule 'giveNumBigIfAux(B:Exp, E1:Exp, 'result(A:Int, E2:Exp))
+          => 'result(A, 'bigIf(B, E1, E2))
 
   rule 'giveNum(A:Int, 'app(E1:Exp, E2:Exp))
           => 'giveNumApp('giveNum(A, E1), E2)
@@ -204,10 +219,16 @@
            => 'giveNumFun(X, 'giveNum(A, E))
   rule 'giveNumFun(X:Id, 'result(A:Int, E:Exp))
           => 'result(A, 'fun(X, E))
-  rule 'giveNum(A:Int, 'continue(X:Id, E:Exp))
+
+  rule 'giveNum(A:Int, 'bigFun(X:Id, Y:Id, E:Exp))
+           => 'giveNumBigFun(X, Y:Id, 'giveNum(A, E))
+  rule 'giveNumBigFun(X:Id, Y:Id, 'result(A:Int, E:Exp))
+          => 'result(A, 'bigFun(X, Y, E))
+
+  rule 'giveNum(A:Int, 'fn(X:Id, E:Exp))
            => 'giveNumContinue(X, 'giveNum(A, E))
   rule 'giveNumContinue(X:Id, 'result(A:Int, E:Exp))
-          => 'result(A, 'continue(X, E))
+          => 'result(A, 'fn(X, E))
 
   rule 'giveNum(A:Int, 'let(X:Id, E1:Exp, E2:Exp))
          => 'giveNumLet(X, 'giveNum(A, E1), E2)
@@ -229,8 +250,10 @@
   rule 'removeNum('listCon(A:Exp, B:Exps))
                => 'listCon('removeNum(A), 'removeNum(B))
   rule 'removeNum('undef(.KList)) => 'undef(.KList)
-  rule 'removeNum('ifelse(E1:Exp, E2:Exp, E3:Exp))
-          => 'ifelse('removeNum(E1), 'removeNum(E2), 'removeNum(E3))
+  rule 'removeNum('if(E1:Exp, E2:Exp, E3:Exp))
+          => 'if('removeNum(E1), 'removeNum(E2), 'removeNum(E3))
+  rule 'removeNum('bigIf(E1:Exp, E2:Exp, E3:Exp))
+          => 'bigIf('removeNum(E1), 'removeNum(E2), 'removeNum(E3))
   rule 'removeNum('app(E1:Exp, E2:Exp))
          => 'app('removeNum(E1), 'removeNum(E2))
   rule 'removeNum('bin(A:Op, E1:Exp, E2:Exp))
@@ -239,8 +262,10 @@
          => 'unary(A, 'removeNum(E1))
   rule 'removeNum('fun(A:Id, E1:Exp))
          => 'fun(A, 'removeNum(E1))
-  rule 'removeNum('continue(A:Id, E1:Exp))
-         => 'continue(A, 'removeNum(E1))
+  rule 'removeNum('bigFun(A:Id, B:Id, E1:Exp))
+         => 'bigFun(A, B, 'removeNum(E1))
+  rule 'removeNum('fn(A:Id, E1:Exp))
+         => 'fn(A, 'removeNum(E1))
   rule 'removeNum('let(A:Id, E1:Exp, E2:Exp))
          => 'let(A, 'removeNum(E1), 'removeNum(E2))
   rule 'removeNum('trans(E1:Exp, E2:Exp))
@@ -255,7 +280,9 @@
   syntax Map ::= 'applyRules(Rule, Exp) [function, klabel('applyRules)]
   rule 'applyRules(A:Rule, B:Sub) => .Map
   rule 'applyRules(A:Rule, B:Undef) => .Map
-  rule 'applyRules(A:Rule, 'ifelse(E1:Exp, E2:Exp, E3:Exp))
+  rule 'applyRules(A:Rule, 'if(E1:Exp, E2:Exp, E3:Exp))
+            => MapCon('applyRules(A, E1), MapCon('applyRules(A, E2), 'applyRules(A, E3)))
+  rule 'applyRules(A:Rule, 'bigIf(E1:Exp, E2:Exp, E3:Exp))
             => MapCon('applyRules(A, E1), MapCon('applyRules(A, E2), 'applyRules(A, E3)))
   rule 'applyRules(A:Rule, 'app(E1:Exp, E2:Exp))
            => MapCon('applyRules(A, E1), 'applyRules(A, E2))
@@ -265,7 +292,9 @@
            => 'applyRules(A, E1)
   rule 'applyRules(A:Rule, 'fun(B:Id, E1:Exp))
            => 'applyRules(A, E1)
-  rule 'applyRules(A:Rule, 'continue(B:Id, E1:Exp))
+  rule 'applyRules(A:Rule, 'bigFun(B:Id, C:Id, E1:Exp))
+           => 'applyRules(A, C, E1)
+  rule 'applyRules(A:Rule, 'fn(B:Id, E1:Exp))
            => 'applyRules(A, E1)
   rule 'applyRules(A:Rule, 'let(B:Id, E1:Exp, E2:Exp))
            => MapCon('applyRules(A, E1), 'applyRules(A, E2))
@@ -280,8 +309,10 @@
   syntax Exp ::= 'subst(Exp, Int, Exp) [function, klabel('subst)]
   rule 'subst(E1:Sub, A:Int, E2:Exp) => E1
   rule 'subst(E1:Undef, A:Int, E2:Exp) => E1
-  rule 'subst('ifelse(E1:Exp, E2:Exp, E3:Exp), A:Int, D:Exp)
-             => 'ifelse('subst(E1, A, D), 'subst(E2, A, D), 'subst(E3, A, D))
+  rule 'subst('if(E1:Exp, E2:Exp, E3:Exp), A:Int, D:Exp)
+             => 'if('subst(E1, A, D), 'subst(E2, A, D), 'subst(E3, A, D))
+  rule 'subst('bigIf(E1:Exp, E2:Exp, E3:Exp), A:Int, D:Exp)
+             => 'bigIf('subst(E1, A, D), 'subst(E2, A, D), 'subst(E3, A, D))
   rule 'subst('app(E1:Exp, E2:Exp), A:Int, D:Exp)
             => 'app('subst(E1, A, D), 'subst(E2, A, D))
   rule 'subst('bin(X:Op, E1:Exp, E2:Exp), A:Int, D:Exp)
@@ -290,8 +321,10 @@
             => 'unary(X, 'subst(E1, A, D))
   rule 'subst('fun(X:Id, E1:Exp), A:Int, D:Exp)
             => 'fun(X, 'subst(E1, A, D))
-  rule 'subst('continue(X:Id, E1:Exp), A:Int, D:Exp)
-            => 'continue(X, 'subst(E1, A, D))
+  rule 'subst('bigFun(X:Id, Y:Id, E1:Exp), A:Int, D:Exp)
+            => 'bigFun(X, Y, 'subst(E1, A, D))
+  rule 'subst('fn(X:Id, E1:Exp), A:Int, D:Exp)
+            => 'fn(X, 'subst(E1, A, D))
   rule 'subst('let(X:Id, E1:Exp, E2:Exp), A:Int, D:Exp)
             => 'let(X, 'subst(E1, A, D), 'subst(E2, A, D))
   rule 'subst('trans(E1:Exp, E2:Exp), A:Int, D:Exp)
@@ -316,8 +349,11 @@
   rule 'alphaSubst('listCon(A:Exp, C:Exps), A':Id, B:Id)
            => 'listCon('alphaSubst(A, A', B), 'alphaSubst(C, A', B))
   rule 'alphaSubst('undef(.KList), A:Id, B:Id) => 'undef(.KList)
-  rule 'alphaSubst('ifelse(E1:Exp, E2:Exp, E3:Exp), A:Id, B:Id)
-              => 'ifelse('alphaSubst(E1,A, B),
+  rule 'alphaSubst('if(E1:Exp, E2:Exp, E3:Exp), A:Id, B:Id)
+              => 'if('alphaSubst(E1,A, B),
+                'alphaSubst(E2, A, B), 'alphaSubst(E3, A, B))
+  rule 'alphaSubst('bigIf(E1:Exp, E2:Exp, E3:Exp), A:Id, B:Id)
+              => 'bigIf('alphaSubst(E1,A, B),
                 'alphaSubst(E2, A, B), 'alphaSubst(E3, A, B))
   rule 'alphaSubst('app(E1:Exp, E2:Exp), A:Id, B:Id)
            => 'app('alphaSubst(E1, A, B), 'alphaSubst(E2, A, B))
@@ -329,9 +365,15 @@
   rule 'alphaSubst('fun(A':Id, E1:Exp), A:Id, B:Id)
             => 'fun(A', 'alphaSubst(E1, A, B))
         requires '=/=K(A, A')
-  rule 'alphaSubst('continue(A:Id, E1:Exp), A:Id, B:Id) => 'continue(A, E1)
-  rule 'alphaSubst('continue(A':Id, E1:Exp), A:Id, B:Id)
-            => 'continue(A', 'alphaSubst(E1, A, B))
+  rule 'alphaSubst('bigFun(A:Id, Y:Id, E1:Exp), A:Id, B:Id) =>'bigFun(A, Y, E1)
+  rule 'alphaSubst('bigFun(Y:Id, A:Id, E1:Exp), A:Id, B:Id) =>'bigFun(Y, A, E1)
+  rule 'alphaSubst('bigFun(A':Id, Y:Id, E1:Exp), A:Id, B:Id)
+            => 'fun(A', Y, 'alphaSubst(E1, A, B))
+        requires 'andBool('=/=K(A, A'), '=/=K(Y, A'))
+
+  rule 'alphaSubst('fn(A:Id, E1:Exp), A:Id, B:Id) => 'fn(A, E1)
+  rule 'alphaSubst('fn(A':Id, E1:Exp), A:Id, B:Id)
+            => 'fn(A', 'alphaSubst(E1, A, B))
         requires '=/=K(A, A')
 
   rule 'alphaSubst('let(A:Id, E1:Exp, E2:Exp), A:Id, B:Id)
@@ -345,7 +387,9 @@
   syntax Bool ::= 'equalExp(Exp, Exp) [function, klabel('equalExp)]
   rule 'equalExp(A:Sub, A) => 'true(.KList)
   rule 'equalExp(A:Undef, A) => 'true(.KList)
-  rule 'equalExp('ifelse(E1:Exp, E2:Exp, E3:Exp), 'ifelse(D1:Exp,D2:Exp, D3:Exp))
+  rule 'equalExp('if(E1:Exp, E2:Exp, E3:Exp), 'if(D1:Exp,D2:Exp, D3:Exp))
+          => 'andBool('equalExp(E1, D1), 'andBool('equalExp(E2, D2), 'equalExp(E3, D3)))
+  rule 'equalExp('bigIf(E1:Exp, E2:Exp, E3:Exp), 'bigIf(D1:Exp,D2:Exp, D3:Exp))
           => 'andBool('equalExp(E1, D1), 'andBool('equalExp(E2, D2), 'equalExp(E3, D3)))
   rule 'equalExp('app(E1:Exp, E2:Exp), 'app(D1:Exp,D2:Exp))
           => 'andBool('equalExp(E1, D1), 'equalExp(E2, D2))
@@ -360,9 +404,22 @@
   rule 'equalExp('fun(X:Id, E1:Exp), 'fun(Y:Id, D1:Exp))
           => 'equalExp('alphaSubst(E1, X, Y), D1)
        requires '=/=K(X, Y)
-  rule 'equalExp('continue(X:Id, E1:Exp), 'continue(X:Id, D1:Exp))
+
+  rule 'equalExp('bigFun(X:Id, Y:Id, E1:Exp), 'bigFun(X:Id, Y:Id, D1:Exp))
           => 'equalExp(E1, D1)
-  rule 'equalExp('continue(X:Id, E1:Exp), 'continue(Y:Id, D1:Exp))
+  rule 'equalExp('bigFun(X:Id, Y:Id, E1:Exp), 'bigFun(X':Id, Y:Id, D1:Exp))
+          => 'equalExp('alphaSubst(E1, X, X'), D1)
+       requires '=/=K(X, X')
+  rule 'equalExp('bigFun(X:Id, Y:Id, E1:Exp), 'bigFun(X:Id, Y':Id, D1:Exp))
+          => 'equalExp('alphaSubst(E1, Y, Y'), D1)
+       requires '=/=K(Y, Y')
+  rule 'equalExp('bigFun(X:Id, Y:Id, E1:Exp), 'bigFun(X':Id, Y':Id, D1:Exp))
+          => 'equalExp('alphaSubst('alphaSubst(E1, Y, Y'), X, X'), D1)
+       requires 'andBool('=/=K(Y, Y'), '=/=K(X, X'))
+
+  rule 'equalExp('fn(X:Id, E1:Exp), 'fn(X:Id, D1:Exp))
+          => 'equalExp(E1, D1)
+  rule 'equalExp('fn(X:Id, E1:Exp), 'fn(Y:Id, D1:Exp))
           => 'equalExp('alphaSubst(E1, X, Y), D1)
        requires '=/=K(X, Y)
   rule 'equalExp('let(X:Id, E1:Exp, E2:Exp), 'let(X:Id, D1:Exp, D2:Exp))
@@ -382,21 +439,21 @@
                  | 'stepEvalAux2(List, Exp) [function, klabel('stepEvalAux2)]
   rule 'stepEval(E:Exp, D:Exp, R:Rule)
          => 'stepEvalAux('giveNum('0(.KList), E), E, D, R)
-  rule 'stepEvalAux(E:Exp, E:Exp, D:Exp, R:Rule) => 'error("Nothing can be transformed.")
+  rule 'stepEvalAux(E:Exp, E:Exp, D:Exp, R:Rule) => 'error('0(.KList), "Nothing can be transformed.")
   rule 'stepEvalAux(E':Exp, E:Exp, D:Exp, R:Rule)
          => 'stepEvalAux1('applyRules(R, E'),E', D) [owise]
-  rule 'stepEvalAux1(.Map, E:Exp, D:Exp) => 'error("The input rule name is incorrect.")
+  rule 'stepEvalAux1(.Map, E:Exp, D:Exp) => 'error('2(.KList), "The input rule name is incorrect.")
   rule 'stepEvalAux1(M:Map, E:Exp, D:Exp) => 'stepEvalAux2('removeNums('substAll(E, M)),D) [owise]
   rule 'stepEvalAux2(L:List, D:Exp) => 'success(.KList)
         requires 'equalExps(D, L)
   rule 'stepEvalAux2(L:List, D:Exp)
-                => 'error("Student wrongly transforms the CPS according to the rule.") [owise]
+                => 'error('1(.KList), "Student wrongly transforms the CPS according to the rule.") [owise]
   rule 'eval(I:Int, E:Exp, .List) => 'output(I, 'success(.KList))
   rule 'eval(I:Int, E:Exp, ListCon(ListItem('pair(E1:Exp, R:Rule)), L:List))
                => 'evalAux(I, 'stepEval(E, E1, R), E, L)
   rule 'evalAux(I:Int, 'success(.KList), E:Exp, L:List) => 'eval('+Int(I, '1(.KList)), E, L) 
-  rule 'evalAux(I:Int, 'error(S:String), E:Exp, L:List)
-                  => 'error('+String(S, '+String(" at point: ", 'intToString(I))))
+  rule 'evalAux(I:Int, 'error(X:Int, S:String), E:Exp, L:List)
+                  => 'output(I, 'error(X, S:String))
 
 
   configuration <k> PGM:KItem </k>

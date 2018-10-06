@@ -8,7 +8,7 @@
 %token EOF PLUS MINUS TIMES DIV MOD DPLUS DMINUS DTIMES DDIV LT GT LEQ GEQ EQUALS
        UNDEF LPAREN RPAREN COMMA LEADSTO INFER FUN LET IN IF THEN ELSE PIPE EVAL APP LBRACE RBRACE
        MATCH WITH BY CONST VAR OPRULE FUNRULE LETRULE IFRULE MATCHRULE
-       UNARYRULE APPRULE UNDER LBR RBR BLBR BRBR
+       UNARYRULE APPRULE UNDER LBR RBR BLBR BRBR FN BigFun BigIf BigThen BigElse
 
 %left COMMA
 %left LT GT LEQ GEQ EQUALS
@@ -49,9 +49,12 @@ expression:
 
 expr:
      appexpr {$1}
+   | FN var LEADSTO expr {"'fn("^$2^", "^$4^")"}
+   | BigFun var var LEADSTO expr {"'bigFun("^$2^", "^$3^", "^$5^")"}
    | FUN var LEADSTO expr {"'fun("^$2^", "^$4^")"}
    | LET var EQUALS expression IN expr {"'let("^$2^", "^$4^", "^$6^")"}
    | IF appexpr THEN expr ELSE expr {"'if("^$2^", "^$4^", "^$6^")"}
+   | BigIf appexpr BigThen expr BigElse expr {"'bigIf("^$2^", "^$4^", "^$6^")"}
 
 pats:
     pat {$1}

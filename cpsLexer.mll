@@ -46,11 +46,16 @@ rule ftoken = parse
   | "->"      { LEADSTO}
   | "=>"      {INFER}
   | "fun"     {FUN}
+  | "FN"      {FN}
+  | "FUN"     {BigFun}
   | "let"     { LET  }
   | "in"      { IN  }
   | "if"      { IF  }
+  | "IF"      {BigIf}
   | "then"    { THEN  }
+  | "THEN"    {BigThen}
   | "else"    { ELSE  }
+  | "ELSE"    {BigElse}
   | "|"       { PIPE  }
   | "match"   {MATCH}
   | "with"    { WITH }

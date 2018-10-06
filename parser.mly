@@ -114,6 +114,23 @@ let rec checkAllInts s n = if n >= String.length s then true else
         && Char.code (String.get s n) <= (Char.code '9')
         && checkAllInts s (n + 1);;
 
+let rec isFloat s n b = if n >= String.length s then b else
+         (if Char.code (String.get s n) >= (Char.code '0')
+        && Char.code (String.get s n) <= (Char.code '9')
+            then isFloat s (n + 1) b
+           else if Char.code (String.get s n) == (Char.code '.')
+           then (if b then false else isFloat s (n + 1) true)
+           else false);;
+
+let rec cutInTwoInts s n = if n >= String.length s then None
+            else if Char.code (String.get s n) == (Char.code '.')
+             then Some (String.sub s 0 n, String.sub s (n+1) (String.length s - n - 1))
+             else cutInTwoInts s (n + 1);;
+
+let parFloat x = match cutInTwoInts x 0 with None -> K.K.Ratreal (K.K.Frct (K.K.Zero_int, K.K.Zero_int))
+                      | Some (u,v) ->
+                    (K.K.Ratreal (K.K.Frct (parInt (int_of_string u), parInt (int_of_string v))));;
+
 let rec dealWithLabel x = match x with "getKLabel" -> K.K.GetKLabel
            | "isKResult" -> K.K.IsKResult | "andBool" -> K.K.AndBool
         | "notBool" -> K.K.NotBool | "orBool" -> K.K.OrBool | "mapUpdate" -> K.K.MapUpdate
@@ -132,6 +149,8 @@ let rec dealWithLabel x = match x with "getKLabel" -> K.K.GetKLabel
      | "+String" -> K.K.StringCon
      | "intToString" -> K.K.IntToString
      | _ -> if checkAllInts x 0 then K.K.ConstToLabel (K.K.IntConst (parInt (int_of_string x)))
+            else if isFloat x 0 false then
+                  K.K.ConstToLabel (K.K.FloatConst (parFloat x))
                    else K.K.OtherLabel (parString x);;
 %}
 
