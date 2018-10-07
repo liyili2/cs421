@@ -4,7 +4,7 @@
   syntax KItem ::= "ok" [klabel('ok)]
   syntax KItem ::= 'success(Exp) [klabel('success)]
   syntax KItem ::= 'badState(Int, String) [klabel('badState)]
-  syntax KItem ::= 'error(Int, String, String) [klabel('error)]
+  syntax KItem ::= 'error(Int, String, Exp) [klabel('error)]
 
   syntax Op ::= "+" [klabel('plus)]
               | "-" [klabel('minus)]
@@ -54,9 +54,6 @@
   syntax KItem ::= 'result(Int, Exp) [klabel('result)]
 
   syntax Term ::= 'pair(Exp, Rule) [klabel('pair)]
-  syntax KItem ::= 'eval(Int, Exp, List) [function, klabel('eval)]
-                 | 'evalAux(Int, K, Exp, Exp, List) [function, klabel('evalAux)]
-                 | 'output(Int, K) [klabel('output)]
 
   syntax Bool ::= 'isGenId(K) [function, klabel('isGenId)]
   rule 'isGenId('genId(A:Int)) => 'true(.KList)
@@ -195,7 +192,7 @@
           => 'giveNumBigIfAux(B, 'giveNum(A, E1), E2)
   rule 'giveNumBigIfAux(B:Exp, 'result(A:Int, E1:Exp), E2:Exp)
           => 'giveNumBigIfNext(B, E1, 'giveNum(A, E2))
-  rule 'giveNumBigIfAux(B:Exp, E1:Exp, 'result(A:Int, E2:Exp))
+  rule 'giveNumBigIfNext(B:Exp, E1:Exp, 'result(A:Int, E2:Exp))
           => 'result(A, 'bigIf(B, E1, E2))
 
   rule 'giveNum(A:Int, 'app(E1:Exp, E2:Exp))
@@ -295,7 +292,7 @@
   rule 'applyRules(A:Rule, 'fun(B:Id, E1:Exp))
            => 'applyRules(A, E1)
   rule 'applyRules(A:Rule, 'bigFun(B:Id, C:Id, E1:Exp))
-           => 'applyRules(A, C, E1)
+           => 'applyRules(A, E1)
   rule 'applyRules(A:Rule, 'fn(B:Id, E1:Exp))
            => 'applyRules(A, E1)
   rule 'applyRules(A:Rule, 'let(B:Id, E1:Exp, E2:Exp))
@@ -370,7 +367,7 @@
   rule 'alphaSubst('bigFun(A:Id, Y:Id, E1:Exp), A:Id, B:Id) =>'bigFun(A, Y, E1)
   rule 'alphaSubst('bigFun(Y:Id, A:Id, E1:Exp), A:Id, B:Id) =>'bigFun(Y, A, E1)
   rule 'alphaSubst('bigFun(A':Id, Y:Id, E1:Exp), A:Id, B:Id)
-            => 'fun(A', Y, 'alphaSubst(E1, A, B))
+            => 'bigFun(A', Y, 'alphaSubst(E1, A, B))
         requires 'andBool('=/=K(A, A'), '=/=K(Y, A'))
 
   rule 'alphaSubst('fn(A:Id, E1:Exp), A:Id, B:Id) => 'fn(A, E1)
@@ -450,6 +447,10 @@
         requires 'equalExps(D, L)
   rule 'stepEvalAux2(L:List, D:Exp)
                 => 'badState('1(.KList), "Student wrongly transforms the CPS according to the rule.") [owise]
+
+  syntax KItem ::= 'eval(Int, Exp, List) [function, klabel('eval)]
+                 | 'evalAux(Int, K, Exp, Exp, List) [function, klabel('evalAux)]
+                 | 'output(Int, K) [klabel('output)]
   rule 'eval(I:Int, E:Exp, .List) => 'output(I, 'success(E))
   rule 'eval(I:Int, E:Exp, ListCon(ListItem('pair(E1:Exp, R:Rule)), L:List))
                => 'evalAux(I, 'stepEval(E, E1, R), E, E1, L)
