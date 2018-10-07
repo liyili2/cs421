@@ -3,7 +3,8 @@
   syntax KItem ::= "none" [klabel('none)]
   syntax KItem ::= "ok" [klabel('ok)]
   syntax KItem ::= 'success(Exp) [klabel('success)]
-  syntax KItem ::= 'error(Int, String) [klabel('error)]
+  syntax KItem ::= 'badState(Int, String) [klabel('badState)]
+  syntax KItem ::= 'error(Int, String, String) [klabel('error)]
 
   syntax Op ::= "+" [klabel('plus)]
               | "-" [klabel('minus)]
@@ -54,7 +55,7 @@
 
   syntax Term ::= 'pair(Exp, Rule) [klabel('pair)]
   syntax KItem ::= 'eval(Int, Exp, List) [function, klabel('eval)]
-                 | 'evalAux(Int, K, Exp, List) [function, klabel('evalAux)]
+                 | 'evalAux(Int, K, Exp, Exp, List) [function, klabel('evalAux)]
                  | 'output(Int, K) [klabel('output)]
 
   syntax Bool ::= 'isGenId(K) [function, klabel('isGenId)]
@@ -440,21 +441,21 @@
                  | 'stepEvalAux2(List, Exp) [function, klabel('stepEvalAux2)]
   rule 'stepEval(E:Exp, D:Exp, R:Rule)
          => 'stepEvalAux('giveNum('0(.KList), E), E, D, R)
-  rule 'stepEvalAux(E:Exp, E:Exp, D:Exp, R:Rule) => 'error('0(.KList), "Nothing can be transformed.")
+  rule 'stepEvalAux(E:Exp, E:Exp, D:Exp, R:Rule) => 'badState('0(.KList), "Nothing can be transformed.")
   rule 'stepEvalAux(E':Exp, E:Exp, D:Exp, R:Rule)
          => 'stepEvalAux1('applyRules(R, E'),E', D) [owise]
-  rule 'stepEvalAux1(.Map, E:Exp, D:Exp) => 'error('2(.KList), "The input rule name is incorrect.")
+  rule 'stepEvalAux1(.Map, E:Exp, D:Exp) => 'badState('2(.KList), "The input rule name is incorrect.")
   rule 'stepEvalAux1(M:Map, E:Exp, D:Exp) => 'stepEvalAux2('removeNums('substAll(E, M)),D) [owise]
   rule 'stepEvalAux2(L:List, D:Exp) => 'ok(.KList)
         requires 'equalExps(D, L)
   rule 'stepEvalAux2(L:List, D:Exp)
-                => 'error('1(.KList), "Student wrongly transforms the CPS according to the rule.") [owise]
+                => 'badState('1(.KList), "Student wrongly transforms the CPS according to the rule.") [owise]
   rule 'eval(I:Int, E:Exp, .List) => 'output(I, 'success(E))
   rule 'eval(I:Int, E:Exp, ListCon(ListItem('pair(E1:Exp, R:Rule)), L:List))
-               => 'evalAux(I, 'stepEval(E, E1, R), E1, L)
-  rule 'evalAux(I:Int, 'ok(.KList), E:Exp, L:List) => 'eval('+Int(I, '1(.KList)), E, L) 
-  rule 'evalAux(I:Int, 'error(X:Int, S:String), E:Exp, L:List)
-                  => 'output(I, 'error(X, S:String))
+               => 'evalAux(I, 'stepEval(E, E1, R), E, E1, L)
+  rule 'evalAux(I:Int, 'ok(.KList), E:Exp, E1:Exp, L:List) => 'eval('+Int(I, '1(.KList)), E1, L) 
+  rule 'evalAux(I:Int, 'badState(X:Int, S:String), E:Exp, E1:Exp, L:List)
+                  => 'output(I, 'error(X, S:String, E))
 
 
   configuration <k> PGM:KItem </k>

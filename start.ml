@@ -1,4 +1,4 @@
-type result = Good of string | Error of int * string;;
+type result = Good of string | Error of int * string * string option;;
 
 type output = Output of int * result;;
 
@@ -340,9 +340,9 @@ let rec cpsExpToString t = match t with SUKItem ((SUKLabel x),y,z) ->
                    | _ -> "bad";;
 
 (* error 0 for parsing error, 1 for rule error, 2 for rule name error. *)
-let runCPS s = match programState s with None -> Output (0, Error(0, "Student has a parsing error"))
+let runCPS s = match programState s with None -> Output (0, Error(0, "Student has a parsing error", None))
         | Some x -> (match funEvaluation allEqual allEqual allEqual allRules database theGraph x
-         with None -> Output (0, Error (0, "unknown error."))
+         with None -> Output (0, Error (0, "unknown error.", None))
             | Some a -> (match a with [ItemB (u,v, SUK [ItemFactor (SUKItem (la,kl,ty))])]
               -> (match kl with [ItemKl (SUBigBag (SUK
                           [ItemFactor (SUKItem
@@ -353,18 +353,21 @@ let runCPS s = match programState s with None -> Output (0, Error(0, "Student ha
                   (match klSecond with [ItemKl (SUBigBag (SUK
                           [ItemFactor term]));]
                      -> Output (int_of_string (printKInt laFirst), Good (cpsExpToString term))
-                   | _ -> Output (0, Error (0, "unknown error.")))
+                   | _ -> Output (0, Error (0, "unknown error.", None)))
                        else (match klSecond with 
                       [ItemKl (SUBigBag (SUK
                           [ItemFactor (SUKItem
                   (SUKLabel (ConstToLabel (IntConst laNext)),klNext,tyNext))]));
                   ItemKl (SUBigBag (SUK [ItemFactor (SUKItem (SUKLabel
-                        (ConstToLabel (StringConst laNext2)),klNext2,tyNext2))]))]
+                        (ConstToLabel (StringConst laNext2)),klNext2,tyNext2))]));
+                  ItemKl (SUBigBag (SUK [ItemFactor term]))]
                       -> Output (int_of_string (printKInt laFirst),
-                                Error (int_of_string (printKInt laNext), charListToString laNext2))
-                        | _ -> Output (0, Error (0, "unknown error.")))
-                     | _ -> Output (0, Error (0, "unknown error.")))
-                   | _ -> Output (0, Error (0, "unknown error."))));;
+                                Error (int_of_string (printKInt laNext), charListToString laNext2,
+                          (if int_of_string (printKInt laNext) = 0
+                                     then None else Some (cpsExpToString term))))
+                        | _ -> Output (0, Error (0, "unknown error.", None)))
+                     | _ -> Output (0, Error (0, "unknown error.", None)))
+                   | _ -> Output (0, Error (0, "unknown error.", None))));;
 
 
 
