@@ -1,7 +1,8 @@
 
   syntax KItem ::= 'some(K) [klabel('some)]
   syntax KItem ::= "none" [klabel('none)]
-  syntax KItem ::= "succecss" [klabel('success)]
+  syntax KItem ::= "ok" [klabel('ok)]
+  syntax KItem ::= 'success(Exp) [klabel('success)]
   syntax KItem ::= 'error(Int, String) [klabel('error)]
 
   syntax Op ::= "+" [klabel('plus)]
@@ -444,14 +445,14 @@
          => 'stepEvalAux1('applyRules(R, E'),E', D) [owise]
   rule 'stepEvalAux1(.Map, E:Exp, D:Exp) => 'error('2(.KList), "The input rule name is incorrect.")
   rule 'stepEvalAux1(M:Map, E:Exp, D:Exp) => 'stepEvalAux2('removeNums('substAll(E, M)),D) [owise]
-  rule 'stepEvalAux2(L:List, D:Exp) => 'success(.KList)
+  rule 'stepEvalAux2(L:List, D:Exp) => 'ok(.KList)
         requires 'equalExps(D, L)
   rule 'stepEvalAux2(L:List, D:Exp)
                 => 'error('1(.KList), "Student wrongly transforms the CPS according to the rule.") [owise]
-  rule 'eval(I:Int, E:Exp, .List) => 'output(I, 'success(.KList))
+  rule 'eval(I:Int, E:Exp, .List) => 'output(I, 'success(E))
   rule 'eval(I:Int, E:Exp, ListCon(ListItem('pair(E1:Exp, R:Rule)), L:List))
-               => 'evalAux(I, 'stepEval(E, E1, R), E, L)
-  rule 'evalAux(I:Int, 'success(.KList), E:Exp, L:List) => 'eval('+Int(I, '1(.KList)), E, L) 
+               => 'evalAux(I, 'stepEval(E, E1, R), E1, L)
+  rule 'evalAux(I:Int, 'ok(.KList), E:Exp, L:List) => 'eval('+Int(I, '1(.KList)), E, L) 
   rule 'evalAux(I:Int, 'error(X:Int, S:String), E:Exp, L:List)
                   => 'output(I, 'error(X, S:String))
 

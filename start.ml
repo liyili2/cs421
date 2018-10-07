@@ -1,4 +1,4 @@
-type result = Good | Error of int * string;;
+type result = Good of string | Error of int * string;;
 
 type output = Output of int * result;;
 
@@ -265,6 +265,80 @@ let programState s = match readInProgram s with None -> None
 
 typeCheckRules allEqual allEqual allRules database theGraph;;
 
+let printFloat s = match s with Ratreal (Frct (x,y)) -> (printKInt x)^"."^(printKInt y);;
+
+let rec cpsExpToString t = match t with SUKItem ((SUKLabel x),y,z) -> 
+       (match x with (OtherLabel l) -> if charListToString l = "if"
+                 then (match y with [ItemKl (SUBigBag (SUK [ItemFactor sub1]));
+                  ItemKl (SUBigBag (SUK [ItemFactor sub2]));
+                   ItemKl (SUBigBag (SUK [ItemFactor sub3]))]
+                   -> "if "^(cpsExpToString sub1)^" then "^(cpsExpToString sub2)
+                         ^" else "^(cpsExpToString sub3) | _ -> "bad")
+                 else if  charListToString l = "bigIf"
+                  then (match y with [ItemKl (SUBigBag (SUK [ItemFactor sub1]));
+                  ItemKl (SUBigBag (SUK [ItemFactor sub2]));
+                   ItemKl (SUBigBag (SUK [ItemFactor sub3]))]
+                   -> "IF "^(cpsExpToString sub1)^" THEN "^(cpsExpToString sub2)
+                         ^" ELSE "^(cpsExpToString sub3) | _ -> "bad")
+                 else if  charListToString l = "app"
+                  then (match y with [ItemKl (SUBigBag (SUK [ItemFactor sub1]));
+                  ItemKl (SUBigBag (SUK [ItemFactor sub2]))]
+                   -> (cpsExpToString sub1)^"("^(cpsExpToString sub2)^")" | _ -> "bad")
+                 else if  charListToString l = "bin"
+                  then (match y with [ItemKl (SUBigBag (SUK [ItemFactor sub1]));
+                  ItemKl (SUBigBag (SUK [ItemFactor sub2]));
+                    ItemKl (SUBigBag (SUK [ItemFactor sub3]))]
+                   -> "("^(cpsExpToString sub1)^")"^(cpsExpToString sub2)^"("^(cpsExpToString sub3)^")"
+                          | _ -> "bad")
+                 else if  charListToString l = "unary"
+                  then (match y with [ItemKl (SUBigBag (SUK [ItemFactor sub1]));
+                  ItemKl (SUBigBag (SUK [ItemFactor sub2]))]
+                   -> (cpsExpToString sub1)^"("^(cpsExpToString sub2)^")"
+                          | _ -> "bad")
+                 else if  charListToString l = "fun"
+                  then (match y with [ItemKl (SUBigBag (SUK [ItemFactor sub1]));
+                  ItemKl (SUBigBag (SUK [ItemFactor sub2]))]
+                   -> "fun "^(cpsExpToString sub1)^" -> ("^(cpsExpToString sub2)^")"
+                          | _ -> "bad")
+                 else if  charListToString l = "fn"
+                  then (match y with [ItemKl (SUBigBag (SUK [ItemFactor sub1]));
+                  ItemKl (SUBigBag (SUK [ItemFactor sub2]))]
+                   -> "FN "^(cpsExpToString sub1)^" -> ("^(cpsExpToString sub2)^")"
+                          | _ -> "bad")
+                 else if  charListToString l = "bigFun"
+                  then (match y with [ItemKl (SUBigBag (SUK [ItemFactor sub1]));
+                  ItemKl (SUBigBag (SUK [ItemFactor sub2]));
+                     ItemKl (SUBigBag (SUK [ItemFactor sub3]))]
+                   -> "FUN "^(cpsExpToString sub1)^" "^(cpsExpToString sub2)
+                               ^" -> ("^(cpsExpToString sub3)^")"
+                          | _ -> "bad")
+                 else if  charListToString l = "let"
+                  then (match y with [ItemKl (SUBigBag (SUK [ItemFactor sub1]));
+                  ItemKl (SUBigBag (SUK [ItemFactor sub2]));
+                     ItemKl (SUBigBag (SUK [ItemFactor sub3]))]
+                   -> "let "^(cpsExpToString sub1)^" = "^(cpsExpToString sub2)
+                               ^" in ("^(cpsExpToString sub3)^")"
+                          | _ -> "bad")
+                 else if  charListToString l = "trans"
+                  then (match y with [ItemKl (SUBigBag (SUK [ItemFactor sub1]));
+                  ItemKl (SUBigBag (SUK [ItemFactor sub2]))]
+                   -> "[["^(cpsExpToString sub1)^"]]_{"^(cpsExpToString sub2)^"}"
+                          | _ -> "bad")
+                 else if  charListToString l = "undef" then "undefined"
+                 else if  charListToString l = "plus" then "+"
+                 else if  charListToString l = "minus" then "-"
+                 else if  charListToString l = "times" then "*"
+                 else if  charListToString l = "lt" then "<"
+                 else if  charListToString l = "leq" then "<="
+                 else if  charListToString l = "gt" then ">"
+                 else if  charListToString l = "geq" then ">="
+                 else "bad"
+             | ConstToLabel (IntConst l) ->  printKInt l
+              | ConstToLabel (FloatConst l) ->  printFloat l
+              |  ConstToLabel (IdConst l) ->  charListToString l
+             | _ -> "bad")
+                   | _ -> "bad";;
+
 (* error 0 for parsing error, 1 for rule error, 2 for rule name error. *)
 let runCPS s = match programState s with None -> Output (0, Error(0, "Student has a parsing error"))
         | Some x -> (match funEvaluation allEqual allEqual allEqual allRules database theGraph x
@@ -276,7 +350,10 @@ let runCPS s = match programState s with None -> Output (0, Error(0, "Student ha
                   ItemKl (SUBigBag (SUK [ItemFactor (SUKItem (SUKLabel
                          (OtherLabel laSecond),klSecond,tySecond))]))] -> 
                      if (charListToString laSecond) = "success" then
-                    Output (int_of_string (printKInt laFirst), Good)
+                  (match klSecond with [ItemKl (SUBigBag (SUK
+                          [ItemFactor term]));]
+                     -> Output (int_of_string (printKInt laFirst), Good (cpsExpToString term))
+                   | _ -> Output (0, Error (0, "unknown error.")))
                        else (match klSecond with 
                       [ItemKl (SUBigBag (SUK
                           [ItemFactor (SUKItem
