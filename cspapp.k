@@ -426,6 +426,7 @@
   rule 'equalExp('let(X:Id, E1:Exp, E2:Exp), 'let(Y:Id, D1:Exp, D2:Exp))
           => 'andBool('equalExp(E1, D1), 'equalExp('alphaSubst(E2, X, Y), D2))
        requires '=/=K(X, Y)
+  rule 'equalExp(A:Exp, B:Exp) => 'false(.KList) [owise]
 
   syntax Bool ::= 'equalExps(Exp, List) [function, klabel('equalExps)]
   rule 'equalExps(E:Exp, .List) => 'false(.KList)
@@ -462,7 +463,11 @@
 
   configuration <k> PGM:KItem </k>
 
-  program 'eval('0(.KList), 'trans($x(.KList), $k(.KList)),
-              ListItem('pair('app($k(.KList), $x(.KList)), 'var(.KList))))
+  program 'eval('0(.KList), 'trans('bin('plus(.KList), $x(.KList), $y(.KList)), $k(.KList)),
+             ListCon(ListItem('pair('trans($y(.KList), 'fn($u(.KList), 'trans($x(.KList),
+                       'fn($v(.KList),
+             'app($k(.KList), 'bin('plus(.KList), $v(.KList),$u(.KList))))))), 'oprule(.KList))),
+                ListItem('pair('trans($y(.KList), 'fn($u(.KList), 'app('fn($v(.KList),
+             'app($k(.KList), 'bin('plus(.KList), $v(.KList),$u(.KList)))), $x(.KList)))), 'var(.KList)))))
 
 
