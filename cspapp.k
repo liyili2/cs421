@@ -167,7 +167,7 @@
                | 'giveNumTrans(Int, K, Exp) [function, klabel('giveNumTrans)]
                | 'giveNumTransAux(Int, Exp, K) [function, klabel('giveNumTransAux)]
 
-  rule 'giveNum(A:Int, B:Undef) => B
+  rule 'giveNum(A:Int, B:Undef) => 'result(A, B)
   rule 'giveNum(A:Int, B:Atomic) => 'result(A, B)
   rule 'giveNum(A:Int, .Exps) => 'result(A, .Exps)
   rule 'giveNum(A:Int, 'listCon(B:Exp, C:Exps))
@@ -433,13 +433,14 @@
             => 'orBool('equalExp(E, A), 'equalExps(E, L))
 
   syntax KItem ::= 'stepEval(Exp, Exp, Rule) [function, klabel('stepEval)]
-                 | 'stepEvalAux(Exp, Exp, Exp, Rule) [function, klabel('stepEvalAux)]
+                 | 'stepEvalAux(K, Exp, Exp, Rule) [function, klabel('stepEvalAux)]
                  | 'stepEvalAux1(Map, Exp, Exp) [function, klabel('stepEvalAux1)]
                  | 'stepEvalAux2(List, Exp) [function, klabel('stepEvalAux2)]
   rule 'stepEval(E:Exp, D:Exp, R:Rule)
          => 'stepEvalAux('giveNum('0(.KList), E), E, D, R)
-  rule 'stepEvalAux(E:Exp, E:Exp, D:Exp, R:Rule) => 'badState('0(.KList), "Nothing can be transformed.")
-  rule 'stepEvalAux(E':Exp, E:Exp, D:Exp, R:Rule)
+  rule 'stepEvalAux('result(A:Int, E:Exp), E:Exp, D:Exp, R:Rule)
+                => 'badState('0(.KList), "Nothing can be transformed.")
+  rule 'stepEvalAux('result(A:Int, E':Exp), E:Exp, D:Exp, R:Rule)
          => 'stepEvalAux1('applyRules(R, E'),E', D) [owise]
   rule 'stepEvalAux1(.Map, E:Exp, D:Exp) => 'badState('2(.KList), "The input rule name is incorrect.")
   rule 'stepEvalAux1(M:Map, E:Exp, D:Exp) => 'stepEvalAux2('removeNums('substAll(E, M)),D) [owise]
@@ -460,5 +461,8 @@
 
 
   configuration <k> PGM:KItem </k>
+
+  program 'eval('0(.KList), 'trans($x(.KList), $k(.KList)),
+              ListItem('pair('app($k(.KList), $x(.KList)), 'var(.KList))))
 
 

@@ -243,8 +243,7 @@ let allRules = match (tupleToRuleInParsed allEqual allEqual allEqual (interpreta
 let parseCPS s =  try Some (CpsParser.main CpsLexer.ftoken (Lexing.from_string "1")) with 
             Stdlib.Parsing.Parse_error -> None;;
 
-let readInProgram s = match s with None -> None
-         | Some s1 -> try Some (Parser.main Lexer.token (Lexing.from_string s1))
+let readInProgram s = try Some (Parser.main Lexer.token (Lexing.from_string s))
                   with Stdlib.Parsing.Parse_error -> None;;
 
   let getAllCPSTokens s =
@@ -264,6 +263,9 @@ let programState s = match readInProgram s with None -> None
        genProgramState allEqual allEqual allEqual (Parsed (x,y,u,d)) database theGraph);;
 
 typeCheckRules allEqual allEqual allRules database theGraph;;
+
+let testResult = match genProgramState allEqual allEqual allEqual parsed database theGraph with None -> None
+              | Some p -> (match funEvaluation allEqual allEqual allEqual allRules database theGraph p with None -> Some "" | Some a -> Some (charsToStringInSUBag a));;
 
 let printFloat s = match s with Ratreal (Frct (x,y)) -> (printKInt x)^"."^(printKInt y);;
 
