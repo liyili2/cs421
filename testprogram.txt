@@ -1,3 +1,5 @@
+[[(fun v -> IF v THEN x + 1 ELSE y) (1 + 2)]]_{k}
+
 program 'eval('0(.KList), 'trans('app('fun($v(.KList), 'bigIf($v(.KList), 'bin('plus(.KList), $x(.KList), '1(.KList)), $y(.KList))), 'bin('plus(.KList), '1(.KList), '2(.KList))), $k(.KList)),
     ListCon(ListItem('pair('trans('bin('plus(.KList), '1(.KList), '2(.KList)),
             'fn($v2(.KList), 'trans('fun($v(.KList), 'bigIf($v(.KList), 'bin('plus(.KList), $x(.KList), '1(.KList)), $y(.KList))),'fn($v1(.KList), 'app($v1(.KList), 'app($v2(.KList), $k(.KList))))))), 'apprule(.KList))),
@@ -7,6 +9,8 @@ program 'eval('0(.KList), 'trans('app('fun($v(.KList), 'bigIf($v(.KList), 'bin('
        'fn($v1(.KList), 'app($v1(.KList), 'app($v2(.KList), $k(.KList)))),
        'trans('bigIf($v(.KList), 'bin('plus(.KList), $x(.KList), '1(.KList)), $y(.KList)),
             'fn($v1(.KList), 'app($v1(.KList), 'app($v2(.KList), $k(.KList))))))))), 'funrule(.KList)))))
+
+[[let x = y + 1 in x * 2]]_{k}
 
   program 'eval('0(.KList), 'trans('let($x(.KList),
             'bin('plus(.KList), $y(.KList), '1(.KList)), 'bin('times(.KList), $x(.KList), '2(.KList))), $k(.KList)),
