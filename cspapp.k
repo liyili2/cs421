@@ -13,6 +13,7 @@
               | "<=" [klabel('leq)]
               | ">"  [klabel('gt)]
               | ">=" [klabel('geq)]
+              | "="  [klabel('equal)]
 
   syntax Atomic ::= Id | Int | Float
 
@@ -269,7 +270,7 @@
          => 'let(A, 'removeNum(E1), 'removeNum(E2))
   rule 'removeNum('trans(E1:Exp, E2:Exp))
          => 'trans('removeNum(E1), 'removeNum(E2))
-  rule 'removeNum('number(A:Int, E2:Exp)) => E2
+  rule 'removeNum('number(A:Int, E2:Exp)) => 'removeNum(E2)
 
   syntax List ::= 'removeNums(List) [function, klabel('removeNums)]
   rule 'removeNums(.List) => .List
@@ -463,11 +464,9 @@
 
   configuration <k> PGM:KItem </k>
 
-  program 'eval('0(.KList), 'trans('bin('plus(.KList), $x(.KList), $y(.KList)), $k(.KList)),
-             ListCon(ListItem('pair('trans($y(.KList), 'fn($u(.KList), 'trans($x(.KList),
-                       'fn($v(.KList),
-             'app($k(.KList), 'bin('plus(.KList), $v(.KList),$u(.KList))))))), 'oprule(.KList))),
-                ListItem('pair('trans($y(.KList), 'fn($u(.KList), 'app('fn($v(.KList),
-             'app($k(.KList), 'bin('plus(.KList), $v(.KList),$u(.KList)))), $x(.KList)))), 'var(.KList)))))
+  program 'eval('0(.KList), 'trans('bin('equal(.KList), $x(.KList), '0(.KList)),
+            'fn($v(.KList), 'bigIf($v(.KList), 'trans('bin('plus(.KList), $x(.KList), '1(.KList)), $k(.KList)), 'trans($y(.KList), $k(.KList))))),
+       ListItem('pair('trans('bin('equal(.KList), $x(.KList), '0(.KList)),
+            'fn($v(.KList), 'bigIf($v(.KList), 'trans('bin('plus(.KList), $x(.KList), '1(.KList)), $k(.KList)), 'app($k(.KList), $y(.KList))))), 'var(.KList))))
 
 
