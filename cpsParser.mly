@@ -27,10 +27,10 @@ main:
   | expression INFER toplevel {"program 'eval('0(.KList), "^$1^", "^$3^")"}
 
 toplevel:
-    expression BY rulename {"ListItem("^$1^", "^$3^")"}
-  | UNDEF {"ListItem('undef(.KList), 'undef(.KList))"}
-  | expression BY rulename toplevel {"ListCon(ListItem("^$1^", "^$3^"), "^$4^")"}
-  | UNDEF toplevel {"ListCon(ListItem('undef(.KList), 'undef(.KList)), "^$2^")"}
+    expression BY rulename {"ListItem('pair("^$1^", "^$3^"))"}
+  | UNDEF {"ListItem('pair('undef(.KList), 'undef(.KList)))"}
+  | expression BY rulename INFER toplevel {"ListCon(ListItem('pair("^$1^", "^$3^")), "^$5^")"}
+  | UNDEF INFER toplevel {"ListCon(ListItem('pair('undef(.KList), 'undef(.KList))), "^$3^")"}
 
 rulename:
     CONST {"'const(.KList)"}
@@ -50,7 +50,7 @@ expression:
 expr:
      appexpr {$1}
    | FN var LEADSTO expr {"'fn("^$2^", "^$4^")"}
-   | BigFun var var LEADSTO expr {"'bigFun("^$2^", "^$3^", "^$5^")"}
+   | BigFun var atomicexpr LEADSTO expr {"'bigFun("^$2^", "^$3^", "^$5^")"}
    | FUN var LEADSTO expr {"'fun("^$2^", "^$4^")"}
    | LET var EQUALS expression IN expr {"'let("^$2^", "^$4^", "^$6^")"}
    | IF appexpr THEN expr ELSE expr {"'if("^$2^", "^$4^", "^$6^")"}
@@ -70,20 +70,20 @@ appexpr:
    
 subexpr:
      unaryexpr {$1}
-   | subexpr PLUS subexpr {"'plus("^$1^", "^$3^")"}
-   | subexpr MINUS subexpr {"'minus("^$1^", "^$3^")"}
-   | subexpr TIMES subexpr {"'times("^$1^", "^$3^")"}
-   | subexpr DIV subexpr {"'div("^$1^", "^$3^")"}
-   | subexpr MOD subexpr {"'mod("^$1^", "^$3^")"}
-   | subexpr DPLUS subexpr {"'dplus("^$1^", "^$3^")"}
-   | subexpr DMINUS subexpr {"'dminus("^$1^", "^$3^")"}
-   | subexpr DTIMES subexpr {"'dtimes("^$1^", "^$3^")"}
-   | subexpr DDIV subexpr {"'ddiv("^$1^", "^$3^")"}
-   | subexpr LT subexpr {"'less("^$1^", "^$3^")"}
-   | subexpr GT subexpr {"'greater("^$1^", "^$3^")"}
-   | subexpr LEQ subexpr {"'leq("^$1^", "^$3^")"}
-   | subexpr GEQ subexpr {"'geq("^$1^", "^$3^")"}
-   | subexpr EQUALS subexpr {"'equal("^$1^", "^$3^")"}
+   | subexpr PLUS subexpr {"'bin('plus(.KList),"^$1^", "^$3^")"}
+   | subexpr MINUS subexpr {"'bin('minus(.KList),"^$1^", "^$3^")"}
+   | subexpr TIMES subexpr {"'bin('times(.KList),"^$1^", "^$3^")"}
+   | subexpr DIV subexpr {"'bin('div(.KList),"^$1^", "^$3^")"}
+   | subexpr MOD subexpr {"'bin('mod(.KList),"^$1^", "^$3^")"}
+   | subexpr DPLUS subexpr {"'bin('dplus(.KList),"^$1^", "^$3^")"}
+   | subexpr DMINUS subexpr {"'bin('dminus(.KList),"^$1^", "^$3^")"}
+   | subexpr DTIMES subexpr {"'bin('dtimes(.KList),"^$1^", "^$3^")"}
+   | subexpr DDIV subexpr {"'bin('ddiv(.KList),"^$1^", "^$3^")"}
+   | subexpr LT subexpr {"'bin('lt(.KList),"^$1^", "^$3^")"}
+   | subexpr GT subexpr {"'bin('gt(.KList),"^$1^", "^$3^")"}
+   | subexpr LEQ subexpr {"'bin('leq(.KList),"^$1^", "^$3^")"}
+   | subexpr GEQ subexpr {"'bin('geq(.KList),"^$1^", "^$3^")"}
+   | subexpr EQUALS subexpr {"'bin('equal(.KList),"^$1^", "^$3^")"}
 
 unaryexpr:
      atomicexpr {$1}

@@ -20,3 +20,22 @@ program 'eval('0(.KList), 'trans('app('fun($v(.KList), 'bigIf($v(.KList), 'bin('
     'trans('1(.KList), 'fn($v2(.KList), 'trans($y(.KList), 'fn($v1(.KList),
           'app('fn($x(.KList), 'trans('bin('times(.KList), $x(.KList), '2(.KList)), $k(.KList))),        
             'bin('plus(.KList), $v1(.KList), $v2(.KList))))))), 'oprule(.KList)))))
+
+runCPS "[[f]]_{k} => k((f)) by var";;
+
+runCPS "[[1.1]]_{k} => k((1.1)) by const";;
+
+runCPS "[[x + 1]]_{k} => [[1]]_{FN v2 -> [[x]]_{FN v1 -> k ((v1) + (v2))}} by oprule
+                => [[1]]_{FN v2 -> (FN v1 -> k ((v1) + (v2))) x} by var
+              => (FN v2 -> (FN v1 -> k ((v1) + (v2))) x) 1 by const";;
+
+runCPS "[[let x = y + 1 in x * 2]]_{k} => [[y + 1]]_{FN x -> [[x * 2]]_{k}} by letrule
+           => [[y + 1]]_{FN x -> [[2]]_{FN v2 -> [[x]]_{FN v1 -> k (v1 * v2)}}} by oprule
+          => [[1]]_{FN v4 -> [[y]]_{FN v3 ->
+       (FN x -> [[2]]_{FN v2 -> [[x]]_{FN v1 -> k (v1 * v2)}}) (v3 + v4)}} by oprule";;
+
+runCPS "[[(fun v -> if v then x + 1 else y) (1 + 2)]]_{k}
+       => [[(1 + 2)]]_{FN v2 -> [[(fun v -> if v then x + 1 else y)]]_{FN v1 -> v1 v2 k}} by apprule
+       => [[(1 + 2)]]_{FN v2 -> (FN v1 -> v1 v2 k)
+             (FUN v (FN v1 -> v1 v2 k) -> [[if v then x + 1 else y]]_{FN v1 -> v1 v2 k})} by funrule"
+

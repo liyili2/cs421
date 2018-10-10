@@ -240,7 +240,7 @@ let database = match collectDatabase (interpreta()) with None -> [] | Some a -> 
 let allRules = match (tupleToRuleInParsed allEqual allEqual allEqual (interpreta())) with None -> []
                     | Some a -> a;;
 
-let parseCPS s =  try Some (CpsParser.main CpsLexer.ftoken (Lexing.from_string "1")) with 
+let parseCPS s =  try Some (CpsParser.main CpsLexer.ftoken (Lexing.from_string s)) with 
             Stdlib.Parsing.Parse_error -> None;;
 
 let readInProgram s = try Some (Parser.main Lexer.token (Lexing.from_string s))
@@ -257,10 +257,11 @@ let confi = match parsed with Parsed (Some a,b,c,d) -> a;;
 
 (* let program = match readInProgram "f x" with Parsed (a, b,c, Some d) -> d;; *)
 
-let programState s = match readInProgram s with None -> None
+let programState s = match parseCPS s with None -> None
+      | Some s' -> (match readInProgram s' with None -> None
       | Some (Parsed (a,b,c,d)) -> 
        (match parsed with Parsed (x,y,u,v) -> 
-       genProgramState allEqual allEqual allEqual (Parsed (x,y,u,d)) database theGraph);;
+       genProgramState allEqual allEqual allEqual (Parsed (x,y,u,d)) database theGraph));;
 
 typeCheckRules allEqual allEqual allRules database theGraph;;
 
@@ -290,7 +291,7 @@ let rec cpsExpToString t = match t with SUKItem ((SUKLabel x),y,z) ->
                   then (match y with [ItemKl (SUBigBag (SUK [ItemFactor sub1]));
                   ItemKl (SUBigBag (SUK [ItemFactor sub2]));
                     ItemKl (SUBigBag (SUK [ItemFactor sub3]))]
-                   -> "("^(cpsExpToString sub1)^")"^(cpsExpToString sub2)^"("^(cpsExpToString sub3)^")"
+                   -> "("^(cpsExpToString sub2)^") "^(cpsExpToString sub1)^" ("^(cpsExpToString sub3)^")"
                           | _ -> "bad")
                  else if  charListToString l = "unary"
                   then (match y with [ItemKl (SUBigBag (SUK [ItemFactor sub1]));

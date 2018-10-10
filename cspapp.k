@@ -128,7 +128,7 @@
   rule 'applyRuleApp(E1:Exp, E2:Exp, K:Exp, A:Id)
          => 'applyRuleAppAux(E1, E2, K, A, 'freshId('trans('app(A, E1), K)))
   rule 'applyRuleAppAux(E1:Exp, E2:Exp, K:Exp, A:Id, B:Id)
-          => 'trans(E2, 'fn(B, 'trans(E1, 'fn(A, 'app(A, 'app(B,K))))))
+          => 'trans(E2, 'fn(B, 'trans(E1, 'fn(A, 'app('app(A, B),K)))))
 
   rule 'applyRule('oprule(.KList), 'bin(A:Op, E1:Exp, E2:Exp), K:Exp)
           => 'applyRuleBin(A, E1, E2, K, 'freshId(K))
