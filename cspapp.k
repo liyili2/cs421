@@ -459,7 +459,7 @@
                => 'evalAux(I, 'stepEval(E, E1, R), E, E1, L)
   rule 'evalAux(I:Int, 'ok(.KList), E:Exp, E1:Exp, L:List) => 'eval('+Int(I, '1(.KList)), E1, L) 
   rule 'evalAux(I:Int, 'badState(X:Int, S:String), E:Exp, E1:Exp, L:List)
-                  => 'output(I, 'error(X, S:String, E))
+                  => 'output(I, 'error(X, S:String, E1))
 
 
   configuration <k> PGM:KItem </k>
