@@ -335,12 +335,27 @@ let rec cpsExpToString t = match t with SUKItem ((SUKLabel x),y,z) ->
                  else if  charListToString l = "leq" then "<="
                  else if  charListToString l = "gt" then ">"
                  else if  charListToString l = "geq" then ">="
+                 else if  charListToString l = "genId" then
+                     (match y with [ItemKl (SUBigBag (SUK [ItemFactor
+                    (SUKItem (SUKLabel (ConstToLabel (IntConst sub1)),kl1,ty1))]))]
+                   -> "genId"^(printKInt sub1) | _ -> "bad")
                  else "bad"
              | ConstToLabel (IntConst l) ->  printKInt l
               | ConstToLabel (FloatConst l) ->  printFloat l
               |  ConstToLabel (IdConst l) ->  charListToString l
              | _ -> "bad")
                    | _ -> "bad";;
+
+(* a function to print the next step *)
+let getNextStep s = match programState s with None -> None
+     | Some x -> (match x with [ItemB (u,v, SUK
+              [ItemFactor (SUKItem (la,kl,ty))])] ->
+            (match kl with [kl1; kl2; kl3] ->
+         (match funEvaluation allEqual allEqual allEqual allRules database theGraph [ItemB (u,v, SUK
+              [ItemFactor (SUKItem (SUKLabel (OtherLabel (parseString "getOneStep")),[kl2],ty))])]
+             with None -> None | Some a -> (match a with 
+          [ItemB (u,v, SUK [ItemFactor term])] -> Some (cpsExpToString term)
+           | _ -> None)) | _ -> None) | _ -> None);;
 
 (* error 0 for parsing error, 1 for rule error, 2 for rule name error. *)
 let runCPS s = match programState s with None -> Output (0, Error(0, "Student has a parsing error", None))

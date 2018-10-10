@@ -149,6 +149,143 @@
   rule 'applyRule('undef(.KList), B:Exp, C:Exp) => 'undef(.KList)
   rule 'applyRule(A:Rule, B:Exp, C:Exp) => 'none(.KList) [owise]
 
+  syntax Exp ::= 'nextStep(Exp, Exp) [function, klabel('nextStep)]
+
+  rule 'nextStep(A:Id, K:Exp) => 'app(K, A)
+  rule 'nextStep(A:Int, K:Exp) => 'app(K, A)
+  rule 'nextStep(A:Float, K:Exp) => 'app(K, A)
+  rule 'nextStep(.Exps, K:Exp) => 'app(K, .Exps)
+  rule 'nextStep('if(E1:Exp, E2:Exp, E3:Exp), K:Exp)
+           => 'applyRuleIf(E1, E2, E3, K,
+                'freshId('trans('if(E1:Exp, E2:Exp, E3:Exp), K)))
+  rule 'nextStep('app(E1:Exp, E2:Exp), K:Exp)
+            => 'applyRuleApp(E1, E2, K, 'freshId(K))
+
+  rule 'nextStep('bin(A:Op, E1:Exp, E2:Exp), K:Exp)
+          => 'applyRuleBin(A, E1, E2, K, 'freshId(K))
+
+  rule 'nextStep('unary(A:Op, E1:Exp), K:Exp)
+          => 'applyRuleUnary(A, E1, K, 'freshId(K))
+
+  rule 'nextStep('fun(X:Id, E:Exp) , K:Exp)
+       => 'app(K, 'bigFun(X, K, 'trans(E, K)))
+  rule 'nextStep('let(X:Id, E1:Exp, E2:Exp), K:Exp)
+           => 'trans(E1, 'fn(X, 'trans(E2, K)))
+  rule 'nextStep(B:Exp, C:Exp) => 'undef(.KList) [owise]
+
+  syntax KItem ::= 'nop(K) [klabel('nop)]
+
+  syntax KItem ::= 'searchNextStep(Exp) [function, klabel('searchNextStep)]
+                 | 'searchNextStepTrans(Exp) [function, klabel('searchNextStepTrans)]
+                 | 'searchNextStepIf(K, Exp, Exp) [function, klabel('searchNextStepIf)]
+                 | 'searchNextStepIfAux(Exp, K, Exp) [function, klabel('searchNextStepIfAux)]
+                 | 'searchNextStepIfNext(Exp, Exp, K) [function, klabel('searchNextStepIfNext)]
+                 | 'searchNextStepBigIf(K, Exp, Exp) [function, klabel('searchNextStepBigIf)]
+                 | 'searchNextStepBigIfAux(Exp, K, Exp) [function, klabel('searchNextStepBigIfAux)]
+                 | 'searchNextStepBigIfNext(Exp, Exp, K) [function, klabel('searchNextStepBigIfNext)]
+                 | 'searchNextStepApp(K, Exp) [function, klabel('searchNextStepApp)]
+                 | 'searchNextStepAppAux(Exp, K) [function, klabel('searchNextStepAppAux)]
+                 | 'searchNextStepBin(Op, K, Exp) [function, klabel('searchNextStepBin)]
+                 | 'searchNextStepBinAux(Op, Exp, K) [function, klabel('searchNextStepBinAux)]
+                 | 'searchNextStepUnary(Op, K) [function, klabel('searchNextStepUnary)]
+                 | 'searchNextStepFun(Id, K) [function, klabel('searchNextStepFun)]
+                 | 'searchNextStepFn(Id, K) [function, klabel('searchNextStepFn)]
+                 | 'searchNextStepBigFun(Id, K, Exp) [function, klabel('searchNextStepBigFun)]
+                 | 'searchNextStepBigFunAux(Id, Exp, K) [function, klabel('searchNextStepBigFunAux)]
+                 | 'searchNextStepLet(Id, K, Exp) [function, klabel('searchNextStepLet)]
+                 | 'searchNextStepLetAux(Id, Exp, K) [function, klabel('searchNextStepLetAux)]
+
+  rule 'searchNextStep('trans(E1:Exp, E2:Exp))
+     => 'searchNextStepTrans('nextStep(E1, E2))
+  rule 'searchNextStepTrans('undef(.KList)) => 'undef(.KList)
+  rule 'searchNextStepTrans(A:Exp) => 'some(A)
+       requires '=/=K(A, 'undef(.KList))
+  rule 'searchNextStep(A:Sub) => 'nop(A)
+  rule 'searchNextStep('undef(.KList)) => 'undef(.KList)
+  rule 'searchNextStep('if(E1:Exp, E2:Exp, E3:Exp))
+          => 'searchNextStepIf('searchNextStep(E1), E2, E3)
+  rule 'searchNextStepIf('nop(E1:Exp), E2:Exp, E3:Exp)
+           => 'searchNextStepIfAux(E1, 'searchNextStep(E2), E3)
+  rule 'searchNextStepIf('some(E1:Exp), E2:Exp, E3:Exp) => 'some('if(E1, E2, E3))
+  rule 'searchNextStepIf('undef(.KList), E2:Exp, E3:Exp) => 'undef(.KList)
+  rule 'searchNextStepIfAux(E1:Exp, 'nop(E2:Exp), E3:Exp)
+          => 'searchNextStepIfNext(E1, E2, 'searchNextStep(E3))
+  rule 'searchNextStepIfAux(E1:Exp, 'some(E2:Exp), E3:Exp) => 'some('if(E1, E2,E3))
+  rule 'searchNextStepIfAux(E1:Exp, 'undef(.KList), E3:Exp) => 'undef(.KList)
+  rule 'searchNextStepIfNext(E1:Exp, E2:Exp, 'nop(E3:Exp)) => 'nop('if(E1,E2,E3))
+  rule 'searchNextStepIfNext(E1:Exp, E2:Exp, 'some(E3:Exp)) => 'some('if(E1,E2,E3))
+  rule 'searchNextStepIfNext(E1:Exp, E2:Exp, 'undef(.KList)) => 'undef(.KList)
+
+  rule 'searchNextStep('bigIf(E1:Exp, E2:Exp, E3:Exp))
+          => 'searchNextStepBigIf('searchNextStep(E1), E2, E3)
+  rule 'searchNextStepBigIf('nop(E1:Exp), E2:Exp, E3:Exp)
+           => 'searchNextStepBigIfAux(E1, 'searchNextStep(E2), E3)
+  rule 'searchNextStepBigIf('some(E1:Exp), E2:Exp, E3:Exp) => 'some('bigIf(E1, E2, E3))
+  rule 'searchNextStepBigIf('undef(.KList), E2:Exp, E3:Exp) => 'undef(.KList)
+  rule 'searchNextStepBigIfAux(E1:Exp, 'nop(E2:Exp), E3:Exp)
+          => 'searchNextStepBigIfNext(E1, E2, 'searchNextStep(E3))
+  rule 'searchNextStepBigIfAux(E1:Exp, 'some(E2:Exp), E3:Exp) => 'some('bigIf(E1, E2,E3))
+  rule 'searchNextStepBigIfAux(E1:Exp, 'undef(.KList), E3:Exp) => 'undef(.KList)
+  rule 'searchNextStepBigIfNext(E1:Exp, E2:Exp, 'nop(E3:Exp)) => 'nop('bigIf(E1,E2,E3))
+  rule 'searchNextStepBigIfNext(E1:Exp, E2:Exp, 'some(E3:Exp)) => 'some('bigIf(E1,E2,E3))
+  rule 'searchNextStepBigIfNext(E1:Exp, E2:Exp, 'undef(.KList)) => 'undef(.KList)
+  rule 'searchNextStep('app(E1:Exp, E2:Exp))
+          => 'searchNextStepApp('searchNextStep(E1), E2)
+  rule 'searchNextStepApp('nop(E1:Exp), E2:Exp)
+          => 'searchNextStepAppAux(E1, 'searchNextStep(E2))
+  rule 'searchNextStepApp('some(E1:Exp), E2:Exp) => 'some('app(E1, E2))
+  rule 'searchNextStepApp('undef(.KList), E2:Exp) => 'undef(.KList)
+  rule 'searchNextStepAppAux(E1:Exp, 'nop(E2:Exp)) => 'nop('app(E1, E2))
+  rule 'searchNextStepAppAux(E1:Exp, 'some(E2:Exp)) => 'some('app(E1, E2))
+  rule 'searchNextStepAppAux(E1:Exp, 'undef(.KList)) => 'undef(.KList)
+  rule 'searchNextStep('bin(A:Op, E1:Exp, E2:Exp))
+           => 'searchNextStepBin(A, 'searchNextStep(E1), E2)
+  rule 'searchNextStepBin(A:Op, 'nop(E1:Exp), E2:Exp)
+          => 'searchNextStepBinAux(A, E1, 'searchNextStep(E2))
+  rule 'searchNextStepBin(A:Op, 'some(E1:Exp), E2:Exp) => 'some('bin(A, E1, E2))
+  rule 'searchNextStepBin(A:Op, 'undef(.KList), E2:Exp) => 'undef(.KList)
+  rule 'searchNextStepBinAux(A:Op, E1:Exp, 'nop(E2:Exp)) => 'some('bin(A, E1, E2))
+  rule 'searchNextStepBinAux(A:Op, E1:Exp, 'some(E2:Exp)) => 'some('bin(A, E1, E2))
+  rule 'searchNextStepBinAux(A:Op, E1:Exp, 'undef(.KList)) => 'undef(.KList)
+  rule 'searchNextStep('unary(A:Op, E1:Exp))
+           => 'searchNextStepUnary(A, 'searchNextStep(E1))
+  rule 'searchNextStepUnary(A:Op, 'undef(.KList)) => 'undef(.KList)
+  rule 'searchNextStepUnary(A:Op, 'some(E1:Exp)) => 'some('unary(A, E1))
+  rule 'searchNextStepUnary(A:Op, 'nop(E1:Exp)) => 'nop('unary(A, E1))
+  rule 'searchNextStep('fun(A:Id, E:Exp)) => 'searchNextStepFun(A, 'searchNextStep(E))
+  rule 'searchNextStepFun(A:Id, 'nop(E:Exp)) => 'nop('fun(A, E))
+  rule 'searchNextStepFun(A:Id, 'some(E:Exp)) => 'some('fun(A, E))
+  rule 'searchNextStepFun(A:Id, 'undef(.KList)) => 'undef(.KList)
+  rule 'searchNextStepFn(A:Id, 'nop(E:Exp)) => 'nop('fn(A, E))
+  rule 'searchNextStepFn(A:Id, 'some(E:Exp)) => 'some('fn(A, E))
+  rule 'searchNextStepFn(A:Id, 'undef(.KList)) => 'undef(.KList)
+  rule 'searchNextStep('bigFun(A:Id, E1:Exp, E2:Exp))
+            => 'searchNextStepBigFun(A, 'searchNextStep(E1), E2)
+  rule 'searchNextStepBigFun(A:Id, 'some(E1:Exp), E2:Exp) => 'some('bigFun(A, E1, E2))
+  rule 'searchNextStepBigFun(A:Id, 'undef(.KList), E2:Exp) => 'undef(.KList)
+  rule 'searchNextStepBigFun(A:Id, 'nop(E1:Exp), E2:Exp)
+           => 'searchNextStepBigFunAux(A, E1, 'searchNextStep(E2))
+  rule 'searchNextStepBigFunAux(A:Id, E1:Exp, 'nop(E2:Exp)) => 'nop('bigFun(A, E1, E2))
+  rule 'searchNextStepBigFunAux(A:Id, E1:Exp, 'some(E2:Exp)) => 'some('bigFun(A, E1, E2))
+  rule 'searchNextStepBigFunAux(A:Id, E1:Exp, 'undef(.KList)) => 'undef(.KList)
+
+  rule 'searchNextStep('let(A:Id, E1:Exp, E2:Exp))
+            => 'searchNextStepLet(A, 'searchNextStep(E1), E2)
+  rule 'searchNextStepLet(A:Id, 'some(E1:Exp), E2:Exp) => 'some('let(A, E1, E2))
+  rule 'searchNextStepLet(A:Id, 'undef(.KList), E2:Exp) => 'undef(.KList)
+  rule 'searchNextStepLet(A:Id, 'nop(E1:Exp), E2:Exp)
+           => 'searchNextStepLetAux(A, E1, 'searchNextStep(E2))
+  rule 'searchNextStepLetAux(A:Id, E1:Exp, 'nop(E2:Exp)) => 'nop('let(A, E1, E2))
+  rule 'searchNextStepLetAux(A:Id, E1:Exp, 'some(E2:Exp)) => 'some('let(A, E1, E2))
+  rule 'searchNextStepLetAux(A:Id, E1:Exp, 'undef(.KList)) => 'undef(.KList)
+
+  syntax Exp ::= 'getOneStep(Exp) [function, klabel('getOneStep)]
+               | 'getOneStepAux(K) [function, klabel('getOneStepAux)]
+  rule 'getOneStep(E:Exp) => 'getOneStepAux('searchNextStep(E))
+  rule 'getOneStepAux('nop(E:Exp)) => 'undef(.KList)
+  rule 'getOneStepAux('undef(.KList)) => 'undef(.KList)
+  rule 'getOneStepAux('some(E:Exp)) => E
+
   syntax KItem ::= 'giveNum(Int, Exp) [function, klabel('giveNum)]
                | 'giveNumExps(K, Exps) [function, klabel('giveNumExps)]
                | 'giveNumExpsAux(Exp, K) [function, klabel('giveNumExpsAux)]
