@@ -1,4 +1,4 @@
-type result = Good of string | Error of int * string * string option;;
+type result = Good of (bool * string) | Error of int * string * string option;;
 
 type output = Output of int * result;;
 
@@ -354,8 +354,11 @@ let runCPS s = match programState s with None -> Output (0, Error(0, "Student ha
                          (OtherLabel laSecond),klSecond,tySecond))]))] -> 
                      if (charListToString laSecond) = "success" then
                   (match klSecond with [ItemKl (SUBigBag (SUK
-                          [ItemFactor term]));]
-                     -> Output (int_of_string (printKInt laFirst), Good (cpsExpToString term))
+                          [ItemFactor (SUKItem
+                  (SUKLabel (ConstToLabel (BoolConst klSecondLa)),klSecondNe,klSecondTy))]));
+                      ItemKl (SUBigBag (SUK
+                          [ItemFactor term]))]
+                     -> Output (int_of_string (printKInt laFirst), Good (klSecondLa, cpsExpToString term))
                    | _ -> Output (0, Error (0, "unknown error.", None)))
                        else (match klSecond with 
                       [ItemKl (SUBigBag (SUK

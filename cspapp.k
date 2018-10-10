@@ -2,7 +2,7 @@
   syntax KItem ::= 'some(K) [klabel('some)]
   syntax KItem ::= "none" [klabel('none)]
   syntax KItem ::= "ok" [klabel('ok)]
-  syntax KItem ::= 'success(Exp) [klabel('success)]
+  syntax KItem ::= 'success(Bool, Exp) [klabel('success)]
   syntax KItem ::= 'badState(Int, String) [klabel('badState)]
   syntax KItem ::= 'error(Int, String, Exp) [klabel('error)]
 
@@ -434,6 +434,31 @@
   rule 'equalExps(E:Exp, ListCon(ListItem(A:K), L:List))
             => 'orBool('equalExp(E, A), 'equalExps(E, L))
 
+  syntax Bool ::= 'existTrans(Exp) [function, klabel('existTrans)]
+  rule 'existTrans(A:Sub) => 'false(.KList)
+  rule 'existTrans('undef(.KList)) => 'false(.KList)
+  rule 'existTrans('if(E1:Exp, E2:Exp, E3:Exp))
+            => 'orBool('existTrans(E1), 'orBool('existTrans(E2), 'existTrans(E3)))
+  rule 'existTrans('bigIf(E1:Exp, E2:Exp, E3:Exp))
+            => 'orBool('existTrans(E1), 'orBool('existTrans(E2), 'existTrans(E3)))
+  rule 'existTrans('app(E1:Exp, E2:Exp))
+            => 'orBool('existTrans(E1), 'existTrans(E2))
+  rule 'existTrans('bin(A:Op, E1:Exp, E2:Exp))
+            => 'orBool('existTrans(E1), 'existTrans(E2))
+  rule 'existTrans('unary(A:Op, E1:Exp))
+            => 'existTrans(E1)
+  rule 'existTrans('fun(A:Id, E1:Exp))
+            => 'existTrans(E1)
+  rule 'existTrans('fn(A:Id, E1:Exp))
+            => 'existTrans(E1)
+  rule 'existTrans('bigFun(A:Id, E1:Exp, E2:Exp))
+            => 'orBool('existTrans(E1), 'existTrans(E2))
+  rule 'existTrans('let(A:Id, E1:Exp, E2:Exp))
+            => 'orBool('existTrans(E1), 'existTrans(E2))
+  rule 'existTrans('trans(E1:Exp, E2:Exp)) => 'true(.KList)
+  rule 'existTrans('match(E1:Exp, E2:Pats)) => 'existTrans(E1)
+  rule 'existTrans('number(A:Int, E:Exp)) => 'existTrans(E)
+
   syntax KItem ::= 'stepEval(Exp, Exp, Rule) [function, klabel('stepEval)]
                  | 'stepEvalAux(K, Exp, Exp, Rule) [function, klabel('stepEvalAux)]
                  | 'stepEvalAux1(Map, Exp, Exp) [function, klabel('stepEvalAux1)]
@@ -454,13 +479,12 @@
   syntax KItem ::= 'eval(Int, Exp, List) [function, klabel('eval)]
                  | 'evalAux(Int, K, Exp, Exp, List) [function, klabel('evalAux)]
                  | 'output(Int, K) [klabel('output)]
-  rule 'eval(I:Int, E:Exp, .List) => 'output(I, 'success(E))
+  rule 'eval(I:Int, E:Exp, .List) => 'output(I, 'success('existTrans(E), E))
   rule 'eval(I:Int, E:Exp, ListCon(ListItem('pair(E1:Exp, R:Rule)), L:List))
                => 'evalAux(I, 'stepEval(E, E1, R), E, E1, L)
   rule 'evalAux(I:Int, 'ok(.KList), E:Exp, E1:Exp, L:List) => 'eval('+Int(I, '1(.KList)), E1, L) 
   rule 'evalAux(I:Int, 'badState(X:Int, S:String), E:Exp, E1:Exp, L:List)
                   => 'output(I, 'error(X, S:String, E1))
-
 
   configuration <k> PGM:KItem </k>
 
