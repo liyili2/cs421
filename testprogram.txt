@@ -25,6 +25,8 @@ runCPS "[[f]]_{k} => k((f)) by var";;
 
 runCPS "[[1.1]]_{k} => k((1.1)) by const";;
 
+runCPS "[[IF x THEN 1 ELSE 1]]_{k} => undefined"
+
 runCPS "[[x + 1]]_{k} => [[1]]_{FN v2 -> [[x]]_{FN v1 -> k ((v1) + (v2))}} by oprule
                 => [[1]]_{FN v2 -> (FN v1 -> k ((v1) + (v2))) x} by var
               => (FN v2 -> (FN v1 -> k ((v1) + (v2))) x) 1 by const";;
