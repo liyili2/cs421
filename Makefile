@@ -22,7 +22,7 @@ lexer.cmo: parser.cmo
 	$(OCAMLC) -c lexer.ml
 
 cpsLexer.cmo: cpsParser.cmo
-       	$(OCAMLLEX) cpsLexer.mll
+	$(OCAMLLEX) cpsLexer.mll
 	$(OCAMLC) -c cpsLexer.ml
 
 cpsParser.cmo: k.cmo
